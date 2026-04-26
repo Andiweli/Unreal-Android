@@ -5,7 +5,6 @@
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
-![Release](https://img.shields.io/badge/release-not%20ready-red)
 
 Work-in-progress Android port of Unreal Engine 1 / Unreal v200.
 
