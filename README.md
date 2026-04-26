@@ -1,2 +1,83 @@
-# Unreal-Android
-Unreal 1 port for Android (WiP)
+# Unreal-Android [WIP]
+
+![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
+![Platform](https://img.shields.io/badge/platform-Android-green)
+![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
+![Release](https://img.shields.io/badge/release-not%20ready-red)
+
+Work-in-progress Android port of Unreal Engine 1 / Unreal v200.
+
+This repository currently provides only the experimental Android version. It is not a finished game package and not a ready-to-play release.
+
+Original Unreal game data is not included.
+
+## Status
+
+- Android port is work in progress
+- No editor support
+- Builds and folder layout may still change
+- Intended for testing and development only
+
+## Requirements
+
+- Android 8.0 or newer
+- Device with OpenGL ES 2.0 support
+- Android-compatible game controller recommended
+- Original Unreal v200 retail game data or Unreal v205 demo data
+
+Copy the required Unreal game folders from a valid Unreal installation or from the Unreal v205 demo.
+
+Required folders:
+
+```text
+Unreal/
++System/
++Maps/
++Textures/
++Sounds/
++Music/
+```
+
+The original Windows executable files are not required.
+
+## Game data location
+
+The game directory 'Unreal' must be placed in the Android app data folder:
+
+```text
+/storage/emulated/0/Android/data/com.ast.unreal/files/
+```
+
+Expected layout:
+
+```text
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/System/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Maps/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Textures/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Sounds/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Music/
+```
+
+## Android changes
+
+This Android version includes several porting adjustments, including:
+
+- Android Studio / Gradle / NDK project setup
+- CMake integration for the native UE1 sources
+- Android-specific SDL2 window, input and lifecycle handling
+- OpenGL ES rendering adjustments
+- gamepad / Android controller input preparation
+- package and data path cleanup for `com.ast.unreal`
+- native dependency and build-system cleanup for Android
+
+## Notes
+
+This Android port is based on [fgsfdsfgs/UE1](https://github.com/fgsfdsfgs/UE1), which provides the Unreal Engine 1 v200 source with modifications for modern systems.
+
+The upstream project is not a dedicated Linux ARM port. It is a shared Unreal Engine 1 v200 code base with several supported build targets, including Windows x86, Linux x86, Linux ARM32 and PSVita ARM32.
+
+For this Android version, the general UE1 v200 code base is used as the foundation. The Linux ARM32 and PSVita/GLES2 parts are useful technical references for ARM, SDL2, OpenGL ES and mobile-style platform work, but Android is handled as its own target through Android Studio, Gradle, CMake, NDK and SDL2.
+
+Unreal, Unreal Engine and related trademarks are owned by Epic Games. This project is not affiliated with or endorsed by Epic Games.
+
+Do not use this project for commercial purposes.

@@ -1,0 +1,186 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-i686-windows-msvc:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build Unreal
+        run: |
+          cmake -G"Visual Studio 17 2022" -Bbuild -AWin32 Source
+          cmake --build build --config RelWithDebInfo
+          cmake --install build --config RelWithDebInfo
+      - name: Prepare artifact for packaging
+        run: |
+          mkdir bin\System
+          copy build\RelWithDebInfo\* bin\System\
+          copy Thirdparty\SDL2\lib\Win32\*.dll bin\System\
+          copy Thirdparty\openal-soft\lib\Win32\*.dll bin\System\
+          copy Thirdparty\libxmp-lite\lib\Win32\*.dll bin\System\
+          copy Engine\Config\*.ini bin\System\
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-i686-windows-msvc
+          path: bin/
+          retention-days: 0
+
+  build-i686-windows-gcc:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          install: >-
+            git
+            make
+            mingw-w64-i686-toolchain
+            mingw-w64-i686-SDL2
+            mingw-w64-i686-openal
+            mingw-w64-i686-libxmp
+            mingw-w64-i686-cmake
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build Unreal
+        run: |
+          cmake -G"Unix Makefiles" -Bbuild Source
+          cmake --build build -j4 -- -O
+          cmake --install build
+      - name: Prepare artifact for packaging
+        run: |
+          mkdir -p bin/System
+          cp build/RelWithDebInfo/* bin/System/
+          cp /mingw32/bin/{SDL2.dll,libgcc_s_dw2-1.dll,libstdc++-6.dll,libwinpthread-1.dll,libopenal-1.dll,libxmp.dll} bin/System/
+          cp Engine/Config/*.ini bin/System/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-i686-windows-gcc
+          path: bin/
+          retention-days: 0
+
+  build-i686-linux-gcc:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    steps:
+      - name: Install dependencies
+        run: |
+          dpkg --add-architecture i386
+          apt-get -y update
+          apt-get -y install git gcc g++ gcc-multilib g++-multilib make cmake
+          apt-get -y install libsdl2-dev libopenal-dev libxmp-dev libsdl2-dev:i386 libopenal-dev:i386 libxmp-dev:i386
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build Unreal
+        run: |
+          cmake -G"Unix Makefiles" -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -Bbuild Source
+          cmake --build build -j
+          cmake --install build
+      - name: Prepare artifact for packaging
+        run: |
+          mkdir -p bin/System
+          cp build/RelWithDebInfo/* bin/System/
+          cp Engine/Config/*.ini bin/System/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-i686-linux-gcc
+          path: bin/
+          retention-days: 0
+
+  build-arm-psvita-gcc:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    env:
+      VITASDK: /usr/local/vitasdk
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install host dependencies
+        run: |
+          apt-get -y update
+          apt-get -y install sudo git make cmake patch curl wget tar gzip bzip2 python3 xz-utils
+      - name: Set PATH
+        run: echo "$VITASDK/bin" >> $GITHUB_PATH
+      - name: Install VitaSDK and vdpm packages
+        run: |
+          git clone https://github.com/vitasdk/vdpm
+          pushd vdpm
+          ./bootstrap-vitasdk.sh
+          ./vdpm -f openal-soft taihen kubridge SceShaccCgExt vitaShaRK libmathneon libxmp
+          popd
+      - name: Build and install vitaGL
+        run: |
+          git clone --recursive https://github.com/Rinnegatamante/vitaGL
+          pushd vitaGL
+          make HAVE_GLSL_SUPPORT=1 CIRCULAR_VERTEX_POOL=2 MATH_SPEEDHACK=1 INDICES_SPEEDHACK=1 PRIMITIVES_SPEEDHACK=1 -j install
+          popd
+      - name: Build and install SDL2
+        run: |
+          git clone --recursive --branch vitagl https://github.com/Northfear/SDL
+          pushd SDL
+          cmake -S. -Bbuild -DCMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DVIDEO_VITA_VGL=ON
+          cmake --build build -- -j
+          cmake --install build
+          popd
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build Unreal
+        run: |
+          cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${VITASDK}/share/vita.toolchain.cmake" -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo Source
+          cmake --build build -j
+      - name: Prepare artifact for packaging
+        run: |
+          mkdir -p bin/unreal/System
+          cp Engine/Config/*.ini bin/unreal/System/
+          cp build/Unreal/Unreal.vpk bin/unreal.vpk
+          sed -i -e 's/ViewportX=800/ViewportX=960/g' -e 's/ViewportY=600/ViewportY=544/g' -e 's/StartupFullscreen=False/StartupFullscreen=True/g' bin/unreal/System/Default.ini
+          sed -i -e 's/ViewportX=800/ViewportX=960/g' -e 's/ViewportY=600/ViewportY=544/g' -e 's/StartupFullscreen=False/StartupFullscreen=True/g' bin/unreal/System/Unreal.ini
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unreal-arm-psvita-gcc
+          path: bin/
+          retention-days: 0
+
+  publish-latest-build:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    needs: [build-i686-windows-msvc, build-i686-windows-gcc, build-i686-linux-gcc, build-arm-psvita-gcc]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: ci-artifacts
+      - name: Publish latest dev-build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir ci-release
+          pushd ci-artifacts
+          tar czf ../ci-release/unreal-i686-linux-gcc.tar.gz unreal-i686-linux-gcc
+          zip -r ../ci-release/unreal-i686-windows-gcc.zip unreal-i686-windows-gcc
+          zip -r ../ci-release/unreal-i686-windows-msvc.zip unreal-i686-windows-msvc
+          zip -r ../ci-release/unreal-arm-psvita-gcc.zip unreal-arm-psvita-gcc
+          popd
+          git tag --force ci-dev-build master
+          git push --force origin ci-dev-build
+          gh release upload --clobber ci-dev-build ci-release/*
