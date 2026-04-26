@@ -9,7 +9,7 @@
 
 Work-in-progress Android port of Unreal Engine 1 / Unreal v200.
 
-This repository currently provides only the experimental Android version. It is not a finished game package and not a ready-to-play release.
+This repository currently provides only an experimental Android version. It is not a finished game package.
 
 Original Unreal game data is not included.
 
@@ -22,10 +22,10 @@ Original Unreal game data is not included.
 
 ## Requirements
 
-- Android 8.0 or newer
+- Android 8.0 or newer (Android 4.x for OUYA is planned)
 - Device with OpenGL ES 2.0 support
 - Android-compatible game controller recommended
-- Original Unreal v200 retail game data or Unreal v205 demo data
+- Original Unreal v200 retail game data (or Unreal v205 demo data)
 
 Copy the required Unreal game folders from a valid Unreal installation or from the Unreal v205 demo.
 
@@ -39,8 +39,6 @@ Unreal/
 +Sounds/
 +Music/
 ```
-
-The original Windows executable files are not required.
 
 ## Game data location
 
@@ -68,9 +66,9 @@ This Android version includes several porting adjustments, including:
 - CMake integration for the native UE1 sources
 - Android-specific SDL2 window, input and lifecycle handling
 - OpenGL ES rendering adjustments
-- gamepad / Android controller input preparation
-- package and data path cleanup for `com.ast.unreal`
-- native dependency and build-system cleanup for Android
+- Gamepad / Android controller input preparation
+- Package and data path cleanup for `com.ast.unreal`
+- Native dependency and build-system cleanup for Android
 
 ## Notes
 
