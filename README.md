@@ -6,7 +6,7 @@
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
 
-Work-in-progress Android port of Unreal Engine 1 / Unreal v200.
+Work-in-progress Android port of Unreal Engine 1 / Unreal v200 (1998).
 
 This repository currently provides only an experimental Android version. It is not a finished game package.
 
