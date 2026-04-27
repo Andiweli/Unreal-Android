@@ -16,8 +16,6 @@ Original Unreal game data is not included.
 
 - Android port is work in progress
 - No editor support
-- Builds and folder layout may still change
-- Intended for testing and development only
 
 ## Requirements
 
@@ -41,20 +39,26 @@ Unreal/
 
 ## Game data location
 
-The game directory 'Unreal' must be placed in the Android app data folder:
+The game directory 'Unreal' must be placed in one of these folders:
 
 ```text
 /storage/emulated/0/Android/data/com.ast.unreal/files/
+/storage/emulated/0/
+/sdcard/
+/storage/sdcard0/
+/mnt/sdcard/
+/mnt/usbdrive/
+/mnt/usbdrive0/
+/mnt/usb_storage/
 ```
 
-Expected layout:
+Expected layout-examples:
 
 ```text
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/System/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Maps/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Textures/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Sounds/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Music/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal
+/storage/emulated/0/Unreal
+/sdcard/Unreal
+/mnt/usbdrive/Unreal
 ```
 
 ## Android changes
