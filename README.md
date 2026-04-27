@@ -1,13 +1,14 @@
-# Unreal-Android [WIP]
+<img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" /> 
+
+# Unreal-Android [WiP]
 
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
-![Release](https://img.shields.io/badge/release-not%20ready-red)
 
-Work-in-progress Android port of Unreal Engine 1 / Unreal v200.
+Work-in-progress Android port of Unreal Engine 1 / Unreal v200 (1998).
 
-This repository currently provides only the experimental Android version. It is not a finished game package and not a ready-to-play release.
+This repository currently provides only an experimental Android version. It is not a finished game package.
 
 Original Unreal game data is not included.
 
@@ -15,15 +16,13 @@ Original Unreal game data is not included.
 
 - Android port is work in progress
 - No editor support
-- Builds and folder layout may still change
-- Intended for testing and development only
 
 ## Requirements
 
-- Android 8.0 or newer
+- Android 8.0 or newer (Android 4.x for OUYA is planned)
 - Device with OpenGL ES 2.0 support
 - Android-compatible game controller recommended
-- Original Unreal v200 retail game data or Unreal v205 demo data
+- Original Unreal v200 retail game data (or Unreal v205 demo data)
 
 Copy the required Unreal game folders from a valid Unreal installation or from the Unreal v205 demo.
 
@@ -38,24 +37,28 @@ Unreal/
 +Music/
 ```
 
-The original Windows executable files are not required.
-
 ## Game data location
 
-The game directory 'Unreal' must be placed in the Android app data folder:
+The game directory 'Unreal' must be placed in one of these folders:
 
 ```text
 /storage/emulated/0/Android/data/com.ast.unreal/files/
+/storage/emulated/0/
+/sdcard/
+/storage/sdcard0/
+/mnt/sdcard/
+/mnt/usbdrive/
+/mnt/usbdrive0/
+/mnt/usb_storage/
 ```
 
-Expected layout:
+Expected layout-examples (please place the above mentions sub-folders inside):
 
 ```text
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/System/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Maps/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Textures/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Sounds/
-/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal/Music/
+/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal
+/storage/emulated/0/Unreal
+/sdcard/Unreal
+/mnt/usbdrive/Unreal
 ```
 
 ## Android changes
@@ -66,9 +69,9 @@ This Android version includes several porting adjustments, including:
 - CMake integration for the native UE1 sources
 - Android-specific SDL2 window, input and lifecycle handling
 - OpenGL ES rendering adjustments
-- gamepad / Android controller input preparation
-- package and data path cleanup for `com.ast.unreal`
-- native dependency and build-system cleanup for Android
+- Gamepad / Android controller input preparation
+- Package and data path cleanup for `com.ast.unreal`
+- Native dependency and build-system cleanup for Android
 
 ## Notes
 
