@@ -1,4 +1,4 @@
-<img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" /> 
+<img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" />
 
 # Unreal-Android [WiP]
 
@@ -14,8 +14,8 @@ Original Unreal game data is not included.
 
 ## Status
 
-- Android port is work in progress
-- No editor support
+- Android 8 version released (but still work in progress)
+- OUYA version is planned
 
 https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad
 
