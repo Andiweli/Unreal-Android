@@ -15,11 +15,20 @@ Original Unreal game data is not included.
 - Android 8 version released (but still work in progress)
 - OUYA version is planned
 
-https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad">
+    <img width="640" height="360" alt="Unreal Android gameplay video" src="https://github.com/user-attachments/assets/d74b4628-5d7a-45c5-89ef-7b15c8c6005a" />
+  </a>
+</p>
 
-<img width="1280" height="720" alt="screen1" src="https://github.com/user-attachments/assets/c262f8db-8353-4216-8826-9bf91bd10c08" />
-<br/>  
-<img width="1280" height="720" alt="screen3" src="https://github.com/user-attachments/assets/869dba74-24ae-4222-8a12-cb5e02965d4c" />
+
+<p align="center">
+  <img width="640" height="360" alt="screen1" src="https://github.com/user-attachments/assets/c262f8db-8353-4216-8826-9bf91bd10c08" />
+</p>
+
+<p align="center">
+  <img width="640" height="360" alt="screen3" src="https://github.com/user-attachments/assets/869dba74-24ae-4222-8a12-cb5e02965d4c" />
+</p>
 
 ## Requirements
 
