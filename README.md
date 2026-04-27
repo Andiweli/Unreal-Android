@@ -52,7 +52,7 @@ The game directory 'Unreal' must be placed in one of these folders:
 /mnt/usb_storage/
 ```
 
-Expected layout-examples:
+Expected layout-examples (please place the above mentions sub-folders inside):
 
 ```text
 /storage/emulated/0/Android/data/com.ast.unreal/files/Unreal
