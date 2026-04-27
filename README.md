@@ -1,14 +1,12 @@
 <img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" />
 
-# Unreal-Android [WiP]
+# Unreal-Android
 
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
 
-Work-in-progress Android port of Unreal Engine 1 / Unreal v200 (1998).
-
-This repository currently provides only an experimental Android version. It is not a finished game package.
+Android port of Unreal / Unreal v200 (1998).
 
 Original Unreal game data is not included.
 
