@@ -1,0 +1,419 @@
+/*=============================================================================
+	UnConfig.cpp: Config cache implementation.
+=============================================================================*/
+
+#include "CorePrivate.h"
+
+// UNREAL_ANDROID_CONFIG_PERSIST_REV37_HELPER_BEGIN
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
+
+static int UE1AndroidConfigLowerAsciiRev37( int C )
+{
+    return ( C >= 'A' && C <= 'Z' ) ? ( C + ( 'a' - 'A' ) ) : C;
+}
+
+static int UE1AndroidConfigStrEqNoCaseRev37( const char* A, const char* B )
+{
+    if( !A || !B )
+        return 0;
+
+    while( *A && *B )
+    {
+        if( UE1AndroidConfigLowerAsciiRev37( (unsigned char)*A ) != UE1AndroidConfigLowerAsciiRev37( (unsigned char)*B ) )
+            return 0;
+
+        ++A;
+        ++B;
+    }
+
+    return *A == 0 && *B == 0;
+}
+
+static const char* UE1AndroidConfigBaseNameRev37( const char* Filename )
+{
+    const char* Base = Filename;
+
+    for( const char* P = Filename; P && *P; ++P )
+    {
+        if( *P == '/' || *P == '\\' || *P == ':' )
+            Base = P + 1;
+    }
+
+    return Base;
+}
+
+static int UE1AndroidConfigHasIniExtensionRev37( const char* Filename )
+{
+    if( !Filename || !Filename[0] )
+        return 0;
+
+    const char* Base = UE1AndroidConfigBaseNameRev37( Filename );
+    const char* Dot = strrchr( Base, '.' );
+
+    return Dot && UE1AndroidConfigStrEqNoCaseRev37( Dot, ".ini" );
+}
+
+static int UE1AndroidConfigIsAbsolutePathRev37( const char* Filename )
+{
+    if( !Filename || !Filename[0] )
+        return 0;
+
+    if( Filename[0] == '/' )
+        return 1;
+
+    if( Filename[0] && Filename[1] == ':' )
+        return 1;
+
+    return 0;
+}
+
+static const char* UE1AndroidRemapConfigFilenameRev37( const char* Filename, char* Out, size_t OutSize, int ForWrite )
+{
+    if( !Filename || OutSize < 16 )
+        return Filename;
+
+    if( !UE1AndroidConfigHasIniExtensionRev37( Filename ) )
+        return Filename;
+
+    if( UE1AndroidConfigIsAbsolutePathRev37( Filename ) )
+        return Filename;
+
+    const char* Root = getenv( "UE1_ANDROID_ROOT" );
+    if( !Root || !Root[0] )
+        Root = "/storage/emulated/0/Android/data/com.ast.unreal/files/Unreal";
+
+    char SystemDir[4096];
+    snprintf( SystemDir, sizeof(SystemDir), "%s/System", Root );
+    SystemDir[sizeof(SystemDir) - 1] = 0;
+
+    mkdir( Root, 0775 );
+    mkdir( SystemDir, 0775 );
+
+    const char* Base = UE1AndroidConfigBaseNameRev37( Filename );
+    snprintf( Out, OutSize, "%s/%s", SystemDir, Base );
+    Out[OutSize - 1] = 0;
+
+    if( !ForWrite )
+    {
+        struct stat St;
+        if( stat( Out, &St ) != 0 )
+        {
+            __android_log_print( ANDROID_LOG_INFO, "UE1Config", "Config read fallback: %s (persistent file missing)", Filename );
+            return Filename;
+        }
+    }
+
+    __android_log_print( ANDROID_LOG_INFO, "UE1Config", "Config %s remap: %s -> %s", ForWrite ? "write" : "read", Filename, Out );
+    return Out;
+}
+#endif // PLATFORM_ANDROID
+// UNREAL_ANDROID_CONFIG_PERSIST_REV37_HELPER_END
+
+
+
+
+/*-----------------------------------------------------------------------------
+	Global variables.
+-----------------------------------------------------------------------------*/
+
+CORE_API FConfigCache GConfigCache;
+
+/*-----------------------------------------------------------------------------
+	FConfigFile.
+-----------------------------------------------------------------------------*/
+
+UBOOL FConfigFile::Read( const char* InFilename )
+{
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CONFIG_PERSIST_REV37_REMAP_FCONFIGFILE_READ
+    char AndroidConfigPathRev37[4096];
+    InFilename = (decltype(InFilename))UE1AndroidRemapConfigFilenameRev37( (const char*)InFilename, AndroidConfigPathRev37, sizeof(AndroidConfigPathRev37), 0 );
+#endif
+
+
+
+
+	guard(FConfigFile::Read);
+
+	FString Text;
+	if( appLoadFileToString( Text, InFilename ? InFilename : Filename ) )
+	{
+		char* Ptr = &Text.GetCharArray()(0);
+		FSection* CurrentSection = NULL;
+		UBOOL Done = 0;
+		while( !Done )
+		{
+			while( *Ptr=='\r' || *Ptr=='\n' )
+				Ptr++;
+			char* Start = Ptr;
+			while( *Ptr && *Ptr!='\r' && *Ptr!='\n' )
+				Ptr++;
+			if( *Ptr==0 )
+				Done = 1;
+			*Ptr++ = 0;
+			if( *Start=='[' && Start[appStrlen(Start)-1]==']' )
+			{
+				Start++;
+				Start[appStrlen(Start)-1] = 0;
+				CurrentSection = FindSection( Start );
+				if( !CurrentSection )
+					CurrentSection = AddSection( Start );
+			}
+			else if( CurrentSection && *Start )
+			{
+				char* Value = appStrchr(Start,'=');
+				if( Value )
+				{
+					*Value++ = 0;
+					if( *Value=='\"' && Value[appStrlen(Value)-1]=='\"' )
+					{
+						Value++;
+						Value[appStrlen(Value)-1]=0;
+					}
+					CurrentSection->AddKeyValue( Start, Value );
+				}
+			}
+		}
+		return true;
+	}
+
+	return false;
+
+	unguard;
+}
+
+UBOOL FConfigFile::Write( const char* InFilename )
+{
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CONFIG_PERSIST_REV37_REMAP_FCONFIGFILE_WRITE
+    char AndroidConfigPathRev37[4096];
+    InFilename = (decltype(InFilename))UE1AndroidRemapConfigFilenameRev37( (const char*)InFilename, AndroidConfigPathRev37, sizeof(AndroidConfigPathRev37), 1 );
+#endif
+
+
+
+
+	guard(FConfigFile::Write);
+
+	if( !Dirty || NoSave )
+		return true;
+
+	if( !InFilename )
+		InFilename = Filename;
+
+	Dirty = false;
+	FString Text;
+	for( TIterator<FSection*> It(Sections); It; ++It )
+	{
+		Text.Appendf( "[%s]\r\n", It.GetCurrent()->Name );
+		for( TIterator<FKeyValue> It2(It.GetCurrent()->KeyValues); It2; ++It2 )
+			Text.Appendf( "%s=%s\r\n", It2.GetCurrent().Key, It2.GetCurrent().Val );
+		Text.Appendf( "\r\n" );
+	}
+
+	return appSaveStringToFile( Text, InFilename );
+
+	unguard;
+}
+
+UBOOL FConfigFile::GetString( const char* Section, const char* Key, char* Out, INT OutLen )
+{
+	guard(FConfigFile::GetString);
+
+	if( !OutLen )
+		return false;
+
+	*Out = '\0';
+
+	FKeyValue* KeyVal = FindKeyValue( Section, Key );
+	if( KeyVal )
+	{
+		appStrncpy( Out, KeyVal->Val, OutLen - 1 );
+		return true;
+	}
+
+	return false;
+
+	unguard;
+}
+
+UBOOL FConfigFile::GetSection( const char* Section, char* Out, INT OutLen )
+{
+	guard(FConfigFile::GetSection);
+
+	if( !OutLen )
+		return false;
+
+	*Out = '\0';
+
+	FSection* Sec = FindSection( Section );
+	if( !Sec )
+		return false;
+
+	char* End = Out;
+	for( TIterator<FKeyValue> It(Sec->KeyValues); It; ++It )
+	{
+		const char* Key = It.GetCurrent().Key;
+		if( ( End - Out ) + appStrlen( Key ) + 1 >= OutLen )
+			break;
+		End += appSprintf( End, "%s=%s", Key, It.GetCurrent().Val ) + 1;
+	}
+
+	*End++ = '\0';
+
+	return true;
+
+	unguard;
+}
+
+UBOOL FConfigFile::SetString( const char* Section, const char *Key, const char* Val )
+{
+	guard(FConfigFile::SetString);
+
+	FKeyValue* KeyVal = FindKeyValue( Section, Key );
+	if( KeyVal )
+	{
+		if( appStrcmp( KeyVal->Val, Val ) != 0 )
+			Dirty = true;
+		appStrncpy( KeyVal->Val, Val, MAX_INI_VAL );
+		return true;
+	}
+
+	if( AddKeyValue( Section, Key, Val ) )
+	{
+		Dirty = true;
+		return true;
+	}
+
+	return false;
+
+	unguard;
+}
+
+/*-----------------------------------------------------------------------------
+	FConfigCache.
+-----------------------------------------------------------------------------*/
+
+void FConfigCache::Init( const char* InDefaultIni )
+{
+	guard(FConfigCache::Init);
+
+	appStrncpy( DefaultIni, InDefaultIni, MAX_INI_NAME );
+
+	unguard;
+}
+
+void FConfigCache::Exit()
+{
+	guard(FConfigCache::Exit);
+
+	for( TIterator<FConfigFile*> It(Configs); It; ++It )
+	{
+		It.GetCurrent()->Write();
+		delete It.GetCurrent();
+	}
+
+	Configs.Empty();
+
+	unguard;
+}
+
+UBOOL FConfigCache::GetString( const char* Section, const char* Key, char* Out, INT OutLen, const char* Filename )
+{
+	guard(FConfigCache::GetString);
+
+	*Out = '\0';
+
+	FConfigFile* Cfg = FindConfig( Filename, false );
+	if( Cfg )
+		return Cfg->GetString( Section, Key, Out, OutLen );
+
+	return false;
+
+	unguard;
+}
+
+UBOOL FConfigCache::GetSection( const char* Section, char* Out, INT OutLen, const char* Filename )
+{
+	guard(FConfigCache::GetSection);
+
+	*Out = '\0';
+
+	FConfigFile* Cfg = FindConfig( Filename, false );
+	if( Cfg )
+		return Cfg->GetSection( Section, Out, OutLen );
+
+	return false;
+
+	unguard;
+}
+
+UBOOL FConfigCache::SetString( const char* Section, const char *Key, const char* Val, const char* Filename )
+{
+	guard(FConfigCache::SetString);
+
+	FConfigFile* Cfg = FindConfig( Filename, true );
+	if( Cfg )
+		return Cfg->SetString( Section, Key, Val );
+
+	return false;
+
+	unguard;
+}
+
+FConfigFile* FConfigCache::FindConfig( const char* InFilename, UBOOL CreateIfNotFound )
+{
+	guard(FConfigCache::FindConfig);
+
+	// If filename not specified, use default.
+	char Filename[MAX_INI_NAME + 1];
+	appStrncpy( Filename, InFilename ? InFilename : DefaultIni, MAX_INI_NAME );
+
+	// Add .ini extension.
+	INT Len = appStrlen(Filename);
+	if( Len < 5 || ( Filename[Len - 4] != '.' && Filename[Len - 5] != '.' ) )
+		appStrcat( Filename, ".ini" );
+
+	// Get file.
+	FConfigFile* Cfg = NULL;
+	for( INT i = 0; i < Configs.Num(); ++i )
+	{
+		if( !appStricmp( Configs(i)->Filename, Filename ) )
+		{
+			Cfg = Configs(i);
+			break;
+		}
+	}
+
+	// Create if we don't have it cached yet.
+	if( !Cfg && ( CreateIfNotFound || appFSize( Filename ) >= 0 ) )
+	{
+		INT i = Configs.AddItem( new FConfigFile( Filename ) );
+		Cfg = Configs(i);
+		Cfg->Read( Filename );
+	}
+
+	return Cfg;
+
+	unguard;
+}
+
+UBOOL FConfigCache::SaveAllConfigs()
+{
+	guard(FConfigCache::SaveAllConfigs);
+	UBOOL Ret = true;
+	for( TIterator<FConfigFile*> It(Configs); It; ++It )
+	{
+		if ( !It.GetCurrent()->Write() )
+			Ret = false;
+	}
+	return Ret;
+	unguard;
+}
+
+/*-----------------------------------------------------------------------------
+   The End.
+ -----------------------------------------------------------------------------*/

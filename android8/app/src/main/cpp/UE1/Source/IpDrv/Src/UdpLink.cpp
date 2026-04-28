@@ -174,6 +174,44 @@ UBOOL AUdpLink::Tick( FLOAT DeltaTime, enum ELevelTick TickType )
 			if( UdpMode==UDP_Text )
 			{
 				Buffer[Count]=0;
+				// ANDROID_LAN_BEACON_LOOPBACK_FIX:
+				// Einige Android-Hosts bewerben im LAN-Beacon 127.0.0.1/localhost.
+				// Für LAN-Join muss der Client aber die echte UDP-Quell-IP verwenden.
+				#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID)
+				{
+				    char* Token = strchr( Buffer, ' ' );
+				    if( Token != NULL && Token[1] != 0 )
+				    {
+				        char* Url = Token + 1;
+				        const char* Tail = NULL;
+				
+				        if( strncmp( Url, "127.0.0.1", 9 ) == 0 )
+				            Tail = Url + 9;
+				        else if( strncmp( Url, "localhost", 9 ) == 0 )
+				            Tail = Url + 9;
+				
+				        if( Tail != NULL && (*Tail == '/' || *Tail == ':' || *Tail == ' ' || *Tail == 0) )
+				        {
+				            const DWORD SourceAddr = ntohl( FromAddr.sin_addr.s_addr );
+				            const INT SourceA = (INT)((SourceAddr >> 24) & 255);
+				            const INT SourceB = (INT)((SourceAddr >> 16) & 255);
+				            const INT SourceC = (INT)((SourceAddr >>  8) & 255);
+				            const INT SourceD = (INT)((SourceAddr      ) & 255);
+				
+				            char SourceIp[64];
+				            appSprintf( SourceIp, "%i.%i.%i.%i", SourceA, SourceB, SourceC, SourceD );
+				
+				            char FixedBuffer[512];
+				            *Token = 0;
+				            appSprintf( FixedBuffer, "%s %s%s", Buffer, SourceIp, Tail );
+				            strncpy( Buffer, FixedBuffer, ARRAY_COUNT(Buffer)-1 );
+				            Buffer[ARRAY_COUNT(Buffer)-1] = 0;
+				
+				            debugf( NAME_Log, "Android LAN beacon address corrected: %s", Buffer );
+				        }
+				    }
+				}
+				#endif
 				FIpAddr Addr;
 				Addr.Addr = ntohl( FromAddr.sin_addr.s_addr );
 				Addr.Port = ntohs( FromAddr.sin_port );
