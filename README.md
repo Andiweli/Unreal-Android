@@ -13,6 +13,7 @@ Original Unreal game data is not included.
 ## Status
 
 - Android 8 version released (but still work in progress)
+- No Multiplayer, but Botgames available.
 - OUYA version is planned
 
 <p align="center">
