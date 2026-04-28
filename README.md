@@ -70,7 +70,9 @@ Unreal/
 +Maps/
 +Textures/
 +Sounds/
++Shared/
 +Music/
++Help/
 ```
 
 ### Game data location
