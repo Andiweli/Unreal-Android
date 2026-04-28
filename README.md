@@ -12,8 +12,8 @@ Original Unreal game data is not included.
 
 ## Status
 
-- Android 8 version and special OUYA version with lower resolution
-- Local Multiplayer via WiFi, Botgames available
+- Android 8+ on newer devices with native resolution, OUYA is specifically designed for low resolution to run smoothly at 960x540 @ it's Tegra 3 processing unit.
+- Additional local WiFi Multiplayer and Botgames available.
 
 <p align="center">
   <a href="https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad">
