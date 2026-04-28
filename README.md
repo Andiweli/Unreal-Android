@@ -12,9 +12,8 @@ Original Unreal game data is not included.
 
 ## Status
 
-- Android 8 version released (but still work in progress)
-- No Multiplayer, but Botgames available.
-- OUYA version is planned
+- Android 8 version and special OUYA version with lower resolution
+- Local Multiplayer via WiFi, Botgames available
 
 <p align="center">
   <a href="https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad">
@@ -33,7 +32,7 @@ Original Unreal game data is not included.
 
 ## Requirements
 
-- Android 8.0 or newer (Android 4.x for OUYA is planned)
+- Android 8.0 or newer (Android 4.x for OUYA)
 - Device with OpenGL ES 2.0 support
 - Android-compatible game controller recommended
 - Original Unreal v200 retail game data (or Unreal v205 demo data)
