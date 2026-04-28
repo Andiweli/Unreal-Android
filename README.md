@@ -1,25 +1,38 @@
-<img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" /> 
+<img width="150" height="150" alt="unreal-icon" src="https://github.com/user-attachments/assets/8aa639be-16c3-4c1b-869b-3b1a8400a958" />
 
-# Unreal-Android [WiP]
+# Unreal-Android
 
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
 
-Work-in-progress Android port of Unreal Engine 1 / Unreal v200 (1998).
-
-This repository currently provides only an experimental Android version. It is not a finished game package.
+Android port of Unreal / Unreal v200 (1998).
 
 Original Unreal game data is not included.
 
 ## Status
 
-- Android port is work in progress
-- No editor support
+- Android 8+ on newer devices with native resolution, OUYA is specifically designed for low resolution to run smoothly at 960x540 @ it's Tegra 3 processing unit.
+- Additional local WiFi Multiplayer and Botgames available.
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/a7b1a1f1-60a9-4123-8a0d-36e26da1fdad">
+    <img width="640" height="360" alt="Unreal Android gameplay video" src="https://github.com/user-attachments/assets/d74b4628-5d7a-45c5-89ef-7b15c8c6005a" />
+  </a>
+</p>
+
+
+<p align="center">
+  <img width="640" height="360" alt="screen1" src="https://github.com/user-attachments/assets/c262f8db-8353-4216-8826-9bf91bd10c08" />
+</p>
+
+<p align="center">
+  <img width="640" height="360" alt="screen3" src="https://github.com/user-attachments/assets/869dba74-24ae-4222-8a12-cb5e02965d4c" />
+</p>
 
 ## Requirements
 
-- Android 8.0 or newer (Android 4.x for OUYA is planned)
+- Android 8.0 or newer (Android 4.x for OUYA)
 - Device with OpenGL ES 2.0 support
 - Android-compatible game controller recommended
 - Original Unreal v200 retail game data (or Unreal v205 demo data)
