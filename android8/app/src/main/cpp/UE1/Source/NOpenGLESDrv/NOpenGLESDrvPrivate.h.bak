@@ -112,7 +112,6 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	GLfloat* VtxData;
 	GLfloat* VtxDataEnd;
 	GLfloat* VtxDataPtr;
-	GLfloat* VtxPolyStart;
 	DWORD VtxDataSize;
 	DWORD VtxPolyVerts;
 	UBOOL InPoly;
@@ -201,7 +200,6 @@ private:
 	inline void BeginPoly()
 	{
 		VtxPolyVerts = 0;
-		VtxPolyStart = VtxDataPtr;
 		IdxBase = IdxCount;
 	}
 
@@ -254,18 +252,6 @@ private:
 
 	inline void EndPoly()
 	{
-#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-		// GLES2 guard: malformed/degenerate UE1 polygons must not leave a stray
-		// partial primitive behind. This also prevents occasional diagonal artefacts
-		// on legacy Android/OUYA-class GPUs when a surface contributes fewer than
-		// three vertices. Rewind to the start of the current polygon before returning.
-		if( VtxPolyVerts < 3 )
-		{
-			VtxDataPtr = VtxPolyStart;
-			VtxPolyVerts = 0;
-			return;
-		}
-#endif
 		*IdxDataPtr++ = IdxCount++;
 		*IdxDataPtr++ = IdxCount++;
 		*IdxDataPtr++ = IdxCount++;

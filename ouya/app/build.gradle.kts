@@ -1,4 +1,4 @@
-﻿import java.net.URI
+import java.net.URI
 import java.util.zip.ZipFile
 
 plugins {
@@ -608,6 +608,41 @@ android {
     namespace = "com.ast.unreal"
     compileSdk = 33
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("E:/Development/Android/UE1/YOUR_KEYSTORE.jks")
+            storePassword = "DEIN_STORE_PASSWORT"
+            keyAlias = "DEIN_KEY_ALIAS"
+            keyPassword = "DEIN_KEY_PASSWORT"
+        }
+    }
+
+    buildTypes {
+        create("ouyaSignedDebug") {
+            initWith(getByName("debug"))
+
+            // Deine bestehende Release-Signatur verwenden
+            signingConfig = signingConfigs.getByName("release")
+
+            // Wichtig: Debug-Verhalten behalten
+            isDebuggable = true
+            isJniDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+            // Kein Suffix, wenn diese APK die normale com.ast.unreal ersetzen soll
+            applicationIdSuffix = null
+            versionNameSuffix = "-OUYA-Signed"
+
+            matchingFallbacks += listOf("debug")
+        }
+    }
+
+    // Replaces deprecated gradle.properties option: android.defaults.buildfeatures.buildconfig=true
+    buildFeatures {
+        buildConfig = true
+    }
+
     lint {
         checkReleaseBuilds = false
         abortOnError = false
@@ -619,7 +654,7 @@ android {
         minSdk = 16
         targetSdk = 19
         versionCode = 1
-        versionName = "1.0-OUYA"
+        versionName = "1.0.2"
 
         ndk {
             abiFilters += listOf("armeabi-v7a")
@@ -632,7 +667,6 @@ android {
                 arguments += listOf(
                     "-DANDROID_STL=c++_shared",
                     "-DANDROID_PLATFORM=android-16",
-                    "-DUE1_ANDROID=ON",
                     "-DUNREAL_ANDROID_OUYA=ON",
                     "-DANDROID_LEGACY_API16=ON"
                 )

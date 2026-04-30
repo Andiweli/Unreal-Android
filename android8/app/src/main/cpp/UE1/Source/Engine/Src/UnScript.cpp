@@ -1714,7 +1714,7 @@ void AActor::execTouchingActors( FFrame& Stack, BYTE*& Result )
 	PRE_ITERATOR;
 		// Fetch next actor in the iteration.
 		*OutActor = NULL;
-		for( iTouching; iTouching<ARRAY_COUNT(Touching) && *OutActor==NULL; iTouching++ )
+		for( ; iTouching<ARRAY_COUNT(Touching) && *OutActor==NULL; iTouching++ )
 		{
 			AActor* TestActor = Touching[iTouching];
 			if(	TestActor && TestActor->IsA(BaseClass) )
@@ -1911,7 +1911,7 @@ void AZoneInfo::execZoneActors( FFrame& Stack, BYTE*& Result )
 			if
 			(	TestActor
 			&&	TestActor->IsA(BaseClass)
-			&&	TestActor->IsInZone(this) );
+			&&	TestActor->IsInZone(this) )
 				*OutActor = TestActor;
 		}
 		if( *OutActor == NULL )

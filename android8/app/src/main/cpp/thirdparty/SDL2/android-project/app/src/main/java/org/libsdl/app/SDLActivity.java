@@ -59,6 +59,7 @@ import java.util.Locale;
 */
 public class SDLActivity extends Activity implements View.OnSystemUiVisibilityChangeListener {
     private static final String TAG = "SDL";
+    public static final boolean UE1_SDL_VERBOSE_LOGGING = false;
     private static final int SDL_MAJOR_VERSION = 2;
     private static final int SDL_MINOR_VERSION = 32;
     private static final int SDL_MICRO_VERSION = 10;
@@ -165,7 +166,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (s2 != 0) src += " Some_Unknown";
 
-        Log.v(TAG, prefix + "int=" + s_copy + " CLASS={" + cls + " } source(s):" + src);
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, prefix + "int=" + s_copy + " CLASS={" + cls + " } source(s):" + src);
     }
 */
 
@@ -319,15 +320,15 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Setup
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.v(TAG, "Device: " + Build.DEVICE);
-        Log.v(TAG, "Model: " + Build.MODEL);
-        Log.v(TAG, "onCreate()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "Device: " + Build.DEVICE);
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "Model: " + Build.MODEL);
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
 
         try {
             Thread.currentThread().setName("SDLActivity");
         } catch (Exception e) {
-            Log.v(TAG, "modify thread properties failed " + e.toString());
+            if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "modify thread properties failed " + e.toString());
         }
 
         // Load shared libraries
@@ -423,7 +424,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         if (intent != null && intent.getData() != null) {
             String filename = intent.getData().getPath();
             if (filename != null) {
-                Log.v(TAG, "Got filename: " + filename);
+                if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "Got filename: " + filename);
                 SDLActivity.onNativeDropFile(filename);
             }
         }
@@ -454,7 +455,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Events
     @Override
     protected void onPause() {
-        Log.v(TAG, "onPause()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onPause()");
         super.onPause();
 
         if (mHIDDeviceManager != null) {
@@ -467,7 +468,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onResume() {
-        Log.v(TAG, "onResume()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onResume()");
         super.onResume();
 
         if (mHIDDeviceManager != null) {
@@ -480,7 +481,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onStop() {
-        Log.v(TAG, "onStop()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onStop()");
         super.onStop();
         if (mHasMultiWindow) {
             pauseNativeThread();
@@ -489,7 +490,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onStart() {
-        Log.v(TAG, "onStart()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onStart()");
         super.onStart();
         if (mHasMultiWindow) {
             resumeNativeThread();
@@ -529,7 +530,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        Log.v(TAG, "onWindowFocusChanged(): " + hasFocus);
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onWindowFocusChanged(): " + hasFocus);
 
         if (SDLActivity.mBrokenLibraries) {
            return;
@@ -554,7 +555,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     public void onLowMemory() {
-        Log.v(TAG, "onLowMemory()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onLowMemory()");
         super.onLowMemory();
 
         if (SDLActivity.mBrokenLibraries) {
@@ -566,7 +567,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
-        Log.v(TAG, "onConfigurationChanged()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onConfigurationChanged()");
         super.onConfigurationChanged(newConfig);
 
         if (SDLActivity.mBrokenLibraries) {
@@ -581,7 +582,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onDestroy() {
-        Log.v(TAG, "onDestroy()");
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "onDestroy()");
 
         if (mHIDDeviceManager != null) {
             HIDDeviceManager.release(mHIDDeviceManager);
@@ -604,7 +605,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             try {
                 SDLActivity.mSDLThread.join();
             } catch(Exception e) {
-                Log.v(TAG, "Problem stopping SDLThread: " + e);
+                if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "Problem stopping SDLThread: " + e);
             }
         }
 
@@ -1025,7 +1026,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        Log.v(TAG, "setOrientation() requestedOrientation=" + req + " width=" + w +" height="+ h +" resizable=" + resizable + " hint=" + hint);
+        if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "setOrientation() requestedOrientation=" + req + " width=" + w +" height="+ h +" resizable=" + resizable + " hint=" + hint);
         mSingleton.setRequestedOrientation(req);
     }
 
@@ -1234,7 +1235,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             /* environment variables set! */
             return true;
         } catch (Exception e) {
-           Log.v(TAG, "exception " + e.toString());
+           if (UE1_SDL_VERBOSE_LOGGING) Log.v(TAG, "exception " + e.toString());
         }
         return false;
     }
@@ -1323,9 +1324,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         }
 
 //        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-//            Log.v("SDL", "key down: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
+//            if (UE1_SDL_VERBOSE_LOGGING) Log.v("SDL", "key down: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
 //        } else if (event.getAction() == KeyEvent.ACTION_UP) {
-//            Log.v("SDL", "key up: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
+//            if (UE1_SDL_VERBOSE_LOGGING) Log.v("SDL", "key up: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
 //        }
 
         // Dispatch the different events depending on where they come from
@@ -1879,14 +1880,14 @@ class SDLMain implements Runnable {
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY);
         } catch (Exception e) {
-            Log.v("SDL", "modify thread properties failed " + e.toString());
+            if (SDLActivity.UE1_SDL_VERBOSE_LOGGING) Log.v("SDL", "modify thread properties failed " + e.toString());
         }
 
-        Log.v("SDL", "Running main function " + function + " from library " + library);
+        if (SDLActivity.UE1_SDL_VERBOSE_LOGGING) Log.v("SDL", "Running main function " + function + " from library " + library);
 
         SDLActivity.nativeRunMain(library, function, arguments);
 
-        Log.v("SDL", "Finished main function");
+        if (SDLActivity.UE1_SDL_VERBOSE_LOGGING) Log.v("SDL", "Finished main function");
 
         if (SDLActivity.mSingleton != null && !SDLActivity.mSingleton.isFinishing()) {
             // Let's finish the Activity

@@ -631,6 +631,23 @@ CORE_API void appFree( void* Ptr )
 
 	unguard;
 }
+
+CORE_API void* operator new( size_t Size )
+{
+	guard( "operator new" );
+	return appMalloc( Size, "new" );
+	unguard;
+}
+
+CORE_API void operator delete( void* Ptr ) noexcept
+{
+	guard( "operator delete" );
+	if( Ptr )
+	{
+		appFree( Ptr );
+	}
+	unguard;
+}
 CORE_API void* appRealloc( void* Ptr, INT NewSize, const char* Tag )
 {
 	guard(appRealloc);

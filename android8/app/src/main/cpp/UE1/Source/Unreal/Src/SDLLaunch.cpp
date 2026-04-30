@@ -161,6 +161,335 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 #ifdef PLATFORM_ANDROID
 #include <android/log.h>
@@ -3618,6 +3947,5881 @@ static void PlatformPreInit()
 	}
 }
 
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
+#elif defined(PLATFORM_ANDROID)
+
+#define MAX_PATH 1024
+static char GAndroidRootPath[MAX_PATH] = "";
+
+static bool AndroidDirExists( const char* Path )
+{
+	struct stat St;
+	return stat( Path, &St ) == 0 && S_ISDIR( St.st_mode );
+}
+
+static bool AndroidLooksLikeUnrealRoot( const char* Root )
+{
+	if( !Root || !Root[0] )
+		return false;
+
+	char Path[MAX_PATH];
+	snprintf( Path, sizeof(Path), "%s/System/Core.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/Engine.u", Root );
+	if( access( Path, R_OK ) != 0 )
+		return false;
+	snprintf( Path, sizeof(Path), "%s/System/UnrealI.u", Root );
+	if( access( Path, R_OK ) != 0 )
+	{
+		snprintf( Path, sizeof(Path), "%s/System/UnrealShare.u", Root );
+		if( access( Path, R_OK ) != 0 )
+			return false;
+	}
+	snprintf( Path, sizeof(Path), "%s/Maps", Root );
+	return AndroidDirExists( Path );
+}
+
+static void AndroidTryRootCandidate( const char* Root )
+{
+	if( GAndroidRootPath[0] || !Root || !Root[0] )
+		return;
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "checking data root candidate: %s", Root );
+	if( AndroidLooksLikeUnrealRoot( Root ) )
+	{
+		snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s", Root );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Android", "using data root candidate: %s", GAndroidRootPath );
+	}
+}
+
+static void AndroidCaptureRootArg( int argc, char** argv )
+{
+	for( int i = 1; i < argc; ++i )
+	{
+		if( !argv[i] )
+			continue;
+		if( !strcmp( argv[i], "--ue1-root" ) && i + 1 < argc && argv[i + 1] )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i + 1], 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i + 1] );
+			return;
+		}
+		if( !strncmp( argv[i], "--ue1-root=", 11 ) )
+		{
+			setenv( "UE1_ANDROID_ROOT", argv[i] + 11, 1 );
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "root from Java: %s", argv[i] + 11 );
+			return;
+		}
+	}
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	__android_log_print( ANDROID_LOG_ERROR, "UE1Android", "%s", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Unreal Android", Msg, nullptr );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	// UNREAL_ANDROID_NATIVE_ROOT_PATH
+	// Java checks Android/data first, then public /Unreal and SD-root candidates.
+	// It passes the selected path with --ue1-root; AndroidCaptureRootArg consumes it
+	// before UE1 sees argv.
+	const char* EnvRoot = getenv( "UE1_ANDROID_ROOT" );
+	if( EnvRoot && EnvRoot[0] )
+		AndroidTryRootCandidate( EnvRoot );
+
+	const char* ExternalBase = SDL_AndroidGetExternalStoragePath();
+	if( ExternalBase && ExternalBase[0] )
+	{
+		char Candidate[MAX_PATH];
+		snprintf( Candidate, sizeof(Candidate), "%s/Unreal", ExternalBase );
+		AndroidTryRootCandidate( Candidate );
+	}
+
+	AndroidTryRootCandidate( "/storage/emulated/0/Unreal" );
+	AndroidTryRootCandidate( "/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/storage/sdcard0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/sdcard/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usbdrive0/Unreal" );
+	AndroidTryRootCandidate( "/mnt/usb_storage/Unreal" );
+
+	if( !GAndroidRootPath[0] )
+	{
+		if( ExternalBase && ExternalBase[0] )
+			snprintf( GAndroidRootPath, sizeof(GAndroidRootPath), "%s/Unreal", ExternalBase );
+		else
+			EarlyError( "Could not resolve Android external app data path." );
+	}
+
+	char SystemPath[MAX_PATH];
+	snprintf( SystemPath, sizeof(SystemPath), "%s/System", GAndroidRootPath );
+	if( !AndroidDirExists( SystemPath ) )
+		EarlyError( "Unreal data was not found. Checked Android/data, /storage/emulated/0/Unreal, /sdcard/Unreal, /storage/sdcard0/Unreal and /mnt/usbdrive/Unreal. Copy your v200/v205 files to Android/data/com.ast.unreal/files/Unreal/ for maximum Android compatibility." );
+
+	setenv( "HOME", GAndroidRootPath, 1 );
+	setenv( "UE1_ANDROID_ROOT", GAndroidRootPath, 1 );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "Android root: %s", GAndroidRootPath );
+
+	if( chdir( SystemPath ) < 0 )
+	{
+		char Err[MAX_PATH + 128];
+		snprintf( Err, sizeof(Err), "Could not chdir to %s: errno=%d", SystemPath, errno );
+		EarlyError( Err );
+	}
+}
+
 #else
 
 void PlatformPreInit()
@@ -3626,6 +9830,53 @@ void PlatformPreInit()
 }
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -608,12 +608,55 @@ android {
     namespace = "com.ast.unreal"
     compileSdk = 36
 
+    tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+        options.compilerArgs.addAll(
+            listOf(
+                "-Xlint:none"
+            )
+        )
+    }
+
+    // Replaces deprecated gradle.properties option: android.defaults.buildfeatures.buildconfig=true
+    buildFeatures {
+        buildConfig = true
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("E:/Development/Android/UE1/YOUR_KEYSTORE.jks")
+            storePassword = "DEIN_STORE_PASSWORT"
+            keyAlias = "DEIN_KEY_ALIAS"
+            keyPassword = "DEIN_KEY_PASSWORT"
+        }
+    }
+
+    buildTypes {
+        create("android8SignedDebug") {
+            initWith(getByName("debug"))
+
+            // Deine bestehende Release-Signatur verwenden
+            signingConfig = signingConfigs.getByName("release")
+
+            // Wichtig: Debug-Verhalten behalten
+            isDebuggable = true
+            isJniDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+
+            // Kein Suffix, wenn diese APK die normale com.ast.unreal ersetzen soll
+            applicationIdSuffix = null
+            versionNameSuffix = "-Android8-Signed"
+
+            matchingFallbacks += listOf("debug")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.ast.unreal"
         minSdk = 23
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0-Android"
+        versionName = "1.0.2"
 
         ndk {
             abiFilters += listOf("armeabi-v7a")
@@ -625,8 +668,7 @@ android {
             cmake {
                 arguments += listOf(
                     "-DANDROID_STL=c++_shared",
-                    "-DANDROID_PLATFORM=android-23",
-                    "-DUE1_ANDROID=ON"
+                    "-DANDROID_PLATFORM=android-23"
                 )
                 cppFlags += listOf("-std=c++17", "-fexceptions", "-frtti")
             }

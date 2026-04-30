@@ -575,7 +575,7 @@ void ULevel::NotifyReceivedText( UNetConnection* Connection, const char* Text )
 			INT Response=0;
 			if
 			(	!Parse(Text,"RESPONSE=",Response)
-			||	!Engine->ChallengeResponse(Connection->Challenge)==Response )
+			||	Engine->ChallengeResponse(Connection->Challenge) != Response )
 			{
 				Connection->Logf( "FAILURE CHALLENGE" );
 				Connection->FlushNet();

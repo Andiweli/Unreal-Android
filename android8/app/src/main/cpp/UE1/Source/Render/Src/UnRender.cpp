@@ -1512,7 +1512,7 @@ void URender::OccludeBsp( FSceneNode* Frame )
 					goto NextCoplanar;
 
 				// Fix facing.
-				if( (!IsFront && (PolyFlags & (PF_TwoSided | PF_Portal))) ^ Frame->Mirror==-1.f )
+				if( ( !IsFront && (PolyFlags & (PF_TwoSided | PF_Portal)) ) != ( Frame->Mirror == -1.f ) )
 					for( INT i=0; i<NumPts/2; i++ )
 						Exchange( Pts[i], Pts[NumPts-i-1] );
 

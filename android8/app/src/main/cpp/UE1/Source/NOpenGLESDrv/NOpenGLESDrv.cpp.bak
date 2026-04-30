@@ -257,7 +257,6 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	verify( VtxData );
 	VtxDataEnd = VtxData + VtxDataSize;
 	VtxDataPtr = VtxData;
-	VtxPolyStart = VtxData;
 
 	IdxDataSize = MAX_VERTS;
 	IdxData = (GLushort*)appMalloc( IdxDataSize * sizeof(GLushort), "GLIdxDataBuf" );

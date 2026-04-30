@@ -159,7 +159,11 @@ void UConsole::PostRender( FSceneNode* Frame )
 		appStrupr( BigMessage );
 		INT XL, YL;
 		Viewport->Canvas->StrLen( LargeFont, XL, YL, BigMessage );
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CENTER_CONSOLE_BIGMESSAGE
+		Viewport->Canvas->Printf( LargeFont, (INT)(Viewport->Canvas->ClipX * 0.5f) - XL/2, (INT)(Viewport->Canvas->ClipY * 0.5f) - YL/2, "%s", BigMessage );
+#else
 		Viewport->Canvas->Printf( LargeFont, Frame->X/2-XL/2, Frame->Y/2-YL/2, "%s", BigMessage );
+#endif
 	}
 
 	// If the console has changed since the previous frame, draw it.

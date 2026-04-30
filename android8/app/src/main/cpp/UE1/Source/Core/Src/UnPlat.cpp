@@ -304,6 +304,105 @@
 #ifdef PLATFORM_ANDROID
 #include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
 #endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
 UBOOL SaveAllConfigs(); // UNREAL_ANDROID_CONFIG_FORWARD
 #ifdef PLATFORM_ANDROID
 #include <android/log.h>
@@ -414,7 +513,7 @@ UBOOL FGlobalPlatform::Exec( const char* Cmd, FOutputDevice* Out )
 		else if( ParseCommand( &Cmd, "GPF" ) )
 		{
 			Out->Log("Unreal crashing with voluntary GPF");
-			*(int *)NULL = 123;
+			__builtin_trap();
 			return 1;
 		}
 		else if( ParseCommand( &Cmd, "RECURSE" ) )
@@ -1937,7 +2036,7 @@ char* appUnixPath( const char* Path )
 	char* UnixPath = Results[Count++ & 15];
 	char* Cur = UnixPath;
 	appStrncpy( UnixPath, Path, 1024 );
-	while( Cur = strchr( Cur, '\\' ) )
+	while( (Cur = strchr( Cur, '\\' )) )
 		*Cur = '/';
 	return UnixPath;
 	unguard;
