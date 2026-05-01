@@ -32,6 +32,7 @@
 #include "SDL_androidvideo.h"
 #include "SDL_androidwindow.h"
 #include "SDL_hints.h"
+#include "SDL_ouya_resolution.h"
 
 /* Currently only one window */
 SDL_Window *Android_Window = NULL;
@@ -54,10 +55,18 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
     /* Adjust the window data to match the screen */
     window->x = 0;
     window->y = 0;
-    window->w = 960;
-    SDL_Log("OUYA/API16 COMBO: Android_CreateWindow reports width=960 instead of Android_SurfaceWidth=%d", Android_SurfaceWidth);
-    window->h = 540;
-    SDL_Log("OUYA/API16 COMBO: Android_CreateWindow reports height=540 instead of Android_SurfaceHeight=%d", Android_SurfaceHeight);
+    int ouya_w = 960;
+    int ouya_h = 540;
+    SDL_OUYA_GetRenderResolution(&ouya_w, &ouya_h);
+    
+            if (ouya_w > 0 && ouya_h > 0) {
+window->w = ouya_w;
+                    SDL_Log("OUYA/API16 COMBO: Android_CreateWindow reports width=%d instead of Android_SurfaceWidth=%d", ouya_w, Android_SurfaceWidth);
+            } else {
+                SDL_Log("OUYA/API16 COMBO: Native mode; Android_CreateWindow keeps surface size");
+            }
+    window->h = ouya_h;
+    SDL_Log("OUYA/API16 COMBO: Android_CreateWindow reports height=%d instead of Android_SurfaceHeight=%d", ouya_h, Android_SurfaceHeight);
 
     window->flags &= ~SDL_WINDOW_HIDDEN;
     window->flags |= SDL_WINDOW_SHOWN; /* only one window on Android */
@@ -144,10 +153,9 @@ void Android_SetWindowFullscreen(_THIS, SDL_Window *window, SDL_VideoDisplay *di
         old_w = window->w;
         old_h = window->h;
 
-        new_w = 960;
-        SDL_Log("OUYA/API16 COMBO: Android_SetWindowFullscreen reports new_w=960");
-        new_h = 540;
-        SDL_Log("OUYA/API16 COMBO: Android_SetWindowFullscreen reports new_h=540");
+        SDL_OUYA_GetRenderResolution(&new_w, &new_h);
+        SDL_Log("OUYA/API16 COMBO: Android_SetWindowFullscreen reports new_w=%d", new_w);
+        SDL_Log("OUYA/API16 COMBO: Android_SetWindowFullscreen reports new_h=%d", new_h);
 
         if (new_w < 0 || new_h < 0) {
             SDL_SetError("ANativeWindow_getWidth/Height() fails");

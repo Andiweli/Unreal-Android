@@ -86,6 +86,21 @@ static FLOAT AndroidCanvasScale()
 }
 #endif
 
+
+#ifdef PLATFORM_ANDROID // UE1_ANDROID_AUDIOVIDEO_MENU_DRAW_FIX
+static UBOOL AndroidCanvasNearlyEqual( FLOAT A, FLOAT B, FLOAT Tolerance )
+{
+	return ( A >= B - Tolerance ) && ( A <= B + Tolerance );
+}
+
+static UBOOL AndroidCanvasActiveMenuIs( UCanvas* Canvas, const char* ClassName )
+{
+	if( !Canvas || !ClassName || !Canvas->Viewport || !Canvas->Viewport->Actor || !Canvas->Viewport->Actor->myHUD || !Canvas->Viewport->Actor->myHUD->MainMenu )
+		return 0;
+	return Canvas->Viewport->Actor->myHUD->MainMenu->GetClass()
+		&& !appStricmp( Canvas->Viewport->Actor->myHUD->MainMenu->GetClass()->GetName(), ClassName );
+}
+#endif
 /*-----------------------------------------------------------------------------
 	UCanvas scaled sprites.
 -----------------------------------------------------------------------------*/
@@ -501,6 +516,88 @@ void UCanvas::execDrawText( FFrame& Stack, BYTE*& Result )
 	}
 
 	//debugf( "DrawText: '%s' %i", Text, CR );
+#ifdef PLATFORM_ANDROID // UE1_ANDROID_AUDIOVIDEO_MENU_DRAW_FIX
+	// Runtime cleanup for the stock UnrealVideoMenu without rebuilding Unreal.u:
+	// - shift the AUDIO/VIDEO value column slightly right for Resolution/Texture Detail;
+	// - suppress the orphaned High/Low that UnrealVideoMenu.DrawMenu still draws for
+	//   hidden Sound Quality after MenuLength was trimmed to 6.
+	FLOAT AndroidMenuSpacing = 0.04f * ClipY;
+	if( AndroidMenuSpacing < 16.0f ) AndroidMenuSpacing = 16.0f;
+	if( AndroidMenuSpacing > 32.0f ) AndroidMenuSpacing = 32.0f;
+
+	FLOAT AndroidMenuStartX = 0.5f * ClipX - 120.0f;
+	if( AndroidMenuStartX < 40.0f ) AndroidMenuStartX = 40.0f;
+
+	FLOAT AndroidMenuStartY = 0.5f * ( ClipY - 6.0f * AndroidMenuSpacing - 128.0f );
+	if( AndroidMenuStartY < 36.0f ) AndroidMenuStartY = 36.0f;
+
+	const FLOAT AndroidValueX = AndroidMenuStartX + 152.0f;
+	INT AndroidSpaceX=0, AndroidSpaceY=0;
+	StrLen( Font, AndroidSpaceX, AndroidSpaceY, " ", 0, 1 );
+	if( AndroidSpaceX < 1 )
+		AndroidSpaceX = 1;
+
+	const UBOOL AndroidIsHighLow = ( !appStricmp( Text, "High" ) || !appStricmp( Text, "Low" ) );
+	if( AndroidIsHighLow )
+	{
+		const FLOAT AndroidRowTolerance = Max( 4.0f, AndroidMenuSpacing * 0.35f );
+		const FLOAT AndroidXLeft  = AndroidValueX - 32.0f;
+		const FLOAT AndroidXRight = AndroidValueX + 128.0f;
+		if( CurX >= AndroidXLeft && CurX <= AndroidXRight
+		&&  AndroidCanvasNearlyEqual( CurY, AndroidMenuStartY + AndroidMenuSpacing * 6.0f, AndroidRowTolerance ) )
+		{
+			return;
+		}
+	}
+
+	if( AndroidCanvasNearlyEqual( CurX, AndroidValueX, 2.5f ) )
+	{
+		if( AndroidCanvasNearlyEqual( CurY, AndroidMenuStartY + AndroidMenuSpacing * 2.0f, 2.5f ) )
+		{
+			if( Text[0] == '[' || Text[0] == ' ' )
+				CurX += AndroidSpaceX;
+		}
+		else if( AndroidCanvasNearlyEqual( CurY, AndroidMenuStartY + AndroidMenuSpacing * 3.0f, 2.5f ) )
+		{
+			if( AndroidIsHighLow )
+				CurX += AndroidSpaceX * 2;
+		}
+	}
+#endif
+
+#ifdef PLATFORM_ANDROID // UE1_ANDROID_MULTIPLAYER_JOIN_MENU_DRAW_FIX
+	if( AndroidCanvasActiveMenuIs( this, "UnrealJoinGameMenu" ) )
+	{
+		FLOAT JoinSpacing = 0.06f * ClipY;
+		if( JoinSpacing < 11.0f ) JoinSpacing = 11.0f;
+		if( JoinSpacing > 32.0f ) JoinSpacing = 32.0f;
+
+		FLOAT JoinStartX = 0.5f * ClipX - 120.0f;
+		if( JoinStartX < 12.0f ) JoinStartX = 12.0f;
+
+		FLOAT JoinStartY = 0.5f * ( ClipY - 3.0f * JoinSpacing - 128.0f );
+		if( JoinStartY < 32.0f ) JoinStartY = 32.0f;
+
+		const FLOAT JoinValueX = JoinStartX + 100.0f;
+		const FLOAT JoinTolerance = Max( 3.0f, JoinSpacing * 0.25f );
+
+		if( ( !appStricmp( Text, "Choose From Favorites" ) || !appStricmp( Text, "Go to the Epic Unreal server list" ) )
+		&&  AndroidCanvasNearlyEqual( CurX, JoinStartX, 3.0f ) )
+		{
+			return;
+		}
+
+		if( AndroidCanvasNearlyEqual( CurY, JoinStartY + JoinSpacing * 2.0f, JoinTolerance )
+		 || AndroidCanvasNearlyEqual( CurY, JoinStartY + JoinSpacing * 3.0f, JoinTolerance ) )
+		{
+			if( AndroidCanvasNearlyEqual( CurX, JoinStartX, 3.0f )
+			 || AndroidCanvasNearlyEqual( CurX, JoinValueX, 4.0f ) )
+			{
+				CurY -= JoinSpacing;
+			}
+		}
+	}
+#endif
 	if( Style!=STY_None )
 		WrappedPrintf( Font, bCenter, "%s", Text );
 	INT XL, YL;

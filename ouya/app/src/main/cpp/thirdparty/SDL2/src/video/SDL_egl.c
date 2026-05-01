@@ -28,6 +28,7 @@
 #ifdef SDL_VIDEO_DRIVER_ANDROID
 #include <android/native_window.h>
 #include "../video/android/SDL_androidvideo.h"
+#include "../video/android/SDL_ouya_resolution.h"
 #endif
 #ifdef SDL_VIDEO_DRIVER_RPI
 #include <unistd.h>
@@ -1205,8 +1206,16 @@ SDL_EGL_CreateSurface(_THIS, NativeWindowType nw)
                                         _this->egl_data->egl_config,
                                         EGL_NATIVE_VISUAL_ID, &format_wanted);
 
-    ANativeWindow_setBuffersGeometry(nw, 960, 540, format_wanted);
-    SDL_Log("OUYA/API16 COMBO: EGL native buffer forced to 960x540 format=%d", (int)format_wanted);
+    int ouya_w = 960;
+    int ouya_h = 540;
+    SDL_OUYA_GetRenderResolution(&ouya_w, &ouya_h);
+                if (ouya_w > 0 && ouya_h > 0) {
+                    ANativeWindow_setBuffersGeometry(nw, ouya_w, ouya_h, format_wanted);
+                    SDL_Log("OUYA/API16 COMBO: EGL native buffer forced to %dx%d format=%d", ouya_w, ouya_h, format_wanted);
+                } else {
+                    SDL_Log("OUYA/API16 COMBO: Native mode; leaving Android native buffer geometry unchanged");
+                }
+    SDL_Log("OUYA/API16 COMBO: EGL native buffer forced to %dx%d format=%d", ouya_w, ouya_h, (int)format_wanted);
 #endif
 
     if (_this->gl_config.framebuffer_srgb_capable) {

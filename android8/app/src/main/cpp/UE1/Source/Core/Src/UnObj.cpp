@@ -726,6 +726,79 @@ UState* UObject::FindState( FName InName )
 }
 IMPLEMENT_CLASS(UObject);
 
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+// Android UE1 ports can mix HUD classes from different package namespaces
+// (for example menu/intro HUD vs. in-game UnrealHUD). Keep the small HUD
+// option pair synchronized natively so the menu before a game and the menu
+// during gameplay see the same values even when different HUD subclasses save
+// to different config sections.
+static UBOOL UE1AndroidIsHudConfigKey( const char* Key )
+{
+	return Key
+	&&	( !appStricmp( Key, "HudMode" ) || !appStricmp( Key, "Crosshair" ) );
+}
+
+static const char* UE1AndroidHudConfigSections[] =
+{
+	"Unreal.UnrealHUD",
+	"UnrealI.UnrealHUD",
+	"UnrealShare.UnrealHUD",
+	"Unreal.IntroNullHud",
+	"UnrealI.IntroNullHud",
+	"UnrealShare.IntroNullHud",
+	"Unreal.UnrealTeamHUD",
+	"UnrealI.UnrealTeamHUD",
+	"UnrealShare.UnrealTeamHUD",
+	"Unreal.SpectatorHud",
+	"UnrealI.SpectatorHud",
+	"UnrealShare.SpectatorHud",
+	"Engine.HUD"
+};
+
+static UBOOL UE1AndroidGetUnifiedHudConfigValue( const char* Key, char* Value, INT ValueSize, const char* Filename )
+{
+	if( !UE1AndroidIsHudConfigKey(Key) || !Value || ValueSize <= 0 )
+		return 0;
+
+	// Prefer the normal single-player/gameplay HUD sections as canonical source.
+	if( GetConfigString( "Unreal.UnrealHUD", Key, Value, ValueSize, Filename ) )
+		return 1;
+	if( GetConfigString( "UnrealI.UnrealHUD", Key, Value, ValueSize, Filename ) )
+		return 1;
+
+	// Fallback for already existing configs where only an intro/menu HUD section
+	// has the latest value from a previous Android build.
+	for( INT i=0; i<ARRAY_COUNT(UE1AndroidHudConfigSections); ++i )
+		if( GetConfigString( UE1AndroidHudConfigSections[i], Key, Value, ValueSize, Filename ) )
+			return 1;
+
+	return 0;
+}
+
+static void UE1AndroidMirrorHudConfigValue( const char* Key, const char* Value, const char* Filename )
+{
+	if( !UE1AndroidIsHudConfigKey(Key) || !Value )
+		return;
+
+	for( INT i=0; i<ARRAY_COUNT(UE1AndroidHudConfigSections); ++i )
+		SetConfigString( UE1AndroidHudConfigSections[i], Key, Value, Filename );
+}
+
+static UBOOL UE1AndroidClassHasHudConfigKeys( UClass* Class )
+{
+	if( !Class )
+		return 0;
+
+	for( UClass* TestClass=Class; TestClass; TestClass=TestClass->GetSuperClass() )
+	{
+		for( TFieldIterator<UProperty> It(TestClass); It; ++It )
+			if( UE1AndroidIsHudConfigKey( It->GetName() ) )
+				return 1;
+	}
+	return 0;
+}
+#endif
+
 /*-----------------------------------------------------------------------------
 	UObject configuration.
 -----------------------------------------------------------------------------*/
@@ -765,6 +838,17 @@ void UObject::LoadConfig( FName Type, UClass* Class, const char* Filename )
 				UClass* BaseClass = (It->PropertyFlags & CPF_GlobalConfig) ? It->GetOwnerClass() : Class;
 				if( GetConfigString( BaseClass->GetPathName(), Key, Value, ARRAY_COUNT(Value), Filename ) )
 					It->ImportText( Value, (BYTE*)this + It->Offset + i*It->GetElementSize(), 1 );
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+				// Use one HUD option source across intro/menu HUDs and in-game HUDs.
+				// This avoids separate HUD Configuration values before and during play.
+				if( UE1AndroidIsHudConfigKey(Key) && UE1AndroidClassHasHudConfigKeys(Class) )
+				{
+					char HudValue[1024]="";
+					if( UE1AndroidGetUnifiedHudConfigValue( Key, HudValue, ARRAY_COUNT(HudValue), Filename ) )
+						It->ImportText( HudValue, (BYTE*)this + It->Offset + i*It->GetElementSize(), 1 );
+				}
+#endif
 			}
 		}
 	}
@@ -778,6 +862,9 @@ void UObject::LoadConfig( FName Type, UClass* Class, const char* Filename )
 void UObject::SaveConfig( DWORD Flags, const char* Filename )
 {
 	guard(UObject::SaveConfig);
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	UBOOL bAndroidHudSyncNeeded = 0;
+#endif
 	for( TFieldIterator<UProperty> It(GetClass()); It; ++It )
 	{
 		if( (It->PropertyFlags & Flags)==Flags )
@@ -794,6 +881,18 @@ void UObject::SaveConfig( DWORD Flags, const char* Filename )
 				It->ExportText( Index, Value, (BYTE*)this, (BYTE*)this, 1 );
 				UClass* SaveClass = (It->PropertyFlags & CPF_GlobalConfig) ? It->GetOwnerClass() : GetClass();
 				SetConfigString( SaveClass->GetPathName(), Key, Value, Filename );
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+				// Do not bind HUD Configuration to the exact UnrealHUD class name.
+				// The Android package set can use a menu/intro HUD before gameplay and
+				// another UnrealHUD package path in-game. Mirror only the known HUD
+				// option keys so both contexts keep one shared value.
+				if( UE1AndroidIsHudConfigKey(Key) && UE1AndroidClassHasHudConfigKeys(GetClass()) )
+				{
+					UE1AndroidMirrorHudConfigValue( Key, Value, Filename );
+					bAndroidHudSyncNeeded = 1;
+				}
+#endif
 			}
 		}
 	}
@@ -805,6 +904,21 @@ void UObject::SaveConfig( DWORD Flags, const char* Filename )
 		for( TObjectIterator<UClass> It; It; ++It )
 			if( It->IsChildOf(BaseClass) )
 				It->GetDefaultObject()->LoadConfig( NAME_Config );
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	// Refresh every live/default object that exposes the HUD option keys.
+	// This covers menu HUDs and in-game HUDs without hard-coding a single class.
+	if( bAndroidHudSyncNeeded )
+	{
+		for( TObjectIterator<UClass> ItC; ItC; ++ItC )
+			if( UE1AndroidClassHasHudConfigKeys(*ItC) )
+				ItC->GetDefaultObject()->LoadConfig( NAME_Config );
+
+		for( TObjectIterator<UObject> ItO; ItO; ++ItO )
+			if( UE1AndroidClassHasHudConfigKeys(ItO->GetClass()) )
+				ItO->LoadConfig( NAME_Config );
+	}
+#endif
 	unguard;
 }
 

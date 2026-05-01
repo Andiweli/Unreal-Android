@@ -25,8 +25,8 @@ IMPLEMENT_PACKAGE(NOpenGLESDrv);
 IMPLEMENT_CLASS(UNOpenGLESRenderDevice);
 
 #if defined(UNREAL_ANDROID_OUYA)
-static const INT OUYA_INTERNAL_RENDER_W = 960;
-static const INT OUYA_INTERNAL_RENDER_H = 540;
+static const INT OUYA_DEFAULT_RENDER_W = 960;
+static const INT OUYA_DEFAULT_RENDER_H = 540;
 static const char* OUYA_BLIT_VERT_GLSL =
 	"attribute vec2 aPosition;\n"
 	"attribute vec2 aTexCoord;\n"
@@ -63,6 +63,7 @@ static constexpr DWORD AttribSizes[AT_Count] = {
 // unlike in newer unreal versions the low cache bits are actually used, so we have use one of the
 // actually unused higher bits for this purpose, thereby breaking 64-bit compatibility for now
 #define MASKED_TEXTURE_TAG (1ULL << 60ULL)
+#define LOW_DETAIL_TEXTURE_TAG (1ULL << 61ULL)
 
 // FColor is adjusted for endianness
 #define ALPHA_MASK 0xff000000
@@ -230,7 +231,16 @@ void UNOpenGLESRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "UseVAO",         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         "Options", CPF_Config );
 	new(Class, "UseBGRA",        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        "Options", CPF_Config );
 	new(Class, "AutoFOV",        RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),        "Options", CPF_Config );
+	new(Class, "BrightnessScale", RF_Public)UFloatProperty( CPP_PROPERTY(BrightnessScale), "Options", CPF_Config );
+	new(Class, "WorldGamma",     RF_Public)UFloatProperty( CPP_PROPERTY(WorldGamma),     "Options", CPF_Config );
+	new(Class, "WorldShadowLift", RF_Public)UFloatProperty( CPP_PROPERTY(WorldShadowLift), "Options", CPF_Config );
 	new(Class, "SwapInterval",   RF_Public)UIntProperty ( CPP_PROPERTY(SwapInterval),   "Options", CPF_Config );
+#if defined(UNREAL_ANDROID_OUYA)
+	new(Class, "PerfSpikeLog",        RF_Public)UBoolProperty ( CPP_PROPERTY(PerfSpikeLog),        "Options", CPF_Config );
+	new(Class, "PerfSpikeThresholdMS", RF_Public)UFloatProperty( CPP_PROPERTY(PerfSpikeThresholdMS), "Options", CPF_Config );
+	new(Class, "OuyaRenderWidth",      RF_Public)UIntProperty ( CPP_PROPERTY(OuyaRenderWidth),      "Options", CPF_Config );
+	new(Class, "OuyaRenderHeight",     RF_Public)UIntProperty ( CPP_PROPERTY(OuyaRenderHeight),     "Options", CPF_Config );
+#endif
 	unguardSlow;
 }
 
@@ -242,9 +252,31 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	UseVAO = false;
 	UseBGRA = true;
 	AutoFOV = true;
+	BrightnessScale = 1.0f;
+	WorldGamma = 1.0f;
+	WorldShadowLift = 0.0f;
 	CurrentBrightness = -1.f;
+	CurrentBrightnessScale = -1.f;
+	CurrentWorldGamma = -1.f;
+	CurrentWorldShadowLift = -1.f;
+	CurrentLowDetailTextures = false;
 	SwapInterval = 1;
 #if defined(UNREAL_ANDROID_OUYA)
+	PerfSpikeLog = true;
+	PerfSpikeThresholdMS = 50.0f;
+	OuyaPerfFrameStart = 0.0;
+	OuyaPerfLastLogTime = 0.0;
+	OuyaPerfFrameIndex = 0;
+	OuyaPerfDrawCalls = 0;
+	OuyaPerfTriangles = 0;
+	OuyaPerfTextureBinds = 0;
+	OuyaPerfTextureUploads = 0;
+	OuyaPerfTextureMips = 0;
+	OuyaPerfUploadKB = 0;
+	OuyaPerfStateChanges = 0;
+	OuyaPerfStateSkips = 0;
+	OuyaPerfLogFile = NULL;
+	OuyaResetGLStateCache();
 	OuyaFBO = 0;
 	OuyaColorTex = 0;
 	OuyaDepthRB = 0;
@@ -253,12 +285,375 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	OuyaBlitPos = -1;
 	OuyaBlitUV = -1;
 	OuyaBlitTexUniform = -1;
-	OuyaRTW = OUYA_INTERNAL_RENDER_W;
-	OuyaRTH = OUYA_INTERNAL_RENDER_H;
+	OuyaRenderWidth = OUYA_DEFAULT_RENDER_W;
+	OuyaRenderHeight = OUYA_DEFAULT_RENDER_H;
+	OuyaRTW = OUYA_DEFAULT_RENDER_W;
+	OuyaRTH = OUYA_DEFAULT_RENDER_H;
 	OuyaOutW = 0;
 	OuyaOutH = 0;
 #endif
 }
+
+#if defined(UNREAL_ANDROID_OUYA)
+static void OuyaNormalizeRenderTargetSize( INT& W, INT& H )
+{
+	if( ( W == 1280 && H == 720 ) ||
+	    ( W == 960  && H == 540 ) ||
+	    ( W == 1024 && H == 768 ) ||
+	    ( W == 800  && H == 600 ) )
+	{
+		return;
+	}
+
+	W = OUYA_DEFAULT_RENDER_W;
+	H = OUYA_DEFAULT_RENDER_H;
+}
+
+void UNOpenGLESRenderDevice::OuyaSelectRenderTargetSize()
+{
+	guard(UNOpenGLESRenderDevice::OuyaSelectRenderTargetSize);
+
+	INT W = OuyaRenderWidth;
+	INT H = OuyaRenderHeight;
+	const UBOOL bOuyaNativeResolutionRequested = 0;
+	if( bOuyaNativeResolutionRequested )
+	{
+		INT NativeW = 0;
+		INT NativeH = 0;
+		OuyaGetDrawableSize( NativeW, NativeH );
+
+		if( NativeW <= 0 || NativeH <= 0 )
+		{
+			NativeW = 1280;
+			NativeH = 720;
+		}
+
+		debugf( NAME_Log, "OUYA render resolution Native disabled; using fixed default %ix%i", NativeW, NativeH );
+		W = NativeW;
+		H = NativeH;
+	}
+
+	if( W == 0 && H == 0 )
+	{
+		INT NativeW = 0;
+		INT NativeH = 0;
+		OuyaGetDrawableSize( NativeW, NativeH );
+		if( NativeW <= 0 || NativeH <= 0 )
+		{
+			NativeW = Viewport ? Viewport->SizeX : OUYA_DEFAULT_RENDER_W;
+			NativeH = Viewport ? Viewport->SizeY : OUYA_DEFAULT_RENDER_H;
+		}
+		if( NativeW <= 0 || NativeH <= 0 )
+		{
+			NativeW = OUYA_DEFAULT_RENDER_W;
+			NativeH = OUYA_DEFAULT_RENDER_H;
+		}
+		debugf( NAME_Log, "OUYA render resolution Native requested; using %ix%i", NativeW, NativeH );
+		W = NativeW;
+		H = NativeH;
+	}
+	else
+	{
+		if( !bOuyaNativeResolutionRequested )
+		OuyaNormalizeRenderTargetSize( W, H );
+	}
+
+	if( W != OuyaRenderWidth || H != OuyaRenderHeight )
+	{
+		debugf( NAME_Warning, "OUYA render resolution %ix%i is unsupported; using %ix%i", OuyaRenderWidth, OuyaRenderHeight, W, H );
+		OuyaRenderWidth = W;
+		OuyaRenderHeight = H;
+	}
+
+	OuyaRTW = W;
+	OuyaRTH = H;
+
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::OuyaResetGLStateCache()
+{
+	guard(UNOpenGLESRenderDevice::OuyaResetGLStateCache);
+	OuyaGLState.Valid = 0;
+	OuyaGLState.ActiveTexture = GL_TEXTURE0;
+	for( INT i = 0; i < MaxTexUnits; ++i )
+		OuyaGLState.BoundTexture2D[i] = 0;
+	OuyaGLState.ArrayBuffer = 0;
+	OuyaGLState.Program = 0;
+	OuyaGLState.Viewport[0] = OuyaGLState.Viewport[1] = OuyaGLState.Viewport[2] = OuyaGLState.Viewport[3] = -1;
+	OuyaGLState.BlendEnabled = 0;
+	OuyaGLState.DepthTestEnabled = 0;
+	OuyaGLState.DepthMask = 1;
+	OuyaGLState.BlendSrc = GL_ONE;
+	OuyaGLState.BlendDst = GL_ZERO;
+	OuyaGLState.ColorMask[0] = OuyaGLState.ColorMask[1] = OuyaGLState.ColorMask[2] = OuyaGLState.ColorMask[3] = 1;
+	for( INT i = 0; i < AT_Count; ++i )
+		OuyaGLState.VertexAttribEnabled[i] = 0;
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::OuyaInvalidateUE1GLState()
+{
+	guard(UNOpenGLESRenderDevice::OuyaInvalidateUE1GLState);
+	FlushTriangles();
+	OuyaResetGLStateCache();
+
+	for( INT i = 0; i < MaxTexUnits; ++i )
+		TexInfo[i].CurrentCacheID = 0;
+
+	CurrentShaderFlags = 0xffffffff;
+	CurrentPolyFlags = 0xffffffff;
+	ShaderInfo = NULL;
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.FX = -1.f;
+	CurrentSceneNode.SizeX = -1;
+	for( INT i = 0; i < UF_Count; ++i )
+		UniformsChanged[i] = true;
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::OuyaBeginPerfFrame()
+{
+	if( !PerfSpikeLog )
+		return;
+	OuyaPerfFrameStart = appSeconds();
+	++OuyaPerfFrameIndex;
+	OuyaPerfDrawCalls = 0;
+	OuyaPerfTriangles = 0;
+	OuyaPerfTextureBinds = 0;
+	OuyaPerfTextureUploads = 0;
+	OuyaPerfTextureMips = 0;
+	OuyaPerfUploadKB = 0;
+	OuyaPerfStateChanges = 0;
+	OuyaPerfStateSkips = 0;
+}
+
+void UNOpenGLESRenderDevice::OuyaEndPerfFrame()
+{
+	if( !PerfSpikeLog || OuyaPerfFrameStart <= 0.0 )
+		return;
+
+	const DOUBLE Now = appSeconds();
+	const FLOAT FrameMS = (FLOAT)( ( Now - OuyaPerfFrameStart ) * 1000.0 );
+	if( FrameMS < PerfSpikeThresholdMS )
+		return;
+
+	debugf( NAME_Log, "OUYA PERF spike: frame=%u ms=%.2f draws=%i tris=%i texBinds=%i texUploads=%i texMips=%i uploadKB=%i stateChanges=%i stateSkips=%i",
+		OuyaPerfFrameIndex, FrameMS, OuyaPerfDrawCalls, OuyaPerfTriangles, OuyaPerfTextureBinds,
+		OuyaPerfTextureUploads, OuyaPerfTextureMips, OuyaPerfUploadKB, OuyaPerfStateChanges, OuyaPerfStateSkips );
+
+	if( !OuyaPerfLogFile )
+	{
+		static const char* LogPaths[] =
+		{
+			"../ouya_perf.log",
+			"../Unreal/ouya_perf.log",
+			"/sdcard/Unreal/ouya_perf.log",
+			"/storage/emulated/0/Unreal/ouya_perf.log"
+		};
+		for( INT i = 0; i < ARRAY_COUNT(LogPaths) && !OuyaPerfLogFile; ++i )
+			OuyaPerfLogFile = appFopen( LogPaths[i], "at" );
+		if( OuyaPerfLogFile )
+			appFprintf( OuyaPerfLogFile, "OUYA PERF log opened\n" );
+	}
+
+	if( OuyaPerfLogFile )
+	{
+		appFprintf( OuyaPerfLogFile, "OUYA PERF spike: frame=%u ms=%.2f draws=%i tris=%i texBinds=%i texUploads=%i texMips=%i uploadKB=%i stateChanges=%i stateSkips=%i\n",
+			OuyaPerfFrameIndex, FrameMS, OuyaPerfDrawCalls, OuyaPerfTriangles, OuyaPerfTextureBinds,
+			OuyaPerfTextureUploads, OuyaPerfTextureMips, OuyaPerfUploadKB, OuyaPerfStateChanges, OuyaPerfStateSkips );
+		fflush( OuyaPerfLogFile );
+	}
+	OuyaPerfLastLogTime = Now;
+}
+
+void UNOpenGLESRenderDevice::OuyaCountTextureUpload( const FTextureInfo& Info )
+{
+	++OuyaPerfTextureUploads;
+	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
+	{
+		const FMipmap* Mip = Info.Mips[MipIndex];
+		if( !Mip || !Mip->DataPtr )
+			break;
+		++OuyaPerfTextureMips;
+		OuyaPerfUploadKB += Max( 1, (INT)( ( Mip->USize * Mip->VSize * 4 + 1023 ) / 1024 ) );
+	}
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedActiveTexture( INT TMU )
+{
+	const GLenum Unit = GL_TEXTURE0 + TMU;
+	if( !OuyaGLState.Valid || OuyaGLState.ActiveTexture != Unit )
+	{
+		glActiveTexture( Unit );
+		OuyaGLState.ActiveTexture = Unit;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedBindTexture2D( INT TMU, GLuint Texture )
+{
+	OuyaCachedActiveTexture( TMU );
+	if( !OuyaGLState.Valid || OuyaGLState.BoundTexture2D[TMU] != Texture )
+	{
+		glBindTexture( GL_TEXTURE_2D, Texture );
+		OuyaGLState.BoundTexture2D[TMU] = Texture;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfTextureBinds;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedBindArrayBuffer( GLuint Buffer )
+{
+	if( !OuyaGLState.Valid || OuyaGLState.ArrayBuffer != Buffer )
+	{
+		glBindBuffer( GL_ARRAY_BUFFER, Buffer );
+		OuyaGLState.ArrayBuffer = Buffer;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedUseProgram( GLuint Program )
+{
+	if( !OuyaGLState.Valid || OuyaGLState.Program != Program )
+	{
+		glUseProgram( Program );
+		OuyaGLState.Program = Program;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedViewport( GLint X, GLint Y, GLsizei W, GLsizei H )
+{
+	if( !OuyaGLState.Valid || OuyaGLState.Viewport[0] != X || OuyaGLState.Viewport[1] != Y || OuyaGLState.Viewport[2] != W || OuyaGLState.Viewport[3] != H )
+	{
+		glViewport( X, Y, W, H );
+		OuyaGLState.Viewport[0] = X;
+		OuyaGLState.Viewport[1] = Y;
+		OuyaGLState.Viewport[2] = W;
+		OuyaGLState.Viewport[3] = H;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedEnable( GLenum Cap )
+{
+	UBOOL* Flag = NULL;
+	if( Cap == GL_BLEND )
+		Flag = &OuyaGLState.BlendEnabled;
+	else if( Cap == GL_DEPTH_TEST )
+		Flag = &OuyaGLState.DepthTestEnabled;
+
+	if( !Flag || !OuyaGLState.Valid || !*Flag )
+	{
+		glEnable( Cap );
+		if( Flag )
+			*Flag = 1;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedDisable( GLenum Cap )
+{
+	UBOOL* Flag = NULL;
+	if( Cap == GL_BLEND )
+		Flag = &OuyaGLState.BlendEnabled;
+	else if( Cap == GL_DEPTH_TEST )
+		Flag = &OuyaGLState.DepthTestEnabled;
+
+	if( !Flag || !OuyaGLState.Valid || *Flag )
+	{
+		glDisable( Cap );
+		if( Flag )
+			*Flag = 0;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedDepthMask( GLboolean Flag )
+{
+	if( !OuyaGLState.Valid || OuyaGLState.DepthMask != (UBOOL)(Flag != GL_FALSE) )
+	{
+		glDepthMask( Flag );
+		OuyaGLState.DepthMask = ( Flag != GL_FALSE );
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedBlendFunc( GLenum Src, GLenum Dst )
+{
+	if( !OuyaGLState.Valid || OuyaGLState.BlendSrc != Src || OuyaGLState.BlendDst != Dst )
+	{
+		glBlendFunc( Src, Dst );
+		OuyaGLState.BlendSrc = Src;
+		OuyaGLState.BlendDst = Dst;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedColorMask( GLboolean R, GLboolean G, GLboolean B, GLboolean A )
+{
+	if( !OuyaGLState.Valid ||
+		OuyaGLState.ColorMask[0] != (UBOOL)(R != GL_FALSE) ||
+		OuyaGLState.ColorMask[1] != (UBOOL)(G != GL_FALSE) ||
+		OuyaGLState.ColorMask[2] != (UBOOL)(B != GL_FALSE) ||
+		OuyaGLState.ColorMask[3] != (UBOOL)(A != GL_FALSE) )
+	{
+		glColorMask( R, G, B, A );
+		OuyaGLState.ColorMask[0] = ( R != GL_FALSE );
+		OuyaGLState.ColorMask[1] = ( G != GL_FALSE );
+		OuyaGLState.ColorMask[2] = ( B != GL_FALSE );
+		OuyaGLState.ColorMask[3] = ( A != GL_FALSE );
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedEnableVertexAttribArray( GLuint Index )
+{
+	if( Index >= AT_Count || !OuyaGLState.Valid || !OuyaGLState.VertexAttribEnabled[Index] )
+	{
+		glEnableVertexAttribArray( Index );
+		if( Index < AT_Count )
+			OuyaGLState.VertexAttribEnabled[Index] = 1;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+
+void UNOpenGLESRenderDevice::OuyaCachedDisableVertexAttribArray( GLuint Index )
+{
+	if( Index >= AT_Count || !OuyaGLState.Valid || OuyaGLState.VertexAttribEnabled[Index] )
+	{
+		glDisableVertexAttribArray( Index );
+		if( Index < AT_Count )
+			OuyaGLState.VertexAttribEnabled[Index] = 0;
+		OuyaGLState.Valid = 1;
+		++OuyaPerfStateChanges;
+	}
+	else ++OuyaPerfStateSkips;
+}
+#endif
 
 UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 {
@@ -275,13 +670,15 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	debugf( NAME_Log, "OpenGL Renderer: %s", glGetString( GL_RENDERER ) );
 	debugf( NAME_Log, "OpenGL Extensions: %s", glGetString( GL_EXTENSIONS ) );
 #if defined(UNREAL_ANDROID_OUYA)
-	debugf( NAME_Log, "OUYA internal render target requested: %ix%i", OUYA_INTERNAL_RENDER_W, OUYA_INTERNAL_RENDER_H );
+	OuyaSelectRenderTargetSize();
+	debugf( NAME_Log, "OUYA internal render target selected: %ix%i", OuyaRTW, OuyaRTH );
 #endif
 
 	NoVolumetricBlend = true;
 	SupportsFogMaps = true;
 	SupportsDistanceFog = true;
 
+	UpdateRuntimeConfig();
 	UpdateSwapInterval();
 
 	ComposeSize = 256 * 256 * 4;
@@ -305,7 +702,11 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	if( UseVAO )
 	{
 		glGenBuffers( 1, &GLBuf );
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaCachedBindArrayBuffer( GLBuf );
+#else
 		glBindBuffer( GL_ARRAY_BUFFER, GLBuf );
+#endif
 		glBufferData( GL_ARRAY_BUFFER, VtxDataSize * sizeof(FLOAT), (void*)VtxData, GL_DYNAMIC_DRAW );
 	}
 
@@ -323,12 +724,24 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 		}
 	}
 
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaResetGLStateCache();
+#endif
+
 	// Set permanent state.
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaCachedEnable( GL_DEPTH_TEST );
+	OuyaCachedDepthMask( GL_TRUE );
+	OuyaCachedBlendFunc( GL_ONE, GL_ZERO );
+	OuyaCachedEnable( GL_BLEND );
+	OuyaCachedEnableVertexAttribArray( 0 );
+#else
 	glEnable( GL_DEPTH_TEST );
 	glDepthMask( GL_TRUE );
 	glBlendFunc( GL_ONE, GL_ZERO );
 	glEnable( GL_BLEND );
 	glEnableVertexAttribArray( 0 );
+#endif
 
 	// Precache some common shaders
 	static const DWORD PrecacheShaders[] = {
@@ -350,7 +763,11 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	CurrentPolyFlags = PF_Occlude;
 	CurrentShaderFlags = 0;
 	CurrentBrightness = -1.f;
+	CurrentBrightnessScale = -1.f;
+	CurrentWorldGamma = -1.f;
+	CurrentWorldShadowLift = -1.f;
 	Viewport = InViewport;
+	CurrentLowDetailTextures = UseLowDetailTextures();
 
 	return true;
 	unguard;
@@ -365,6 +782,14 @@ void UNOpenGLESRenderDevice::Exit()
 	Flush();
 #if defined(UNREAL_ANDROID_OUYA)
 	OuyaDestroyRenderTarget();
+#endif
+
+#if defined(UNREAL_ANDROID_OUYA)
+	if( OuyaPerfLogFile )
+	{
+		appFclose( OuyaPerfLogFile );
+		OuyaPerfLogFile = NULL;
+	}
 #endif
 
 	if( Compose )
@@ -383,9 +808,51 @@ void UNOpenGLESRenderDevice::PostEditChange()
 
 	Super::PostEditChange();
 
+	UpdateRuntimeConfig();
 	UpdateSwapInterval();
 
 	unguard;
+}
+
+
+UBOOL UNOpenGLESRenderDevice::UseLowDetailTextures() const
+{
+	return Viewport && Viewport->Client && Viewport->Client->LowDetailTextures;
+}
+
+INT UNOpenGLESRenderDevice::GetTextureUploadBaseMip( const FTextureInfo& Info ) const
+{
+	// HARD LOW mode:
+	// LOW uses mip 1 for normal paletted textures.
+	// This is the first/strong LOW behaviour again.
+	//
+	// HIGH:
+	//   BaseMip 0
+	//
+	// LOW:
+	//   128x128   -> 64x64
+	//   256x256   -> 128x128
+	//   512x512   -> 256x256
+	//   1024x1024 -> 512x512
+	if( !UseLowDetailTextures() )
+		return 0;
+
+	// Keep lightmaps/fogmaps and special translucent effect sprites untouched.
+	if( !Info.Palette || Info.NumMips <= 1 || UE1GLESIsLegacyEffectSpriteTexture( Info ) )
+		return 0;
+
+	return 1;
+}
+
+void UNOpenGLESRenderDevice::UpdateLowDetailTextureMode()
+{
+	const UBOOL NewLowDetail = UseLowDetailTextures();
+	if( NewLowDetail != CurrentLowDetailTextures )
+	{
+		debugf( NAME_Log, "OUYA texture detail changed to %s; flushing GLES texture cache", NewLowDetail ? "LOW" : "HIGH" );
+		CurrentLowDetailTextures = NewLowDetail;
+		Flush();
+	}
 }
 
 void UNOpenGLESRenderDevice::Flush()
@@ -403,6 +870,69 @@ void UNOpenGLESRenderDevice::Flush()
 		glDeleteTextures( TexAlloc.Num(), &TexAlloc(0) );
 		TexAlloc.Empty();
 		BindMap.Empty();
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaInvalidateUE1GLState();
+#endif
+	}
+
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredBrightnessScale() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredBrightnessScale);
+	FLOAT Value = BrightnessScale;
+	char Buffer[64];
+	if( GConfigCache.GetString( "NOpenGLESDrv.NOpenGLESRenderDevice", "BrightnessScale", Buffer, sizeof(Buffer) ) )
+		Value = appAtof( Buffer );
+	return Clamp( Value, 0.25f, 4.0f );
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredWorldGamma() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredWorldGamma);
+	FLOAT Value = WorldGamma;
+	char Buffer[64];
+	if( GConfigCache.GetString( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldGamma", Buffer, sizeof(Buffer) ) )
+		Value = appAtof( Buffer );
+	return Clamp( Value, 0.5f, 3.0f );
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredWorldShadowLift() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredWorldShadowLift);
+	FLOAT Value = WorldShadowLift;
+	char Buffer[64];
+	if( GConfigCache.GetString( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldShadowLift", Buffer, sizeof(Buffer) ) )
+		Value = appAtof( Buffer );
+	return Clamp( Value, 0.0f, 0.35f );
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::UpdateRuntimeConfig()
+{
+	guard(UNOpenGLESRenderDevice::UpdateRuntimeConfig);
+
+	BrightnessScale = GetConfiguredBrightnessScale();
+	WorldGamma = GetConfiguredWorldGamma();
+	WorldShadowLift = GetConfiguredWorldShadowLift();
+
+	if( CurrentBrightnessScale != BrightnessScale )
+	{
+		CurrentBrightnessScale = BrightnessScale;
+		UniformsChanged[UF_BrightnessScale] = true;
+	}
+	if( CurrentWorldGamma != WorldGamma )
+	{
+		CurrentWorldGamma = WorldGamma;
+		UniformsChanged[UF_WorldGamma] = true;
+	}
+	if( CurrentWorldShadowLift != WorldShadowLift )
+	{
+		CurrentWorldShadowLift = WorldShadowLift;
+		UniformsChanged[UF_WorldShadowLift] = true;
 	}
 
 	unguard;
@@ -417,12 +947,15 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 {
 	guard(UNOpenGLESRenderDevice::Lock);
 
+	UpdateLowDetailTextureMode();
+
 #if defined(UNREAL_ANDROID_OUYA)
+	OuyaBeginPerfFrame();
 	OuyaEnsureRenderTarget();
 	if( OuyaFBO )
 	{
 		glBindFramebuffer( GL_FRAMEBUFFER, OuyaFBO );
-		glViewport( 0, 0, OuyaRTW, OuyaRTH );
+		OuyaCachedViewport( 0, 0, OuyaRTW, OuyaRTH );
 	}
 #endif
 	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
@@ -440,6 +973,8 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 		CurrentBrightness = TargetBrightness;
 		UniformsChanged[UF_Brightness] = true;
 	}
+
+	UpdateRuntimeConfig();
 
 	SetBlend( PF_Occlude );
 	SetShader( CurrentShaderFlags );
@@ -474,6 +1009,9 @@ void UNOpenGLESRenderDevice::Unlock( UBOOL Blit )
 		OuyaBlitToDefaultFramebuffer();
 #endif
 
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaEndPerfFrame();
+#endif
 	glFlush();
 
 	unguard;
@@ -487,8 +1025,7 @@ UBOOL UNOpenGLESRenderDevice::OuyaEnsureRenderTarget()
 	if( OuyaFBO && OuyaColorTex && OuyaDepthRB )
 		return true;
 
-	OuyaRTW = OUYA_INTERNAL_RENDER_W;
-	OuyaRTH = OUYA_INTERNAL_RENDER_H;
+	OuyaSelectRenderTargetSize();
 
 	glGenTextures( 1, &OuyaColorTex );
 	glBindTexture( GL_TEXTURE_2D, OuyaColorTex );
@@ -636,15 +1173,14 @@ void UNOpenGLESRenderDevice::OuyaBlitToDefaultFramebuffer()
 	glVertexAttribPointer( OuyaBlitUV, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)( 2 * sizeof(GLfloat) ) );
 	glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
 
-	glBindBuffer( GL_ARRAY_BUFFER, UseVAO ? GLBuf : 0 );
-	glEnable( GL_DEPTH_TEST );
-	glDepthMask( GL_TRUE );
-	glEnable( GL_BLEND );
-	CurrentShaderFlags = 0xffffffff;
-	CurrentPolyFlags = 0xffffffff;
-	ShaderInfo = NULL;
-	for( INT i = 0; i < UF_Count; ++i )
-		UniformsChanged[i] = true;
+	// The OUYA fullscreen blit intentionally uses its own program, VBO, texture
+	// and framebuffer. Invalidate the UE1-side cache completely so the next game
+	// frame rebinding is explicit instead of trusting stale cached state.
+	OuyaInvalidateUE1GLState();
+	OuyaCachedBindArrayBuffer( UseVAO ? GLBuf : 0 );
+	OuyaCachedEnable( GL_DEPTH_TEST );
+	OuyaCachedDepthMask( GL_TRUE );
+	OuyaCachedEnable( GL_BLEND );
 	if( OuyaFBO )
 		glBindFramebuffer( GL_FRAMEBUFFER, OuyaFBO );
 	unguard;
@@ -673,8 +1209,13 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 		// white brightens the whole polygon into a rectangle. For this one
 		// texture use classic multiplicative modulation: dst = dst * src.
 		FlushTriangles();
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaCachedEnable( GL_BLEND );
+		OuyaCachedBlendFunc( GL_ZERO, GL_SRC_COLOR );
+#else
 		glEnable( GL_BLEND );
 		glBlendFunc( GL_ZERO, GL_SRC_COLOR );
+#endif
 	}
 	SetTexture( 0, *Surface.Texture, ( RenderPolyFlags & PF_Masked ), 0.f );
 	if( Surface.LightMap )
@@ -687,7 +1228,7 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 		SetTexture( 2, *Surface.FogMap, 0, -0.5f );
 		CurrentShaderFlags |= SF_Fogmap;
 	}
-	if( Surface.DetailTexture && DetailTextures )
+	if( Surface.DetailTexture && DetailTextures && !UseLowDetailTextures() )
 	{
 		SetTexture( 3, *Surface.DetailTexture, 0, 0.f );
 		CurrentShaderFlags |= SF_Detail;
@@ -709,7 +1250,7 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 				AttribFloat2( (U-UDot-TexInfo[1].UPan)*TexInfo[1].UMult, (V-VDot-TexInfo[1].VPan)*TexInfo[1].VMult );
 			if( Surface.FogMap )
 				AttribFloat2( (U-UDot-TexInfo[2].UPan)*TexInfo[2].UMult, (V-VDot-TexInfo[2].VPan)*TexInfo[2].VMult );
-			if( Surface.DetailTexture && DetailTextures )
+			if( Surface.DetailTexture && DetailTextures && !UseLowDetailTextures() )
 				AttribFloat2( (U-UDot-TexInfo[3].UPan)*TexInfo[3].UMult, (V-VDot-TexInfo[3].VPan)*TexInfo[3].VMult );
 			PolyVertex();
 		}
@@ -724,10 +1265,16 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 
 	if( bHubWaterRings2 && ( RenderPolyFlags & PF_Modulated ) )
 	{
-		// Flush while the special blend is active, then force the next
-		// SetBlend() to restore the normal cached UE1 blend state.
+		// Flush while the WaterRings2 multiplicative blend is active, then
+		// immediately restore the normal UE1 PF_Modulated GL state. The old
+		// workaround only invalidated CurrentPolyFlags and left
+		// GL_ZERO,GL_SRC_COLOR live until the next SetBlend() call. Some paths
+		// do not re-enter SetBlend immediately, which can leak this special
+		// state into later world/HUD draws and corrupt the whole view when
+		// looking down at the waterfall pool.
 		FlushTriangles();
 		CurrentPolyFlags = 0xffffffff;
+		SetBlend( RenderPolyFlags );
 	}
 
 	unguard;
@@ -910,7 +1457,11 @@ void UNOpenGLESRenderDevice::EndFlash( )
 	const FLOAT RFX2 = RProjZ;
 	const FLOAT RFY2 = RProjZ * Aspect;
 
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaCachedDisable( GL_DEPTH_TEST );
+#else
 	glDisable( GL_DEPTH_TEST );
+#endif
 
 	BeginPoly();
 		AttribFloat3( RFX2 * -Z, RFY2 * -Z, Z );
@@ -927,7 +1478,11 @@ void UNOpenGLESRenderDevice::EndFlash( )
 		PolyVertex();
 	EndPoly();
 
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaCachedEnable( GL_DEPTH_TEST );
+#else
 	glEnable( GL_DEPTH_TEST );
+#endif
 
 	CurrentShaderFlags &= ~SF_VtxColor;
 
@@ -1005,6 +1560,30 @@ void UNOpenGLESRenderDevice::UpdateUniforms()
 		UniformsChanged[UF_Brightness] = false;
 	}
 
+	if( UniformsChanged[UF_BrightnessScale] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_BrightnessScale] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_BrightnessScale], CurrentBrightnessScale );
+		UniformsChanged[UF_BrightnessScale] = false;
+	}
+
+	if( UniformsChanged[UF_WorldGamma] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_WorldGamma] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_WorldGamma], CurrentWorldGamma );
+		UniformsChanged[UF_WorldGamma] = false;
+	}
+
+	if( UniformsChanged[UF_WorldShadowLift] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_WorldShadowLift] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_WorldShadowLift], CurrentWorldShadowLift );
+		UniformsChanged[UF_WorldShadowLift] = false;
+	}
+
 	for( INT i = UF_Texture0; i <= UF_Texture3; ++i )
 	{
 		if( UniformsChanged[i] && ShaderInfo->Uniforms[i] >= 0 )
@@ -1053,7 +1632,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
 	};
 
 	static const char* UniformNames[UF_Count] = {
-		"uMtx", "uBrightness", "uTexture0", "uTexture1", "uTexture2", "uTexture3"
+		"uMtx", "uBrightness", "uBrightnessScale", "uWorldGamma", "uWorldShadowLift", "uTexture0", "uTexture1", "uTexture2", "uTexture3"
 	};
 
 	static const char* AttribNames[AT_Count] = {
@@ -1159,17 +1738,29 @@ void UNOpenGLESRenderDevice::SetShader( DWORD ShaderFlags )
 		{
 			if( ShaderInfo->Attribs[i] )
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedEnableVertexAttribArray( i );
+#else
 				glEnableVertexAttribArray( i );
+#endif
 				glVertexAttribPointer( i, AttribSizes[i], GL_FLOAT, GL_FALSE, ShaderInfo->NumFloats * sizeof(FLOAT), (void*)Ptr );
 				Ptr += AttribSizes[i] * sizeof(FLOAT);
 			}
 			else
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedDisableVertexAttribArray( i );
+#else
 				glDisableVertexAttribArray( i );
+#endif
 			}
 		}
 
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaCachedUseProgram( ShaderInfo->Prog );
+#else
 		glUseProgram( ShaderInfo->Prog );
+#endif
 	}
 
 	UpdateUniforms();
@@ -1197,7 +1788,11 @@ void UNOpenGLESRenderDevice::SetSceneNode( FSceneNode* Frame )
 			Viewport->SizeX != CurrentSceneNode.SizeX || Viewport->SizeY != CurrentSceneNode.SizeY )
 	{
 		FlushTriangles();
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaCachedViewport( Frame->XB, Viewport->SizeY - Frame->Y - Frame->YB, Frame->X, Frame->Y );
+#else
 		glViewport( Frame->XB, Viewport->SizeY - Frame->Y - Frame->YB, Frame->X, Frame->Y );
+#endif
 		CurrentSceneNode.X = Frame->X;
 		CurrentSceneNode.Y = Frame->Y;
 		CurrentSceneNode.XB = Frame->XB;
@@ -1245,32 +1840,64 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
 		FlushTriangles();
 		if( Xor & (PF_Translucent|PF_Modulated|PF_Highlighted) )
 		{
+#if defined(UNREAL_ANDROID_OUYA)
+			OuyaCachedEnable( GL_BLEND );
+#else
 			glEnable( GL_BLEND );
+#endif
 			if( PolyFlags & PF_Translucent )
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_COLOR );
+#else
 				glBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_COLOR );
+#endif
 			}
 			else if( PolyFlags & PF_Modulated )
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
+#else
 				glBlendFunc( GL_DST_COLOR, GL_SRC_COLOR );
+#endif
 			}
 			else if( PolyFlags & PF_Highlighted )
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
+#else
 				glBlendFunc( GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
+#endif
 			}
 			else
 			{
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedDisable( GL_BLEND );
+#else
 				glDisable( GL_BLEND );
+#endif
+#if defined(UNREAL_ANDROID_OUYA)
+				OuyaCachedBlendFunc( GL_ONE, GL_ZERO );
+#else
 				glBlendFunc( GL_ONE, GL_ZERO );
+#endif
 			}
 		}
 		if( Xor & PF_Invisible )
 		{
 			UBOOL Show = !( PolyFlags & PF_Invisible );
+#if defined(UNREAL_ANDROID_OUYA)
+			OuyaCachedColorMask( Show, Show, Show, Show );
+#else
 			glColorMask( Show, Show, Show, Show );
+#endif
 		}
 		if( Xor & PF_Occlude )
+#if defined(UNREAL_ANDROID_OUYA)
+			OuyaCachedDepthMask( (PolyFlags & PF_Occlude) != 0 );
+#else
 			glDepthMask( (PolyFlags & PF_Occlude) != 0 );
+#endif
 		if( Xor & PF_Masked )
 		{
 			if( PolyFlags & PF_Masked )
@@ -1302,15 +1929,18 @@ void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWOR
 		return;
 	}
 
-	// Set mip filtering if there are mips.
+	// Set mip filtering if there are mips. In Low texture detail mode mip 1 is
+	// uploaded as GL level 0, so the effective mip count is reduced by one.
+	const INT BaseMip = GetTextureUploadBaseMip( Info );
+	const INT EffectiveNumMips = Max( 1, Info.NumMips - BaseMip );
 	if( ( PolyFlags & PF_NoSmooth ) || ( NoFiltering && Info.Palette ) ) // TODO: This is set per poly, not per texture.
 	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( Info.NumMips > 1 ) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	}
 	else
 	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( Info.NumMips > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 
@@ -1333,8 +1963,12 @@ void UNOpenGLESRenderDevice::ResetTexture( INT TMU )
 	if( TexInfo[TMU].CurrentCacheID != 0 )
 	{
 		FlushTriangles();
+#if defined(UNREAL_ANDROID_OUYA)
+		OuyaCachedBindTexture2D( TMU, 0 );
+#else
 		glActiveTexture( GL_TEXTURE0 + TMU );
 		glBindTexture( GL_TEXTURE_2D, 0 );
+#endif
 		TexInfo[TMU].CurrentCacheID = 0;
 	}
 
@@ -1360,6 +1994,8 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	QWORD NewCacheID = Info.CacheID;
 	if( ( PolyFlags & PF_Masked ) && Info.Palette )
 		NewCacheID |= MASKED_TEXTURE_TAG;
+	if( GetTextureUploadBaseMip( Info ) > 0 )
+		NewCacheID |= LOW_DETAIL_TEXTURE_TAG;
 	UBOOL RealtimeChanged = ( Info.TextureFlags & TF_RealtimeChanged );
 	if( NewCacheID == Tex.CurrentCacheID && !RealtimeChanged )
 		return;
@@ -1378,8 +2014,12 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 		TexAlloc.AddItem( Bind->Id );
 	}
 
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaCachedBindTexture2D( TMU, Bind->Id );
+#else
 	glActiveTexture( GL_TEXTURE0 + TMU );
 	glBindTexture( GL_TEXTURE_2D, Bind->Id );
+#endif
 
 	if( !OldBind || RealtimeChanged )
 	{
@@ -1397,14 +2037,19 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 {
 	guard(UNOpenGLESRenderDevice::UploadTexture);
 
-	if( !Info.Mips[0] )
+#if defined(UNREAL_ANDROID_OUYA)
+	OuyaCountTextureUpload( Info );
+#endif
+
+	const INT BaseMip = GetTextureUploadBaseMip( Info );
+	if( BaseMip < 0 || BaseMip >= Info.NumMips || !Info.Mips[BaseMip] )
 	{
 		debugf( NAME_Warning, "Encountered texture with invalid mips!" );
 		return;
 	}
 
 	// We're gonna be using the compose buffer, so expand it to fit.
-	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
+	INT NewComposeSize = Info.Mips[BaseMip]->USize * Info.Mips[BaseMip]->VSize * 4;
 	if( NewComposeSize > ComposeSize )
 	{
 		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
@@ -1418,9 +2063,12 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 	const UBOOL bHubWaterRings2 = UE1GLESIsHubWaterRings2Texture( Info );
 	const UBOOL bLegacyEffectSprite = bMaineffect || bSmokeBlack || bHubSmoke1 || bHubWaterRings2;
 
-	// Upload all mips.
-	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
+	// Upload all effective mips. In Low texture detail mode, source mip 1 is
+	// uploaded as GL level 0, giving visibly lower texture detail immediately
+	// after the GL texture cache is flushed.
+	for( INT MipIndex = BaseMip; MipIndex < Info.NumMips; ++MipIndex )
 	{
+		const INT GLMipIndex = MipIndex - BaseMip;
 		const FMipmap* Mip = Info.Mips[MipIndex];
 		if( !Mip || !Mip->DataPtr ) break;
 		BYTE* UploadBuf;
@@ -1524,9 +2172,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		}
 		// Upload to GL.
 		if( NewTexture )
-			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+			glTexImage2D( GL_TEXTURE_2D, GLMipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		else
-			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+			glTexSubImage2D( GL_TEXTURE_2D, GLMipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 	}
 
 	unguard;

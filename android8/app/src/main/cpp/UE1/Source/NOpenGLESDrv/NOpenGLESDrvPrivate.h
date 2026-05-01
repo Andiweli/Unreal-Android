@@ -14,6 +14,9 @@ enum EUniformIndex
 {
 	UF_Mtx,
 	UF_Brightness,
+	UF_BrightnessScale,
+	UF_WorldGamma,
+	UF_WorldShadowLift,
 	UF_Texture0,
 	UF_Texture1,
 	UF_Texture2,
@@ -65,7 +68,11 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	UBOOL DetailTextures;
 	UBOOL UseVAO;
 	UBOOL AutoFOV;
+	FLOAT BrightnessScale;
+	FLOAT WorldGamma;
+	FLOAT WorldShadowLift;
 	INT SwapInterval;
+	UBOOL RuntimeLowDetailTextures;
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -129,6 +136,9 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	DWORD CurrentShaderFlags;
 	DWORD CurrentPolyFlags;
 	FLOAT CurrentBrightness;
+	FLOAT CurrentBrightnessScale;
+	FLOAT CurrentWorldGamma;
+	FLOAT CurrentWorldShadowLift;
 	FLOAT RProjZ, Aspect;
 	FLOAT RFX2, RFY2;
 	glm::mat4 MtxProj;
@@ -177,8 +187,15 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void SetBlend( DWORD PolyFlags, UBOOL InverseOrder = false );
 	void SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFlags, FLOAT PanBias );
 	void ResetTexture( INT TMU );
-	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture );
-	void UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags );
+	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture, INT BaseMip );
+	void UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags, INT BaseMip );
+	INT GetTextureBaseMip( const FTextureInfo& Info, DWORD PolyFlags ) const;
+	UBOOL GetConfiguredLowDetailTextures() const;
+	FLOAT GetConfiguredBrightness() const;
+	FLOAT GetConfiguredBrightnessScale() const;
+	FLOAT GetConfiguredWorldGamma() const;
+	FLOAT GetConfiguredWorldShadowLift() const;
+	void UpdateRuntimeConfig();
 	void UpdateSwapInterval();
 
 private:

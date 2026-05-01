@@ -3,6 +3,7 @@
 
 #include "NSDLDrv.h"
 #include "UnRender.h"
+#include "NSDLOuyaResolutionMenu.h"
 
 IMPLEMENT_CLASS( UNSDLClient );
 
@@ -328,6 +329,12 @@ UBOOL UNSDLClient::Exec( const char* Cmd, FOutputDevice* Out )
 {
 	guard(UNSDLClient::Exec);
 
+#if PLATFORM_ANDROID && ANDROID_LEGACY_API16
+	if( NSDL_OuyaExecResolutionCommand( NULL, Cmd, Out ) )
+	{
+		return 1;
+	}
+#endif
 	if( ParseCommand( &Cmd, "EndFullscreen" ) )
 	{
 		EndFullscreen();

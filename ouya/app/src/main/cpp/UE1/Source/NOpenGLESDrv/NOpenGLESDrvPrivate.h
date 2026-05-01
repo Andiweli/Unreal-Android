@@ -14,6 +14,9 @@ enum EUniformIndex
 {
 	UF_Mtx,
 	UF_Brightness,
+	UF_BrightnessScale,
+	UF_WorldGamma,
+	UF_WorldShadowLift,
 	UF_Texture0,
 	UF_Texture1,
 	UF_Texture2,
@@ -65,7 +68,18 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	UBOOL DetailTextures;
 	UBOOL UseVAO;
 	UBOOL AutoFOV;
+	FLOAT BrightnessScale;
+	FLOAT WorldGamma;
+	FLOAT WorldShadowLift;
 	INT SwapInterval;
+#if defined(UNREAL_ANDROID_OUYA)
+	INT OuyaRenderWidth;
+	INT OuyaRenderHeight;
+#endif
+#if defined(UNREAL_ANDROID_OUYA)
+	UBOOL PerfSpikeLog;
+	FLOAT PerfSpikeThresholdMS;
+#endif
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -129,6 +143,10 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	DWORD CurrentShaderFlags;
 	DWORD CurrentPolyFlags;
 	FLOAT CurrentBrightness;
+	FLOAT CurrentBrightnessScale;
+	FLOAT CurrentWorldGamma;
+	FLOAT CurrentWorldShadowLift;
+	UBOOL CurrentLowDetailTextures;
 	FLOAT RProjZ, Aspect;
 	FLOAT RFX2, RFY2;
 	glm::mat4 MtxProj;
@@ -158,6 +176,38 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		INT XB, YB;
 		INT SizeX, SizeY;
 	} CurrentSceneNode;
+
+#if defined(UNREAL_ANDROID_OUYA)
+	struct FOuyaGLStateCache
+	{
+		UBOOL Valid;
+		GLenum ActiveTexture;
+		GLuint BoundTexture2D[MaxTexUnits];
+		GLuint ArrayBuffer;
+		GLuint Program;
+		GLint Viewport[4];
+		UBOOL BlendEnabled;
+		UBOOL DepthTestEnabled;
+		UBOOL DepthMask;
+		GLenum BlendSrc;
+		GLenum BlendDst;
+		UBOOL ColorMask[4];
+		UBOOL VertexAttribEnabled[AT_Count];
+	} OuyaGLState;
+
+	DOUBLE OuyaPerfFrameStart;
+	DOUBLE OuyaPerfLastLogTime;
+	DWORD OuyaPerfFrameIndex;
+	INT OuyaPerfDrawCalls;
+	INT OuyaPerfTriangles;
+	INT OuyaPerfTextureBinds;
+	INT OuyaPerfTextureUploads;
+	INT OuyaPerfTextureMips;
+	INT OuyaPerfUploadKB;
+	INT OuyaPerfStateChanges;
+	INT OuyaPerfStateSkips;
+	FILE* OuyaPerfLogFile;
+#endif
 
 	// Constructors.
 	UNOpenGLESRenderDevice();
@@ -195,10 +245,35 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture );
 	void UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags );
 	void UpdateSwapInterval();
+	UBOOL UseLowDetailTextures() const;
+	INT GetTextureUploadBaseMip( const FTextureInfo& Info ) const;
+	void UpdateLowDetailTextureMode();
+	FLOAT GetConfiguredBrightnessScale() const;
+	FLOAT GetConfiguredWorldGamma() const;
+	FLOAT GetConfiguredWorldShadowLift() const;
+	void UpdateRuntimeConfig();
 #if defined(UNREAL_ANDROID_OUYA)
 	UBOOL OuyaEnsureRenderTarget();
 	void OuyaDestroyRenderTarget();
 	void OuyaBlitToDefaultFramebuffer();
+	void OuyaSelectRenderTargetSize();
+	void OuyaResetGLStateCache();
+	void OuyaInvalidateUE1GLState();
+	void OuyaBeginPerfFrame();
+	void OuyaEndPerfFrame();
+	void OuyaCountTextureUpload( const FTextureInfo& Info );
+	void OuyaCachedActiveTexture( INT TMU );
+	void OuyaCachedBindTexture2D( INT TMU, GLuint Texture );
+	void OuyaCachedBindArrayBuffer( GLuint Buffer );
+	void OuyaCachedUseProgram( GLuint Program );
+	void OuyaCachedViewport( GLint X, GLint Y, GLsizei W, GLsizei H );
+	void OuyaCachedEnable( GLenum Cap );
+	void OuyaCachedDisable( GLenum Cap );
+	void OuyaCachedDepthMask( GLboolean Flag );
+	void OuyaCachedBlendFunc( GLenum Src, GLenum Dst );
+	void OuyaCachedColorMask( GLboolean R, GLboolean G, GLboolean B, GLboolean A );
+	void OuyaCachedEnableVertexAttribArray( GLuint Index );
+	void OuyaCachedDisableVertexAttribArray( GLuint Index );
 #endif
 
 private:
@@ -212,6 +287,10 @@ private:
 			if ( UseVAO )
 				glBufferSubData( GL_ARRAY_BUFFER, 0, ( (BYTE*)VtxDataPtr - (BYTE*)VtxData ), VtxData );
 			glDrawElements( GL_TRIANGLES, IdxDataPtr - IdxData, GL_UNSIGNED_SHORT, IdxData );
+#if defined(UNREAL_ANDROID_OUYA)
+			++OuyaPerfDrawCalls;
+			OuyaPerfTriangles += (INT)( ( IdxDataPtr - IdxData ) / 3 );
+#endif
 			IdxCount = 0;
 		}
 		VtxDataPtr = VtxData;

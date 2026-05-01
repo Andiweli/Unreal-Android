@@ -47,6 +47,7 @@ static constexpr DWORD AttribSizes[AT_Count] = {
 // unlike in newer unreal versions the low cache bits are actually used, so we have use one of the
 // actually unused higher bits for this purpose, thereby breaking 64-bit compatibility for now
 #define MASKED_TEXTURE_TAG (1ULL << 60ULL)
+#define LOWDETAIL_TEXTURE_TAG (1ULL << 61ULL)
 
 // FColor is adjusted for endianness
 #define ALPHA_MASK 0xff000000
@@ -78,6 +79,28 @@ static UBOOL UE1GLESTextureNameStartsWith( const FTextureInfo& Info, const char*
 	char Name[512];
 	UE1GLESGetTextureObjectName( Info, Name, sizeof(Name) );
 	return Name[0] && appStrnicmp( Name, Prefix, appStrlen(Prefix) ) == 0;
+}
+
+static UBOOL UE1GLESConfigBool( const char* Section, const char* Key, UBOOL DefaultValue )
+{
+	char Value[64];
+	if( !GConfigCache.GetString( Section, Key, Value, sizeof(Value) ) )
+		return DefaultValue;
+
+	if( !appStricmp( Value, "True" ) || !appStricmp( Value, "1" ) || !appStricmp( Value, "Yes" ) || !appStricmp( Value, "On" ) )
+		return true;
+	if( !appStricmp( Value, "False" ) || !appStricmp( Value, "0" ) || !appStricmp( Value, "No" ) || !appStricmp( Value, "Off" ) )
+		return false;
+
+	return DefaultValue;
+}
+
+static FLOAT UE1GLESConfigFloat( const char* Section, const char* Key, FLOAT DefaultValue )
+{
+	char Value[64];
+	if( !GConfigCache.GetString( Section, Key, Value, sizeof(Value) ) )
+		return DefaultValue;
+	return appAtof( Value );
 }
 
 static UBOOL UE1GLESIsMaineffectTexture( const FTextureInfo& Info )
@@ -214,6 +237,9 @@ void UNOpenGLESRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "UseVAO",         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         "Options", CPF_Config );
 	new(Class, "UseBGRA",        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        "Options", CPF_Config );
 	new(Class, "AutoFOV",        RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),        "Options", CPF_Config );
+	new(Class, "BrightnessScale",RF_Public)UFloatProperty( CPP_PROPERTY(BrightnessScale),"Options", CPF_Config );
+	new(Class, "WorldGamma",    RF_Public)UFloatProperty( CPP_PROPERTY(WorldGamma),    "Options", CPF_Config );
+	new(Class, "WorldShadowLift",RF_Public)UFloatProperty( CPP_PROPERTY(WorldShadowLift),"Options", CPF_Config );
 	new(Class, "SwapInterval",   RF_Public)UIntProperty ( CPP_PROPERTY(SwapInterval),   "Options", CPF_Config );
 	unguardSlow;
 }
@@ -226,7 +252,17 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	UseVAO = false;
 	UseBGRA = true;
 	AutoFOV = true;
+	// Keep the classic UE1 Brightness slider linear.  Android world-gamma is
+	// intentionally separate so dark level geometry can be tuned without
+	// changing sprite/effect/HUD brightness.
+	BrightnessScale = 1.0f;
+	WorldGamma = 1.0f;
+	WorldShadowLift = 0.0f;
+	RuntimeLowDetailTextures = false;
 	CurrentBrightness = -1.f;
+	CurrentBrightnessScale = -1.f;
+	CurrentWorldGamma = -1.f;
+	CurrentWorldShadowLift = -1.f;
 	SwapInterval = 1;
 }
 
@@ -245,6 +281,21 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	NoVolumetricBlend = true;
 	SupportsFogMaps = true;
 	SupportsDistanceFog = true;
+
+	if( BrightnessScale < 0.25f )
+		BrightnessScale = 0.25f;
+	else if( BrightnessScale > 4.0f )
+		BrightnessScale = 4.0f;
+	if( WorldGamma < 0.5f )
+		WorldGamma = 0.5f;
+	else if( WorldGamma > 3.0f )
+		WorldGamma = 3.0f;
+	if( WorldShadowLift < 0.0f )
+		WorldShadowLift = 0.0f;
+	else if( WorldShadowLift > 0.35f )
+		WorldShadowLift = 0.35f;
+
+	RuntimeLowDetailTextures = GetConfiguredLowDetailTextures();
 
 	UpdateSwapInterval();
 
@@ -314,7 +365,11 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	CurrentPolyFlags = PF_Occlude;
 	CurrentShaderFlags = 0;
 	CurrentBrightness = -1.f;
+	CurrentBrightnessScale = -1.f;
+	CurrentWorldGamma = -1.f;
+	CurrentWorldShadowLift = -1.f;
 	Viewport = InViewport;
+	RuntimeLowDetailTextures = GetConfiguredLowDetailTextures();
 
 	return true;
 	unguard;
@@ -343,6 +398,19 @@ void UNOpenGLESRenderDevice::PostEditChange()
 	guard(UNOpenGLESRenderDevice::PostEditChange)
 
 	Super::PostEditChange();
+
+	if( BrightnessScale < 0.25f )
+		BrightnessScale = 0.25f;
+	else if( BrightnessScale > 4.0f )
+		BrightnessScale = 4.0f;
+	if( WorldGamma < 0.5f )
+		WorldGamma = 0.5f;
+	else if( WorldGamma > 3.0f )
+		WorldGamma = 3.0f;
+	if( WorldShadowLift < 0.0f )
+		WorldShadowLift = 0.0f;
+	else if( WorldShadowLift > 0.35f )
+		WorldShadowLift = 0.35f;
 
 	UpdateSwapInterval();
 
@@ -382,16 +450,32 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 	glClearDepthf( 1.f );
 	glDepthFunc( GL_LEQUAL );
 
-	FLOAT TargetBrightness = CurrentBrightness;
-	if( Viewport && Viewport->Client )
-		TargetBrightness = Viewport->Client->Brightness;
-	else if( CurrentBrightness < 0.f )
-		TargetBrightness = 0.5f;
+	UpdateRuntimeConfig();
+
+	FLOAT TargetBrightness = GetConfiguredBrightness();
 
 	if( CurrentBrightness != TargetBrightness )
 	{
 		CurrentBrightness = TargetBrightness;
 		UniformsChanged[UF_Brightness] = true;
+	}
+
+	if( CurrentBrightnessScale != BrightnessScale )
+	{
+		CurrentBrightnessScale = BrightnessScale;
+		UniformsChanged[UF_BrightnessScale] = true;
+	}
+
+	if( CurrentWorldGamma != WorldGamma )
+	{
+		CurrentWorldGamma = WorldGamma;
+		UniformsChanged[UF_WorldGamma] = true;
+	}
+
+	if( CurrentWorldShadowLift != WorldShadowLift )
+	{
+		CurrentWorldShadowLift = WorldShadowLift;
+		UniformsChanged[UF_WorldShadowLift] = true;
 	}
 
 	SetBlend( PF_Occlude );
@@ -464,7 +548,7 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 		SetTexture( 2, *Surface.FogMap, 0, -0.5f );
 		CurrentShaderFlags |= SF_Fogmap;
 	}
-	if( Surface.DetailTexture && DetailTextures )
+	if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
 	{
 		SetTexture( 3, *Surface.DetailTexture, 0, 0.f );
 		CurrentShaderFlags |= SF_Detail;
@@ -492,7 +576,7 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 				AttribFloat2( (U-UDot-TexInfo[1].UPan)*TexInfo[1].UMult, (V-VDot-TexInfo[1].VPan)*TexInfo[1].VMult );
 			if( Surface.FogMap )
 				AttribFloat2( (U-UDot-TexInfo[2].UPan)*TexInfo[2].UMult, (V-VDot-TexInfo[2].VPan)*TexInfo[2].VMult );
-			if( Surface.DetailTexture && DetailTextures )
+			if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
 				AttribFloat2( (U-UDot-TexInfo[3].UPan)*TexInfo[3].UMult, (V-VDot-TexInfo[3].VPan)*TexInfo[3].VMult );
 			PolyVertex();
 		}
@@ -750,6 +834,30 @@ void UNOpenGLESRenderDevice::UpdateUniforms()
 		UniformsChanged[UF_Brightness] = false;
 	}
 
+	if( UniformsChanged[UF_BrightnessScale] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_BrightnessScale] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_BrightnessScale], CurrentBrightnessScale );
+		UniformsChanged[UF_BrightnessScale] = false;
+	}
+
+	if( UniformsChanged[UF_WorldGamma] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_WorldGamma] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_WorldGamma], CurrentWorldGamma );
+		UniformsChanged[UF_WorldGamma] = false;
+	}
+
+	if( UniformsChanged[UF_WorldShadowLift] )
+	{
+		FlushTriangles();
+		if( ShaderInfo->Uniforms[UF_WorldShadowLift] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_WorldShadowLift], CurrentWorldShadowLift );
+		UniformsChanged[UF_WorldShadowLift] = false;
+	}
+
 	for( INT i = UF_Texture0; i <= UF_Texture3; ++i )
 	{
 		if( UniformsChanged[i] && ShaderInfo->Uniforms[i] >= 0 )
@@ -798,7 +906,8 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
 	};
 
 	static const char* UniformNames[UF_Count] = {
-		"uMtx", "uBrightness", "uTexture0", "uTexture1", "uTexture2", "uTexture3"
+		"uMtx", "uBrightness", "uBrightnessScale", "uWorldGamma", "uWorldShadowLift",
+		"uTexture0", "uTexture1", "uTexture2", "uTexture3"
 	};
 
 	static const char* AttribNames[AT_Count] = {
@@ -833,6 +942,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
 
 	if( Overbright )
 		FSText.Appendf( "#define LIGHTMAP_OVERBRIGHT %f\n", LIGHTMAP_OVERBRIGHT );
+
 
 	VSText += VertShaderGLSL;
 	FSText += FragShaderGLSL;
@@ -1030,7 +1140,7 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
 	unguard;
 }
 
-void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags )
+void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags, INT BaseMip )
 {
 	guard(UNOpenGLESRenderDevice::UpdateTextureFilter);
 
@@ -1047,15 +1157,17 @@ void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWOR
 		return;
 	}
 
+	const INT EffectiveNumMips = Max( Info.NumMips - BaseMip, 1 );
+
 	// Set mip filtering if there are mips.
 	if( ( PolyFlags & PF_NoSmooth ) || ( NoFiltering && Info.Palette ) ) // TODO: This is set per poly, not per texture.
 	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( Info.NumMips > 1 ) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	}
 	else
 	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( Info.NumMips > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 
@@ -1086,6 +1198,128 @@ void UNOpenGLESRenderDevice::ResetTexture( INT TMU )
 	unguard;
 }
 
+INT UNOpenGLESRenderDevice::GetTextureBaseMip( const FTextureInfo& Info, DWORD PolyFlags ) const
+{
+	guard(UNOpenGLESRenderDevice::GetTextureBaseMip);
+
+	if( !RuntimeLowDetailTextures )
+		return 0;
+
+	// Keep lightmaps/fogmaps, realtime/fire/effect textures and masked sprites exact.
+	// Low detail is only for ordinary palettized world textures with a real mip chain.
+	if( !Info.Palette || Info.NumMips < 2 || ( PolyFlags & PF_Masked ) )
+		return 0;
+	if( Info.TextureFlags & ( TF_Realtime | TF_RealtimeChanged ) )
+		return 0;
+	if( UE1GLESIsLegacyEffectSpriteTexture( Info ) )
+		return 0;
+
+	return ( Info.Mips[1] && Info.Mips[1]->DataPtr ) ? 1 : 0;
+
+	unguard;
+}
+
+UBOOL UNOpenGLESRenderDevice::GetConfiguredLowDetailTextures() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredLowDetailTextures);
+
+	UBOOL Value = false;
+	if( Viewport && Viewport->Client )
+		Value = Viewport->Client->LowDetailTextures;
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	Value = UE1GLESConfigBool( "NSDLDrv.NSDLClient", "LowDetailTextures", Value );
+#endif
+
+	return Value;
+
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredBrightness() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredBrightness);
+
+	FLOAT Value = 0.5f;
+	if( Viewport && Viewport->Client )
+		Value = Viewport->Client->Brightness;
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	Value = UE1GLESConfigFloat( "NSDLDrv.NSDLClient", "Brightness", Value );
+#endif
+
+	return Clamp( Value, 0.0f, 1.0f );
+
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredBrightnessScale() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredBrightnessScale);
+
+	FLOAT Value = BrightnessScale;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	Value = UE1GLESConfigFloat( "NOpenGLESDrv.NOpenGLESRenderDevice", "BrightnessScale", Value );
+#endif
+	return Clamp( Value, 0.25f, 4.0f );
+
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredWorldGamma() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredWorldGamma);
+
+	FLOAT Value = WorldGamma;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	Value = UE1GLESConfigFloat( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldGamma", Value );
+	// Gives a future/advanced menu one simple client-side value to write.
+	Value = UE1GLESConfigFloat( "NSDLDrv.NSDLClient", "Gamma", Value );
+#endif
+	return Clamp( Value, 0.5f, 3.0f );
+
+	unguard;
+}
+
+FLOAT UNOpenGLESRenderDevice::GetConfiguredWorldShadowLift() const
+{
+	guard(UNOpenGLESRenderDevice::GetConfiguredWorldShadowLift);
+
+	FLOAT Value = WorldShadowLift;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	Value = UE1GLESConfigFloat( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldShadowLift", Value );
+#endif
+	return Clamp( Value, 0.0f, 0.35f );
+
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::UpdateRuntimeConfig()
+{
+	guard(UNOpenGLESRenderDevice::UpdateRuntimeConfig);
+
+	const FLOAT ConfigBrightness = GetConfiguredBrightness();
+	if( Viewport && Viewport->Client && Viewport->Client->Brightness != ConfigBrightness )
+		Viewport->Client->Brightness = ConfigBrightness;
+
+	BrightnessScale = GetConfiguredBrightnessScale();
+	WorldGamma = GetConfiguredWorldGamma();
+	WorldShadowLift = GetConfiguredWorldShadowLift();
+
+	const UBOOL NewLowDetailTextures = GetConfiguredLowDetailTextures();
+	if( Viewport && Viewport->Client )
+		Viewport->Client->LowDetailTextures = NewLowDetailTextures;
+
+	if( RuntimeLowDetailTextures != NewLowDetailTextures )
+	{
+		RuntimeLowDetailTextures = NewLowDetailTextures;
+		debugf( NAME_Log, "GLES2: Texture Detail runtime mode changed to %s", RuntimeLowDetailTextures ? "LOW" : "HIGH" );
+		Flush();
+	}
+
+	unguard;
+}
+
 void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFlags, FLOAT PanBias )
 {
 	guard(UNOpenGLESRenderDevice::SetTexture);
@@ -1102,9 +1336,12 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	Tex.VMult = 1.f / (Info.VScale * static_cast<FLOAT>(Info.VSize));
 
 	// Find in cache.
+	const INT BaseMip = GetTextureBaseMip( Info, PolyFlags );
 	QWORD NewCacheID = Info.CacheID;
 	if( ( PolyFlags & PF_Masked ) && Info.Palette )
 		NewCacheID |= MASKED_TEXTURE_TAG;
+	if( BaseMip > 0 )
+		NewCacheID |= LOWDETAIL_TEXTURE_TAG;
 	UBOOL RealtimeChanged = ( Info.TextureFlags & TF_RealtimeChanged );
 	if( NewCacheID == Tex.CurrentCacheID && !RealtimeChanged )
 		return;
@@ -1119,6 +1356,8 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	{
 		// New texture.
 		Bind = BindMap.Add( NewCacheID, FCachedTexture() );
+		Bind->BaseMip = BaseMip;
+		Bind->MaxLevel = Max( Info.NumMips - BaseMip - 1, 0 );
 		glGenTextures( 1, &Bind->Id );
 		TexAlloc.AddItem( Bind->Id );
 	}
@@ -1126,30 +1365,36 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	glActiveTexture( GL_TEXTURE0 + TMU );
 	glBindTexture( GL_TEXTURE_2D, Bind->Id );
 
+	Bind->BaseMip = BaseMip;
+	Bind->MaxLevel = Max( Info.NumMips - BaseMip - 1, 0 );
+
 	if( !OldBind || RealtimeChanged )
 	{
 		// New texture or it has changed, upload it.
 		Info.TextureFlags &= ~TF_RealtimeChanged;
-		UploadTexture( Info, ( PolyFlags & PF_Masked ), !OldBind );
+		UploadTexture( Info, ( PolyFlags & PF_Masked ), !OldBind, BaseMip );
 		// TODO: This depends on PolyFlags, not Info.
-		UpdateTextureFilter( Info, PolyFlags );
+		UpdateTextureFilter( Info, PolyFlags, BaseMip );
 	}
 
 	unguard;
 }
 
-void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture )
+void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture, INT BaseMip )
 {
 	guard(UNOpenGLESRenderDevice::UploadTexture);
 
-	if( !Info.Mips[0] )
+	if( BaseMip < 0 || BaseMip >= Info.NumMips || !Info.Mips[BaseMip] )
+		BaseMip = 0;
+
+	if( !Info.Mips[BaseMip] )
 	{
 		debugf( NAME_Warning, "Encountered texture with invalid mips!" );
 		return;
 	}
 
 	// We're gonna be using the compose buffer, so expand it to fit.
-	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
+	INT NewComposeSize = Info.Mips[BaseMip]->USize * Info.Mips[BaseMip]->VSize * 4;
 	if( NewComposeSize > ComposeSize )
 	{
 		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
@@ -1163,10 +1408,10 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 	const UBOOL bHubWaterRings2 = UE1GLESIsHubWaterRings2Texture( Info );
 	const UBOOL bLegacyEffectSprite = bMaineffect || bSmokeBlack || bHubSmoke1 || bHubWaterRings2;
 
-	// Upload all mips.
-	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
+	// Upload all mips. In LOW texture detail mode, source mip 1 becomes GL level 0.
+	for( INT SourceMipIndex = BaseMip, UploadMipIndex = 0; SourceMipIndex < Info.NumMips; ++SourceMipIndex, ++UploadMipIndex )
 	{
-		const FMipmap* Mip = Info.Mips[MipIndex];
+		const FMipmap* Mip = Info.Mips[SourceMipIndex];
 		if( !Mip || !Mip->DataPtr ) break;
 		BYTE* UploadBuf;
 		GLenum UploadFormat;
@@ -1269,9 +1514,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		}
 		// Upload to GL.
 		if( NewTexture )
-			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+			glTexImage2D( GL_TEXTURE_2D, UploadMipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		else
-			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+			glTexSubImage2D( GL_TEXTURE_2D, UploadMipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 	}
 
 	unguard;

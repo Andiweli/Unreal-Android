@@ -283,6 +283,7 @@ void UTexture::Serialize( FArchive& Ar )
 		UClamp = USize;
 		VClamp = VSize;
 	}
+#if !( defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__) )
 	if
 	(	Ar.IsLoading()
 	&&	!GIsEditor
@@ -297,6 +298,7 @@ void UTexture::Serialize( FArchive& Ar )
 		UBits = FLogTwo(USize);
 		VBits = FLogTwo(VSize);
 	}
+#endif
 
 #if !__INTEL_BYTE_ORDER__
 	// PolyFlags isn't a proper bitfield, so the bits have to be reversed

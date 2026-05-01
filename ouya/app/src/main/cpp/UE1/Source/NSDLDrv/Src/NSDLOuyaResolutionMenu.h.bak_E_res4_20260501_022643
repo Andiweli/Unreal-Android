@@ -1,0 +1,232 @@
+/*
+  OUYA/API16 safe render-resolution menu bridge.
+
+  The UnrealScript video menu already uses the classic UE1 commands:
+    GetRes, GetCurrentRes and SetRes.
+
+  On OUYA these commands must not rebuild SDL/EGL/native buffers while the game
+  is running. Instead, SetRes stores the selected internal render resolution in
+  Unreal.ini and asks the player to restart. On the next start, the package 4
+  SDL/EGL/GLES resolution selector picks up the same keys and initializes the
+  whole fullscreen chain consistently.
+*/
+#ifndef NSDL_OUYA_RESOLUTION_MENU_H
+#define NSDL_OUYA_RESOLUTION_MENU_H
+
+#if PLATFORM_ANDROID && ANDROID_LEGACY_API16
+
+static const char* NSDL_OUYA_RES_SECTION = "NOpenGLESDrv.NOpenGLESRenderDevice";
+
+static UBOOL NSDL_OuyaIsSpaceChar( char C )
+{
+	return C == ' ' || C == '\t' || C == '\r' || C == '\n';
+}
+
+static const char* NSDL_OuyaSkipSpaces( const char* Text )
+{
+	while( Text && *Text && NSDL_OuyaIsSpaceChar( *Text ) )
+		++Text;
+	return Text ? Text : "";
+}
+
+static UBOOL NSDL_OuyaSupportedResolution( INT W, INT H )
+{
+	return ( W == 0 && H == 0 ) || ( W == 960 && H == 540 ) || ( W == 1280 && H == 720 );
+}
+
+static void NSDL_OuyaNormalizeResolution( INT& W, INT& H )
+{
+	if( NSDL_OuyaSupportedResolution( W, H ) )
+		return;
+
+	/*
+		1280x720 is now the default/safe quality mode. 1920x1080 is removed
+		because it is too heavy for OUYA/Tegra 3; stale 1080p values therefore
+		fall back to 720p instead of staying selectable.
+	*/
+	if( W == 960 || H == 540 )
+	{
+		W = 960;
+		H = 540;
+	}
+	else
+	{
+		W = 1280;
+		H = 720;
+	}
+}
+
+static UBOOL NSDL_OuyaParseResolution( const char* Text, INT& OutW, INT& OutH )
+{
+	char Local[64];
+	char* Sep;
+	INT W;
+	INT H;
+
+	Text = NSDL_OuyaSkipSpaces( Text );
+	if( !Text || !Text[0] )
+		return 0;
+
+	appStrncpy( Local, Text, ARRAY_COUNT(Local) );
+	Local[ARRAY_COUNT(Local)-1] = 0;
+
+	Sep = appStrchr( Local, 'x' );
+	if( !Sep )
+		Sep = appStrchr( Local, 'X' );
+	if( !Sep )
+	{
+		if( !appStricmp( Local, "Native" ) || !appStricmp( Local, "Monitor" ) || !appStricmp( Local, "Display" ) )
+		{
+			OutW = 0;
+			OutH = 0;
+			return 1;
+		}
+		if( !appStricmp( Local, "540p" ) )
+		{
+			OutW = 960;
+			OutH = 540;
+			return 1;
+		}
+		if( !appStricmp( Local, "720p" ) )
+		{
+			OutW = 1280;
+			OutH = 720;
+			return 1;
+		}
+		return 0;
+	}
+
+	*Sep = 0;
+	W = appAtoi( NSDL_OuyaSkipSpaces( Local ) );
+	H = appAtoi( NSDL_OuyaSkipSpaces( Sep + 1 ) );
+
+	if( !NSDL_OuyaSupportedResolution( W, H ) )
+		return 0;
+
+	OutW = W;
+	OutH = H;
+	return 1;
+}
+
+static void NSDL_OuyaGetConfiguredResolution( INT& W, INT& H )
+{
+	char Value[64];
+	INT ParsedW = 0;
+	INT ParsedH = 0;
+
+	W = 1280;
+	H = 720;
+
+	if( GConfigCache.GetString( NSDL_OUYA_RES_SECTION, "OuyaRenderResolution", Value, ARRAY_COUNT(Value) ) &&
+		NSDL_OuyaParseResolution( Value, ParsedW, ParsedH ) )
+	{
+		W = ParsedW;
+		H = ParsedH;
+	}
+
+	if( GConfigCache.GetString( NSDL_OUYA_RES_SECTION, "OuyaRenderWidth", Value, ARRAY_COUNT(Value) ) )
+		W = appAtoi( Value );
+	if( GConfigCache.GetString( NSDL_OUYA_RES_SECTION, "OuyaRenderHeight", Value, ARRAY_COUNT(Value) ) )
+		H = appAtoi( Value );
+
+	NSDL_OuyaNormalizeResolution( W, H );
+}
+
+static void NSDL_OuyaSaveConfiguredResolution( INT W, INT H )
+{
+	char Value[64];
+
+	if( W == 0 && H == 0 )
+	{
+		GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderResolution", "Native" );
+		GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderWidth", "0" );
+		GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderHeight", "0" );
+		GConfigCache.SaveAllConfigs();
+		return;
+	}
+
+	NSDL_OuyaNormalizeResolution( W, H );
+
+	appSprintf( Value, "%ix%i", W, H );
+	GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderResolution", Value );
+
+	appSprintf( Value, "%i", W );
+	GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderWidth", Value );
+
+	appSprintf( Value, "%i", H );
+	GConfigCache.SetString( NSDL_OUYA_RES_SECTION, "OuyaRenderHeight", Value );
+
+	GConfigCache.SaveAllConfigs();
+}
+
+static void NSDL_OuyaNotifyResolutionRestart( UViewport* Viewport, INT W, INT H )
+{
+	char Message[255];
+
+	if( W == 0 && H == 0 )
+		appSprintf( Message, "OUYA render resolution set to Native. Restart Unreal to apply." );
+	else
+		appSprintf( Message, "OUYA render resolution set to %ix%i. Restart Unreal to apply.", W, H );
+
+	debugf( "%s", Message );
+
+	if( Viewport && Viewport->Actor )
+		Viewport->Actor->eventClientMessage( Message );
+}
+
+static UBOOL NSDL_OuyaExecResolutionCommand( UViewport* Viewport, const char* InCmd, FOutputDevice* Out )
+{
+	const char* Cmd = InCmd;
+	INT W;
+	INT H;
+
+	if( ParseCommand( &Cmd, "GetRes" ) )
+	{
+		if( Out )
+			Out->Log( "Native 1280x720 960x540" );
+		return 1;
+	}
+	else if( ParseCommand( &Cmd, "GetCurrentRes" ) )
+	{
+		NSDL_OuyaGetConfiguredResolution( W, H );
+		if( Out )
+			if( W == 0 && H == 0 )
+			Out->Log( "Native" );
+		else
+			Out->Logf( "%ix%i", W, H );
+		return 1;
+	}
+	else if( ParseCommand( &Cmd, "SetRes" ) )
+	{
+		if( NSDL_OuyaParseResolution( Cmd, W, H ) )
+		{
+			NSDL_OuyaSaveConfiguredResolution( W, H );
+			if( Out )
+				Out->Logf( "OUYA render resolution set to %ix%i. Restart Unreal to apply.", W, H );
+			NSDL_OuyaNotifyResolutionRestart( Viewport, W, H );
+		}
+		else
+		{
+			if( Out )
+				Out->Log( "Unsupported OUYA render resolution. Use Native, 1280x720, or 960x540." );
+			if( Viewport && Viewport->Actor )
+				Viewport->Actor->eventClientMessage( "Unsupported OUYA resolution. Use Native, 1280x720, or 960x540." );
+		}
+		return 1;
+	}
+	else if( ParseCommand( &Cmd, "ToggleFullscreen" ) )
+	{
+		/* OUYA is always fullscreen. Do not tear down the stable SDL/EGL path. */
+		if( Out )
+			Out->Log( "OUYA always runs fullscreen. Use Select Resolution and restart Unreal." );
+		if( Viewport && Viewport->Actor )
+			Viewport->Actor->eventClientMessage( "OUYA is always fullscreen. Select a resolution and restart Unreal." );
+		return 1;
+	}
+
+	return 0;
+}
+
+#endif /* PLATFORM_ANDROID && ANDROID_LEGACY_API16 */
+
+#endif /* NSDL_OUYA_RESOLUTION_MENU_H */

@@ -42,6 +42,7 @@ void UNSDLClient::InternalClassInitializer( UClass* Class )
 		new(Class, "DeadZoneRUV",       RF_Public)UFloatProperty(CPP_PROPERTY(DeadZoneRUV),      "Joystick", CPF_Config );
 		new(Class, "ScaleXYZ",          RF_Public)UFloatProperty(CPP_PROPERTY(ScaleXYZ),         "Joystick", CPF_Config );
 		new(Class, "ScaleRUV",          RF_Public)UFloatProperty(CPP_PROPERTY(ScaleRUV),         "Joystick", CPF_Config );
+		new(Class, "Gamma",             RF_Public)UFloatProperty(CPP_PROPERTY(Gamma),            "Display",  CPF_Config );
 		new(Class, "InvertY",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertY),           "Joystick", CPF_Config );
 		new(Class, "InvertV",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertV),           "Joystick", CPF_Config );
 	}
@@ -59,6 +60,7 @@ UNSDLClient::UNSDLClient()
 	UseJoystick = true;
 	ScaleXYZ = 100.f;
 	ScaleRUV = 100.f;
+	Gamma = 1.0f;
 	DeadZoneXYZ = 0.1f;
 	DeadZoneRUV = 0.1f;
 	unguard;
@@ -170,6 +172,10 @@ void UNSDLClient::PostEditChange()
 {
 	guard(UNSDLClient::PostEditChange);
 	Super::PostEditChange();
+	if( Gamma < 0.5f )
+		Gamma = 0.5f;
+	else if( Gamma > 3.0f )
+		Gamma = 3.0f;
 	unguard;
 }
 

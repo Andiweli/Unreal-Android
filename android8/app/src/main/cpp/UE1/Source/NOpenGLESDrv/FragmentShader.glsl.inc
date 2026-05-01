@@ -21,6 +21,9 @@ varying lowp vec4 vVtxFog;
 #endif
 
 uniform lowp float uBrightness;
+uniform mediump float uBrightnessScale;
+uniform mediump float uWorldGamma;
+uniform mediump float uWorldShadowLift;
 
 #ifdef SF_Texture0
 uniform sampler2D uTexture0;
@@ -38,6 +41,7 @@ uniform sampler2D uTexture3;
 #ifndef LIGHTMAP_OVERBRIGHT
 #define LIGHTMAP_OVERBRIGHT 1.0
 #endif
+
 
 void main()
 {
@@ -93,7 +97,21 @@ void main()
 	Out.rgb = vVtxFog.rgb + Out.rgb * (1.0 - vVtxFog.a);
 #endif
 
-	Out.rgb *= 0.5 + 1.5 * uBrightness;
+	// Brightness is back to the original UE1-style linear slider.
+	// Extra Android tuning is separate: uWorldGamma/uWorldShadowLift only affect
+	// lightmapped world geometry, never sprite/effect/HUD paths.
+	mediump float BrightScale = (0.5 + 1.5 * uBrightness) * uBrightnessScale;
+	Out.rgb *= BrightScale;
+
+#ifdef SF_Lightmap
+	mediump vec3 ClampedRgb = clamp(Out.rgb, 0.0, 1.0);
+	mediump float ShadowLuma = max(max(ClampedRgb.r, ClampedRgb.g), ClampedRgb.b);
+	mediump float ShadowMask = 1.0 - smoothstep(0.20, 0.85, ShadowLuma);
+	mediump float SafeWorldGamma = max(uWorldGamma, 0.01);
+	mediump vec3 GammaRgb = pow(ClampedRgb, vec3(1.0 / SafeWorldGamma));
+	Out.rgb = mix(Out.rgb, GammaRgb, ShadowMask);
+	Out.rgb += uWorldShadowLift * ShadowMask * (1.0 - ClampedRgb);
+#endif
 
 	gl_FragColor = Out;
 }

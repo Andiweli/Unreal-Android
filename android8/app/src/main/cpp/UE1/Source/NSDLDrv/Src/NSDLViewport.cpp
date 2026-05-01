@@ -10,6 +10,667 @@ IMPLEMENT_CLASS( UNSDLViewport );
 extern "C" int UE1AndroidShouldIgnoreEarlyQuit();
 #endif
 
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+struct FAndroidGammaMode
+{
+	FLOAT Value;
+	const char* Label;
+};
+
+static const FAndroidGammaMode GAndroidGammaModes[] =
+{
+	{ 1.00f, "Default"    },
+	{ 1.10f, "Default +1" },
+	{ 1.20f, "Default +2" },
+	{ 1.30f, "Default +3" },
+	{ 1.40f, "Default +4" },
+};
+
+static FLOAT UE1AndroidGetConfiguredGammaModeValue()
+{
+	guard(UE1AndroidGetConfiguredGammaModeValue);
+
+	char Value[64];
+	if( GConfigCache.GetString( "NSDLDrv.NSDLClient", "Gamma", Value, sizeof(Value) ) )
+		return Clamp( appAtof( Value ), 0.5f, 3.0f );
+
+	if( GConfigCache.GetString( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldGamma", Value, sizeof(Value) ) )
+		return Clamp( appAtof( Value ), 0.5f, 3.0f );
+
+	return 1.0f;
+
+	unguard;
+}
+
+static INT UE1AndroidGetNearestGammaModeIndex()
+{
+	guard(UE1AndroidGetNearestGammaModeIndex);
+
+	const FLOAT Current = UE1AndroidGetConfiguredGammaModeValue();
+	INT Nearest = 0;
+	FLOAT BestDiff = 999.0f;
+	for( INT i=0; i<(INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0])); ++i )
+	{
+		const FLOAT Diff = ( Current > GAndroidGammaModes[i].Value ) ? ( Current - GAndroidGammaModes[i].Value ) : ( GAndroidGammaModes[i].Value - Current );
+		if( Diff < BestDiff )
+		{
+			BestDiff = Diff;
+			Nearest = i;
+		}
+	}
+	return Nearest;
+
+	unguard;
+}
+
+static void UE1AndroidBuildGammaMenuLabel( char* OutLabel, INT OutSize )
+{
+	guard(UE1AndroidBuildGammaMenuLabel);
+
+	if( !OutLabel || OutSize <= 0 )
+		return;
+
+	const INT ModeIndex = UE1AndroidGetNearestGammaModeIndex();
+
+	// Match the classic UE1 menu layout: option name on the left,
+	// current value in the AUDIO/VIDEO value column. The current Android 8
+	// menu font/layout needs two more spaces here to line up with Texture Detail.
+	appSprintf( OutLabel, "Toggle Gamma              %s", GAndroidGammaModes[ModeIndex].Label );
+	OutLabel[OutSize-1] = 0;
+
+	unguard;
+}
+
+static UBOOL UE1AndroidStringLooksLikeGammaFullscreenMenuItem( const char* Text )
+{
+	guard(UE1AndroidStringLooksLikeGammaFullscreenMenuItem);
+
+	return Text
+		&& ( appStrfind( Text, "Toggle Fullscreen" ) != NULL
+		  || appStrfind( Text, "Toggle Gamma" ) != NULL );
+
+	unguard;
+}
+
+static UBOOL UE1AndroidSetGammaMenuLabelOnObject( UObject* Object, UProperty* MenuListProperty, const char* Label )
+{
+	guard(UE1AndroidSetGammaMenuLabelOnObject);
+
+	if( !Object || !MenuListProperty || !Label || MenuListProperty->ArrayDim <= 0 )
+		return 0;
+
+	const INT ElementSize = MenuListProperty->GetElementSize();
+	if( ElementSize <= 1 )
+		return 0;
+
+	// UnrealVideoMenu uses one-based menu indices in UnrealScript.
+	// In the stock Android package the fullscreen item is MenuList(2).
+	// A previously recompiled test package may have shifted it to MenuList(3),
+	// so patch only the element that still contains Toggle Fullscreen/Gamma.
+	static const INT CandidateIndices[] = { 2, 3 };
+	BYTE* Base = (BYTE*)Object + MenuListProperty->Offset;
+	for( INT Candidate=0; Candidate<(INT)(sizeof(CandidateIndices)/sizeof(CandidateIndices[0])); ++Candidate )
+	{
+		const INT Index = CandidateIndices[Candidate];
+		if( Index < 0 || Index >= MenuListProperty->ArrayDim )
+			continue;
+
+		char* MenuText = (char*)(Base + Index * ElementSize);
+		if( UE1AndroidStringLooksLikeGammaFullscreenMenuItem( MenuText ) )
+		{
+			appStrncpy( MenuText, Label, ElementSize );
+			MenuText[ElementSize-1] = 0;
+			return 1;
+		}
+	}
+
+	// Fallback for the normal, unmodified Unreal.u: keep the change restricted to
+	// the known fullscreen slot directly below Brightness.
+	if( MenuListProperty->ArrayDim > 2 )
+	{
+		char* MenuText = (char*)(Base + 2 * ElementSize);
+		appStrncpy( MenuText, Label, ElementSize );
+		MenuText[ElementSize-1] = 0;
+		return 1;
+	}
+
+	return 0;
+
+	unguard;
+}
+
+static void UE1AndroidRefreshGammaMenuLabel()
+{
+	guard(UE1AndroidRefreshGammaMenuLabel);
+
+	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, "UnrealVideoMenu" );
+	if( !MenuClass )
+		return;
+
+	UProperty* MenuListProperty = FindField<UProperty>( MenuClass, "MenuList" );
+	if( !MenuListProperty )
+		return;
+
+	char Label[64];
+	UE1AndroidBuildGammaMenuLabel( Label, sizeof(Label) );
+
+	UE1AndroidSetGammaMenuLabelOnObject( MenuClass->GetDefaultObject(), MenuListProperty, Label );
+
+	for( TObjectIterator<UObject> It; It; ++It )
+	{
+		if( It->IsA( MenuClass ) )
+			UE1AndroidSetGammaMenuLabelOnObject( *It, MenuListProperty, Label );
+	}
+
+	unguard;
+}
+
+static void UE1AndroidToggleGammaMode( UNSDLViewport* Viewport, FOutputDevice* Out )
+{
+	guard(UE1AndroidToggleGammaMode);
+
+	const INT Nearest = UE1AndroidGetNearestGammaModeIndex();
+	const INT NewIndex = ( Nearest + 1 ) % (INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0]));
+	const FAndroidGammaMode& NewMode = GAndroidGammaModes[NewIndex];
+
+	char NewValue[32];
+	appSprintf( NewValue, "%.2f", NewMode.Value );
+
+	// NSDLDrv.NSDLClient/Gamma is the runtime value read by the Android GLES renderer.
+	// Mirroring to WorldGamma keeps the renderer section readable and avoids stale advanced config values.
+	GConfigCache.SetString( "NSDLDrv.NSDLClient", "Gamma", NewValue );
+	GConfigCache.SetString( "NOpenGLESDrv.NOpenGLESRenderDevice", "WorldGamma", NewValue );
+	GConfigCache.SaveAllConfigs();
+	UE1AndroidRefreshGammaMenuLabel();
+
+	char Message[128];
+	appSprintf( Message, "Gamma: %s (%.2f)", NewMode.Label, NewMode.Value );
+
+	if( Viewport && Viewport->Actor )
+		Viewport->Actor->eventClientMessage( Message );
+	if( Out )
+		Out->Log( Message );
+
+	debugf( NAME_Log, "Android gamma mode toggled via ToggleFullscreen: %s", Message );
+
+	unguard;
+}
+
+
+static AMenu* UE1AndroidGetActiveMenu( UNSDLViewport* Viewport )
+{
+	guard(UE1AndroidGetActiveMenu);
+
+	if( !Viewport || !Viewport->Actor || !Viewport->Actor->myHUD )
+		return NULL;
+	return Viewport->Actor->myHUD->MainMenu;
+
+	unguard;
+}
+
+static UBOOL UE1AndroidMenuIsExactClass( AMenu* Menu, const char* ClassName )
+{
+	guard(UE1AndroidMenuIsExactClass);
+
+	if( !Menu || !ClassName || !Menu->GetClass() )
+		return 0;
+	return !appStricmp( Menu->GetClass()->GetName(), ClassName );
+
+	unguard;
+}
+
+struct FAndroidPlayerClassChoice
+{
+	const char* PrimaryClass;
+	const char* FallbackClass;
+	const char* Label;
+};
+
+static const FAndroidPlayerClassChoice GAndroidPlayerClassChoices[] =
+{
+	{ "Unreal.FemaleOne",      "UnrealI.FemaleOne",      "Female1"    },
+	{ "Unreal.FemaleTwo",      "UnrealI.FemaleTwo",      "Female2"    },
+	{ "Unreal.UnrealSpectator", "UnrealI.UnrealSpectator", "Spectator"  },
+	{ "Unreal.SkaarjPlayer",    "UnrealI.SkaarjPlayer",    "Sktrooper1" },
+	{ "Unreal.MaleThree",      "UnrealI.MaleThree",      "Male3"      },
+	{ "Unreal.MaleTwo",        "UnrealI.MaleTwo",        "Male2"      },
+	{ "Unreal.MaleOne",        "UnrealI.MaleOne",        "Male 1"     },
+};
+
+static UClass* UE1AndroidLoadPlayerClassChoice( const FAndroidPlayerClassChoice& Choice )
+{
+	guard(UE1AndroidLoadPlayerClassChoice);
+
+	UClass* Result = LoadClass<APlayerPawn>( NULL, Choice.PrimaryClass, NULL, LOAD_NoWarn | LOAD_KeepImports, NULL );
+	if( !Result && Choice.FallbackClass )
+		Result = LoadClass<APlayerPawn>( NULL, Choice.FallbackClass, NULL, LOAD_NoWarn | LOAD_KeepImports, NULL );
+	return Result;
+
+	unguard;
+}
+
+static INT UE1AndroidFindCurrentPlayerClassChoice( APlayerPawn* PlayerOwner )
+{
+	guard(UE1AndroidFindCurrentPlayerClassChoice);
+
+	char ConfigClass[128] = "";
+	GConfigCache.GetString( "DefaultPlayer", "Class", ConfigClass, sizeof(ConfigClass) );
+
+	for( INT i=0; i<(INT)(sizeof(GAndroidPlayerClassChoices)/sizeof(GAndroidPlayerClassChoices[0])); ++i )
+	{
+		const FAndroidPlayerClassChoice& Choice = GAndroidPlayerClassChoices[i];
+		if( ConfigClass[0]
+		&& ( !appStricmp( ConfigClass, Choice.PrimaryClass ) || !appStricmp( ConfigClass, Choice.FallbackClass )
+		  || appStrfind( ConfigClass, appStrchr( Choice.PrimaryClass, '.' ) ? appStrchr( Choice.PrimaryClass, '.' ) + 1 : Choice.PrimaryClass ) != NULL ) )
+		{
+			return i;
+		}
+	}
+
+	if( PlayerOwner && PlayerOwner->GetClass() )
+	{
+		const char* CurrentName = PlayerOwner->GetClass()->GetName();
+		for( INT i=0; i<(INT)(sizeof(GAndroidPlayerClassChoices)/sizeof(GAndroidPlayerClassChoices[0])); ++i )
+		{
+			const char* ShortName = appStrchr( GAndroidPlayerClassChoices[i].PrimaryClass, '.' );
+			ShortName = ShortName ? ShortName + 1 : GAndroidPlayerClassChoices[i].PrimaryClass;
+			if( !appStricmp( CurrentName, ShortName ) )
+				return i;
+		}
+	}
+
+	return 0;
+
+	unguard;
+}
+
+static UBOOL UE1AndroidApplyPlayerClassChoice( UNSDLViewport* Viewport, AMenu* Menu, INT ChoiceIndex )
+{
+	guard(UE1AndroidApplyPlayerClassChoice);
+
+	if( !Viewport || !Menu || !Menu->PlayerOwner )
+		return 0;
+
+	const INT Count = (INT)(sizeof(GAndroidPlayerClassChoices)/sizeof(GAndroidPlayerClassChoices[0]));
+	if( ChoiceIndex < 0 ) ChoiceIndex = Count - 1;
+	if( ChoiceIndex >= Count ) ChoiceIndex = 0;
+
+	const FAndroidPlayerClassChoice& Choice = GAndroidPlayerClassChoices[ChoiceIndex];
+	UClass* PlayerClass = UE1AndroidLoadPlayerClassChoice( Choice );
+	if( !PlayerClass )
+	{
+		debugf( NAME_Log, "Android player setup class not found: %s / %s", Choice.PrimaryClass, Choice.FallbackClass ? Choice.FallbackClass : "" );
+		return 0;
+	}
+
+	APlayerPawn* DefaultPawn = (APlayerPawn*)PlayerClass->GetDefaultObject();
+	if( !DefaultPawn )
+		return 0;
+
+	// Keep the menu preview and the current player pawn visually in sync.
+	Menu->Mesh = DefaultPawn->Mesh;
+	Menu->Skin = DefaultPawn->Skin;
+	Menu->PlayerOwner->Mesh = DefaultPawn->Mesh;
+	Menu->PlayerOwner->Skin = DefaultPawn->Skin;
+
+	// Persist the class for the next travel/join and also add it to the runtime URL.
+	const char* ClassPath = PlayerClass->GetPathName();
+	GConfigCache.SetString( "DefaultPlayer", "Class", ClassPath );
+	GConfigCache.SaveAllConfigs();
+
+	if( Viewport->Actor && Viewport->Actor->GetLevel() && Viewport->Actor->GetLevel()->Engine )
+	{
+		char URLClass[160];
+		appSprintf( URLClass, "Class=%s", ClassPath );
+		((UGameEngine*)Viewport->Actor->GetLevel()->Engine)->LastURL.AddOption( URLClass );
+	}
+
+	char URLSkin[160];
+	if( DefaultPawn->Skin )
+		appSprintf( URLSkin, "Skin=%s", DefaultPawn->Skin->GetPathName() );
+	else
+		appSprintf( URLSkin, "Skin=" );
+	if( Viewport->Actor && Viewport->Actor->GetLevel() && Viewport->Actor->GetLevel()->Engine )
+		((UGameEngine*)Viewport->Actor->GetLevel()->Engine)->LastURL.AddOption( URLSkin );
+
+	char Message[128];
+	appSprintf( Message, "Class: %s", Choice.Label );
+	if( Viewport->Actor )
+		Viewport->Actor->eventClientMessage( Message );
+	debugf( NAME_Log, "Android player setup class changed: %s", ClassPath );
+	return 1;
+
+	unguard;
+}
+
+static UBOOL UE1AndroidHandlePlayerSetupClassInput( UNSDLViewport* Viewport, INT iKey, EInputAction Action )
+{
+	guard(UE1AndroidHandlePlayerSetupClassInput);
+
+	if( Action != IST_Press || ( iKey != IK_Left && iKey != IK_Right ) )
+		return 0;
+
+	AMenu* Menu = UE1AndroidGetActiveMenu( Viewport );
+	if( !UE1AndroidMenuIsExactClass( Menu, "UnrealPlayerMenu" ) )
+		return 0;
+	if( Menu->Selection != 4 )
+		return 0;
+
+	INT Index = UE1AndroidFindCurrentPlayerClassChoice( Menu->PlayerOwner );
+	if( iKey == IK_Right )
+		Index++;
+	else
+		Index--;
+	return UE1AndroidApplyPlayerClassChoice( Viewport, Menu, Index );
+
+	unguard;
+}
+
+static void UE1AndroidPostProcessJoinMenuInput( UNSDLViewport* Viewport, INT iKey, EInputAction Action )
+{
+	guard(UE1AndroidPostProcessJoinMenuInput);
+
+	if( Action != IST_Press || ( iKey != IK_Up && iKey != IK_Down ) )
+		return;
+
+	AMenu* Menu = UE1AndroidGetActiveMenu( Viewport );
+	if( !UE1AndroidMenuIsExactClass( Menu, "UnrealJoinGameMenu" ) )
+		return;
+
+	if( Menu->Selection == 2 )
+		Menu->Selection = ( iKey == IK_Up ) ? 1 : 3;
+	else if( Menu->Selection < 1 )
+		Menu->Selection = 1;
+	else if( Menu->Selection > 4 )
+		Menu->Selection = 4;
+
+	unguard;
+}
+
+static void UE1AndroidSetFixedStringArrayElement( UObject* Object, UProperty* Property, INT Index, const char* Text )
+{
+	guard(UE1AndroidSetFixedStringArrayElement);
+
+	if( !Object || !Property || !Text || Index < 0 || Index >= Property->ArrayDim )
+		return;
+
+	const INT ElementSize = Property->GetElementSize();
+	if( ElementSize <= 1 )
+		return;
+
+	char* Value = (char*)((BYTE*)Object + Property->Offset + Index * ElementSize);
+	appStrncpy( Value, Text, ElementSize );
+	Value[ElementSize-1] = 0;
+
+	unguard;
+}
+
+static void UE1AndroidSetIntPropertyValue( UObject* Object, UProperty* Property, INT Value )
+{
+	guard(UE1AndroidSetIntPropertyValue);
+
+	if( !Object || !Property )
+		return;
+
+	*(INT*)((BYTE*)Object + Property->Offset) = Value;
+
+	unguard;
+}
+
+static void UE1AndroidClampMenuSelection( UObject* Object, UProperty* SelectionProperty, INT MaxSelection )
+{
+	guard(UE1AndroidClampMenuSelection);
+
+	if( !Object || !SelectionProperty || MaxSelection <= 0 )
+		return;
+
+	INT* Selection = (INT*)((BYTE*)Object + SelectionProperty->Offset);
+	if( *Selection > MaxSelection )
+		*Selection = MaxSelection;
+	else if( *Selection < 1 )
+		*Selection = 1;
+
+	unguard;
+}
+
+static void UE1AndroidPatchMenuObjectLengthAndTail( UObject* Object, UProperty* MenuLengthProperty, UProperty* SelectionProperty, UProperty* MenuListProperty, UProperty* HelpMessageProperty, INT NewLength, INT FirstHiddenIndex )
+{
+	guard(UE1AndroidPatchMenuObjectLengthAndTail);
+
+	if( !Object )
+		return;
+
+	UE1AndroidSetIntPropertyValue( Object, MenuLengthProperty, NewLength );
+	UE1AndroidClampMenuSelection( Object, SelectionProperty, NewLength );
+
+	// UnrealScript menu arrays are effectively one-based in these classes.
+	// Clear the now-hidden tail so stale text/help cannot reappear if a menu
+	// draw briefly happens before MenuLength is observed.
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty, FirstHiddenIndex, "" );
+	UE1AndroidSetFixedStringArrayElement( Object, HelpMessageProperty, FirstHiddenIndex, "" );
+
+	unguard;
+}
+
+static UBOOL UE1AndroidPatchMenuClassLengthAndTail( const char* ClassName, INT NewLength, INT FirstHiddenIndex )
+{
+	guard(UE1AndroidPatchMenuClassLengthAndTail);
+
+	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, ClassName );
+	if( !MenuClass )
+		return 0;
+
+	UProperty* MenuLengthProperty = FindField<UProperty>( MenuClass, "MenuLength" );
+	UProperty* SelectionProperty   = FindField<UProperty>( MenuClass, "Selection" );
+	UProperty* MenuListProperty    = FindField<UProperty>( MenuClass, "MenuList" );
+	UProperty* HelpMessageProperty = FindField<UProperty>( MenuClass, "HelpMessage" );
+
+	if( !MenuLengthProperty )
+		return 0;
+
+	UE1AndroidPatchMenuObjectLengthAndTail( MenuClass->GetDefaultObject(), MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty, NewLength, FirstHiddenIndex );
+
+	for( TObjectIterator<UObject> It; It; ++It )
+	{
+		if( It->IsA( MenuClass ) )
+			UE1AndroidPatchMenuObjectLengthAndTail( *It, MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty, NewLength, FirstHiddenIndex );
+	}
+
+	debugf( NAME_Log, "Android runtime menu trim applied: %s MenuLength=%i hiddenIndex=%i", ClassName, NewLength, FirstHiddenIndex );
+	return 1;
+
+	unguard;
+}
+
+static void UE1AndroidPatchVideoMenuCosmeticsOnObject( UObject* Object, UProperty* MenuListProperty )
+{
+	guard(UE1AndroidPatchVideoMenuCosmeticsOnObject);
+
+	if( !Object || !MenuListProperty )
+		return;
+
+	// UnrealVideoMenu default slot 3 is "Select Resolution". On Android the
+	// action is still the same, but the shorter label better matches the old
+	// low-width menu layout and leaves more room for the value column.
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty, 3, "Resolution" );
+
+	unguard;
+}
+
+static UBOOL UE1AndroidPatchVideoMenuCosmetics()
+{
+	guard(UE1AndroidPatchVideoMenuCosmetics);
+
+	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, "UnrealVideoMenu" );
+	if( !MenuClass )
+		return 0;
+
+	UProperty* MenuListProperty = FindField<UProperty>( MenuClass, "MenuList" );
+	if( !MenuListProperty )
+		return 0;
+
+	UE1AndroidPatchVideoMenuCosmeticsOnObject( MenuClass->GetDefaultObject(), MenuListProperty );
+
+	for( TObjectIterator<UObject> It; It; ++It )
+	{
+		if( It->IsA( MenuClass ) )
+			UE1AndroidPatchVideoMenuCosmeticsOnObject( *It, MenuListProperty );
+	}
+
+	debugf( NAME_Log, "Android runtime video menu cosmetic labels applied" );
+	return 1;
+
+	unguard;
+}
+
+static void UE1AndroidPatchJoinMenuOnObject( UObject* Object, UProperty* MenuLengthProperty, UProperty* SelectionProperty, UProperty* MenuListProperty, UProperty* HelpMessageProperty )
+{
+	guard(UE1AndroidPatchJoinMenuOnObject);
+
+	if( !Object )
+		return;
+
+	UE1AndroidSetIntPropertyValue( Object, MenuLengthProperty, 4 );
+	UE1AndroidClampMenuSelection( Object, SelectionProperty, 4 );
+
+	// Keep the original hardcoded UnrealJoinGameMenu selection indices intact:
+	// 1=Find Local Servers, 3=Open, 4=Optimized for. The draw filter in
+	// UnCanvas shifts rows 3/4 up visually over the hidden favorites row.
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty,    2, "" );
+	UE1AndroidSetFixedStringArrayElement( Object, HelpMessageProperty, 2, "" );
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty,    3, "Connect to Server via IP" );
+	UE1AndroidSetFixedStringArrayElement( Object, HelpMessageProperty, 3, "Type in a server IP address and connect directly." );
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty,    5, "" );
+	UE1AndroidSetFixedStringArrayElement( Object, HelpMessageProperty, 5, "" );
+
+	AMenu* Menu = Cast<AMenu>( Object );
+	if( Menu && Menu->Selection == 2 )
+		Menu->Selection = 3;
+
+	unguard;
+}
+
+static UBOOL UE1AndroidPatchJoinMenu()
+{
+	guard(UE1AndroidPatchJoinMenu);
+
+	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, "UnrealJoinGameMenu" );
+	if( !MenuClass )
+		return 0;
+
+	UProperty* MenuLengthProperty = FindField<UProperty>( MenuClass, "MenuLength" );
+	UProperty* SelectionProperty   = FindField<UProperty>( MenuClass, "Selection" );
+	UProperty* MenuListProperty    = FindField<UProperty>( MenuClass, "MenuList" );
+	UProperty* HelpMessageProperty = FindField<UProperty>( MenuClass, "HelpMessage" );
+	if( !MenuLengthProperty || !MenuListProperty )
+		return 0;
+
+	UE1AndroidPatchJoinMenuOnObject( MenuClass->GetDefaultObject(), MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty );
+	for( TObjectIterator<UObject> It; It; ++It )
+	{
+		if( It->GetClass() == MenuClass )
+			UE1AndroidPatchJoinMenuOnObject( *It, MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty );
+	}
+
+	debugf( NAME_Log, "Android runtime multiplayer JOIN menu patch applied" );
+	return 1;
+
+	unguard;
+}
+
+static void UE1AndroidPatchPlayerMenuOnObject( UObject* Object, UProperty* MenuLengthProperty, UProperty* SelectionProperty, UProperty* MenuListProperty, UProperty* HelpMessageProperty )
+{
+	guard(UE1AndroidPatchPlayerMenuOnObject);
+
+	if( !Object )
+		return;
+
+	UE1AndroidSetIntPropertyValue( Object, MenuLengthProperty, 4 );
+	UE1AndroidClampMenuSelection( Object, SelectionProperty, 4 );
+	UE1AndroidSetFixedStringArrayElement( Object, MenuListProperty,    4, "Class:" );
+	UE1AndroidSetFixedStringArrayElement( Object, HelpMessageProperty, 4, "Change your player class using the left and right arrows." );
+
+	unguard;
+}
+
+static UBOOL UE1AndroidPatchPlayerSetupMenu()
+{
+	guard(UE1AndroidPatchPlayerSetupMenu);
+
+	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, "UnrealPlayerMenu" );
+	if( !MenuClass )
+		return 0;
+
+	UProperty* MenuLengthProperty = FindField<UProperty>( MenuClass, "MenuLength" );
+	UProperty* SelectionProperty   = FindField<UProperty>( MenuClass, "Selection" );
+	UProperty* MenuListProperty    = FindField<UProperty>( MenuClass, "MenuList" );
+	UProperty* HelpMessageProperty = FindField<UProperty>( MenuClass, "HelpMessage" );
+	if( !MenuLengthProperty || !MenuListProperty )
+		return 0;
+
+	UE1AndroidPatchPlayerMenuOnObject( MenuClass->GetDefaultObject(), MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty );
+	for( TObjectIterator<UObject> It; It; ++It )
+	{
+		// Exact class only. UnrealMeshMenu inherits from UnrealPlayerMenu and already
+		// has its own 5-row Start Game layout.
+		if( It->GetClass() == MenuClass )
+			UE1AndroidPatchPlayerMenuOnObject( *It, MenuLengthProperty, SelectionProperty, MenuListProperty, HelpMessageProperty );
+	}
+
+	debugf( NAME_Log, "Android runtime player setup class row patch applied" );
+	return 1;
+
+	unguard;
+}
+
+static void UE1AndroidRefreshRuntimeMenuPatches()
+
+{
+	guard(UE1AndroidRefreshRuntimeMenuPatches);
+
+	static UBOOL VideoMenuPatched    = 0;
+	static UBOOL OptionsMenuPatched  = 0;
+	static UBOOL VideoMenuCosmetics  = 0;
+	static UBOOL JoinMenuPatched     = 0;
+	static UBOOL ServerMenuPatched   = 0;
+	static UBOOL PlayerMenuPatched   = 0;
+
+	// AUDIO/VIDEO: hide the bottom Sound Quality entry. MenuLength=6 keeps
+	// Brightness, Toggle Gamma, Select Resolution, Texture Detail, Music Volume
+	// and Sound Volume. The old Sound Quality Low/High value is drawn before
+	// the help panel, so moving the help panel up via MenuLength also covers the
+	// obsolete value row on the stock UnrealVideoMenu.
+	if( !VideoMenuPatched )
+		VideoMenuPatched = UE1AndroidPatchMenuClassLengthAndTail( "UnrealVideoMenu", 6, 7 );
+	if( !VideoMenuCosmetics )
+		VideoMenuCosmetics = UE1AndroidPatchVideoMenuCosmetics();
+
+	// MULTIPLAYER / JOIN: hide favorites and the obsolete Epic server list,
+	// rename Open to direct IP connect, while preserving the stock hardcoded
+	// selection indices used by UnrealJoinGameMenu.ProcessSelection().
+	if( !JoinMenuPatched )
+		JoinMenuPatched = UE1AndroidPatchJoinMenu();
+
+	// MULTIPLAYER / START GAME: hide the bottom Launch Dedicated Server entry.
+	if( !ServerMenuPatched )
+		ServerMenuPatched = UE1AndroidPatchMenuClassLengthAndTail( "UnrealServerMenu", 4, 5 );
+
+	// MULTIPLAYER / PLAYER SETUP: restore the missing Class row. Runtime input
+	// handling below cycles the class on left/right without rebuilding Unreal.u.
+	if( !PlayerMenuPatched )
+		PlayerMenuPatched = UE1AndroidPatchPlayerSetupMenu();
+
+	// OPTIONS: hide the bottom Advanced Options entry cleanly. It is already the
+	// final item, so MenuLength=14 is enough and does not disturb other hardcoded
+	// option selections such as HUD Configuration or View Bob.
+	if( !OptionsMenuPatched )
+		OptionsMenuPatched = UE1AndroidPatchMenuClassLengthAndTail( "UnrealOptionsMenu", 14, 15 );
+
+	unguard;
+}
+#endif
+
 // UE1_ANDROID_SOFT_KEYBOARD_PATCH_BEGIN
 #if PLATFORM_ANDROID
 static UBOOL GAndroidSoftKeyboardActive = 0;
@@ -800,6 +1461,9 @@ void UNSDLViewport::MakeCurrent()
 void UNSDLViewport::Repaint()
 {
 	guard(UNSDLViewport::Repaint);
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	UE1AndroidRefreshRuntimeMenuPatches();
+#endif
 	if( !OnHold && RenDev && SizeX && SizeY )
 		Client->Engine->Draw( this, 0 );
 	unguard;
@@ -994,7 +1658,20 @@ UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta
 
 	// Route to engine if a valid key
 	if( iKey > 0 )
-		return Client->Engine->InputEvent( this, (EInputKey)iKey, Action, Delta );
+	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// UnrealPlayerMenu originally exposes only Name/Team/Skin. The restored
+		// Class row is handled natively because the compiled Unreal.u cannot be
+		// changed safely on-device.
+		if( UE1AndroidHandlePlayerSetupClassInput( this, iKey, Action ) )
+			return 1;
+#endif
+		UBOOL Result = Client->Engine->InputEvent( this, (EInputKey)iKey, Action, Delta );
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		UE1AndroidPostProcessJoinMenuInput( this, iKey, Action );
+#endif
+		return Result;
+	}
 	else
 		return 0;
 
@@ -1312,21 +1989,35 @@ UBOOL UNSDLViewport::TickInput()
 UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 {
 	guard(UNSDLViewport::Exec);
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	UE1AndroidRefreshRuntimeMenuPatches();
+#endif
 	if( UViewport::Exec( Cmd, Out ) )
 	{
 		return 1;
 	}
 	else if( ParseCommand(&Cmd, "ToggleFullscreen") )
 	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// Android is always fullscreen. Reuse the existing, otherwise useless
+		// Audio/Video menu entry as a safe native gamma-mode toggle without
+		// changing or recompiling Unreal.u.
+		UE1AndroidToggleGammaMode( this, Out );
+		return 1;
+#else
 		// Toggle fullscreen.
 		if( Client->FullscreenViewport )
 			Client->EndFullscreen();
 		else if( !(Actor->ShowFlags & SHOW_ChildWindow) )
 			Client->TryRenderDevice( this, "ini:Engine.Engine.GameRenderDevice", 1 );
 		return 1;
+#endif
 	}
 	else if( ParseCommand(&Cmd, "GetCurrentRes") )
 	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		UE1AndroidRefreshGammaMenuLabel();
+#endif
 		Out->Logf( "%ix%i", SizeX, SizeY );
 		return 1;
 	}

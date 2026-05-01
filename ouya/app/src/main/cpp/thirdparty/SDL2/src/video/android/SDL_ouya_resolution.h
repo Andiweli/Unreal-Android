@@ -1,0 +1,269 @@
+/*
+  OUYA/API16 Unreal render-resolution selector.
+
+  This helper intentionally lives on the SDL side because SDL_androidwindow.c
+  and SDL_egl.c must agree on the virtual window size and native buffer size
+  before UE1's renderer is fully initialized.
+*/
+#ifndef SDL_OUYA_RESOLUTION_H_
+#define SDL_OUYA_RESOLUTION_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int SDL_OUYA_IsSpaceChar(char C)
+{
+    return C == ' ' || C == '\t' || C == '\r' || C == '\n';
+}
+
+static char *SDL_OUYA_Trim(char *Text)
+{
+    char *End;
+    while (*Text && SDL_OUYA_IsSpaceChar(*Text)) {
+        ++Text;
+    }
+    End = Text + strlen(Text);
+    while (End > Text && SDL_OUYA_IsSpaceChar(End[-1])) {
+        --End;
+    }
+    *End = '\0';
+    return Text;
+}
+
+static int SDL_OUYA_ToLowerAscii(int C)
+{
+    if (C >= 'A' && C <= 'Z') {
+        return C + ('a' - 'A');
+    }
+    return C;
+}
+
+static int SDL_OUYA_StrEqualNoCase(const char *A, const char *B)
+{
+    while (*A && *B) {
+        if (SDL_OUYA_ToLowerAscii((unsigned char)*A) != SDL_OUYA_ToLowerAscii((unsigned char)*B)) {
+            return 0;
+        }
+        ++A;
+        ++B;
+    }
+    return *A == '\0' && *B == '\0';
+}
+
+static int SDL_OUYA_ParsePositiveInt(const char *Text)
+{
+    int Value = 0;
+    while (*Text >= '0' && *Text <= '9') {
+        Value = Value * 10 + (*Text - '0');
+        ++Text;
+    }
+    return Value;
+}
+
+
+static int SDL_OUYA_IsNativeResolution(int W, int H)
+{
+    (void)W;
+    (void)H;
+    return 0;
+}
+
+static int SDL_OUYA_IsExplicitSupportedResolution(int W, int H)
+{
+    return (W == 1280 && H == 720) ||
+           (W == 960  && H == 540) ||
+           (W == 1024 && H == 768) ||
+           (W == 800  && H == 600);
+}
+static int SDL_OUYA_ParseResolutionValue(const char *Value, int *OutW, int *OutH)
+{
+    int W = 0;
+    int H = 0;
+    char Local[64];
+    char *Text;
+    char *Sep;
+
+    if (!Value || !Value[0]) {
+        return 0;
+    }
+
+    strncpy(Local, Value, sizeof(Local) - 1);
+    Local[sizeof(Local) - 1] = '\0';
+    Text = SDL_OUYA_Trim(Local);
+
+    if (SDL_OUYA_StrEqualNoCase(Text, "Native") ||
+        SDL_OUYA_StrEqualNoCase(Text, "native") ||
+        SDL_OUYA_StrEqualNoCase(Text, "Monitor") ||
+        SDL_OUYA_StrEqualNoCase(Text, "Display")) {
+        *OutW = 1280;
+        *OutH = 720;
+        return 1;
+    }
+
+    if (SDL_OUYA_StrEqualNoCase(Text, "540p")) {
+        W = 960; H = 540;
+    } else if (SDL_OUYA_StrEqualNoCase(Text, "720p")) {
+        W = 1280; H = 720;
+    } else {
+        Sep = strchr(Text, 'x');
+        if (!Sep) {
+            Sep = strchr(Text, 'X');
+        }
+        if (!Sep) {
+            return 0;
+        }
+        *Sep = '\0';
+        W = SDL_OUYA_ParsePositiveInt(SDL_OUYA_Trim(Text));
+        H = SDL_OUYA_ParsePositiveInt(SDL_OUYA_Trim(Sep + 1));
+    }
+
+    if ((W == 0 && H == 0) || (SDL_OUYA_IsNativeResolution(W, H) || SDL_OUYA_IsExplicitSupportedResolution(W, H))) {
+        *OutW = W;
+        *OutH = H;
+        return 1;
+    }
+
+    return 0;
+}
+
+static void SDL_OUYA_NormalizeResolution(int *W, int *H)
+{
+    if ((*W == 0 && *H == 0) || (SDL_OUYA_IsNativeResolution(*W, *H) || SDL_OUYA_IsExplicitSupportedResolution(*W, *H))) {
+        return;
+    }
+
+    /*
+       960x540 is the safe OUYA default. 720p remains selectable,
+       but missing or unsupported config values should fall back to the
+       stable performance mode on Tegra 3.
+    */
+    if (*W == 960 || *H == 540) {
+        *W = 960; *H = 540;
+    } else {
+        *W = 960; *H = 540;
+    }
+}
+
+static int SDL_OUYA_ReadResolutionFromIni(const char *Path, int *OutW, int *OutH)
+{
+    FILE *File;
+    char Line[256];
+    int FileW = 0;
+    int FileH = 0;
+    int Got = 0;
+
+    if (!Path || !Path[0]) {
+        return 0;
+    }
+
+    File = fopen(Path, "r");
+    if (!File) {
+        return 0;
+    }
+
+    while (fgets(Line, sizeof(Line), File)) {
+        char *Text = SDL_OUYA_Trim(Line);
+        char *Eq;
+        char *Key;
+        char *Value;
+
+        if (!Text[0] || Text[0] == ';' || Text[0] == '#' || Text[0] == '[') {
+            continue;
+        }
+
+        Eq = strchr(Text, '=');
+        if (!Eq) {
+            continue;
+        }
+
+        *Eq = '\0';
+        Key = SDL_OUYA_Trim(Text);
+        Value = SDL_OUYA_Trim(Eq + 1);
+
+        if (SDL_OUYA_StrEqualNoCase(Key, "OuyaRenderResolution") ||
+            SDL_OUYA_StrEqualNoCase(Key, "OuyaInternalResolution") ||
+            SDL_OUYA_StrEqualNoCase(Key, "OuyaRenderSize")) {
+            if (SDL_OUYA_ParseResolutionValue(Value, OutW, OutH)) {
+                Got = 1;
+            }
+        } else if (SDL_OUYA_StrEqualNoCase(Key, "OuyaRenderWidth") ||
+                   SDL_OUYA_StrEqualNoCase(Key, "OuyaInternalWidth")) {
+            FileW = SDL_OUYA_ParsePositiveInt(Value);
+        } else if (SDL_OUYA_StrEqualNoCase(Key, "OuyaRenderHeight") ||
+                   SDL_OUYA_StrEqualNoCase(Key, "OuyaInternalHeight")) {
+            FileH = SDL_OUYA_ParsePositiveInt(Value);
+        }
+    }
+
+    fclose(File);
+
+    if (FileW > 0 && FileH > 0) {
+        *OutW = FileW;
+        *OutH = FileH;
+        SDL_OUYA_NormalizeResolution(OutW, OutH);
+        Got = 1;
+    }
+
+    return Got;
+}
+
+static void SDL_OUYA_GetRenderResolution(int *OutW, int *OutH)
+{
+    static int Cached = 0;
+    static int CachedW = 960;
+    static int CachedH = 540;
+
+    if (!Cached) {
+        const char *EnvRoot;
+        const char *EnvRes;
+        const char *EnvW;
+        const char *EnvH;
+        char Path[1024];
+
+        CachedW = 960;
+        CachedH = 540;
+
+        SDL_OUYA_ReadResolutionFromIni("Unreal.ini", &CachedW, &CachedH);
+        SDL_OUYA_ReadResolutionFromIni("./Unreal.ini", &CachedW, &CachedH);
+
+        EnvRoot = getenv("UE1_ANDROID_ROOT");
+        if (EnvRoot && EnvRoot[0]) {
+            snprintf(Path, sizeof(Path), "%s/System/Unreal.ini", EnvRoot);
+            Path[sizeof(Path) - 1] = '\0';
+            SDL_OUYA_ReadResolutionFromIni(Path, &CachedW, &CachedH);
+        }
+
+        SDL_OUYA_ReadResolutionFromIni("/mnt/usbdrive/Unreal/System/Unreal.ini", &CachedW, &CachedH);
+        SDL_OUYA_ReadResolutionFromIni("/storage/emulated/0/Unreal/System/Unreal.ini", &CachedW, &CachedH);
+        SDL_OUYA_ReadResolutionFromIni("/sdcard/Unreal/System/Unreal.ini", &CachedW, &CachedH);
+
+        EnvRes = getenv("UE1_OUYA_RENDER_RES");
+        if (!EnvRes || !EnvRes[0]) {
+            EnvRes = getenv("OUYA_RENDER_RES");
+        }
+        if (EnvRes && EnvRes[0]) {
+            SDL_OUYA_ParseResolutionValue(EnvRes, &CachedW, &CachedH);
+        }
+
+        EnvW = getenv("UE1_OUYA_RENDER_WIDTH");
+        EnvH = getenv("UE1_OUYA_RENDER_HEIGHT");
+        if (EnvW && EnvH && EnvW[0] && EnvH[0]) {
+            CachedW = SDL_OUYA_ParsePositiveInt(EnvW);
+            CachedH = SDL_OUYA_ParsePositiveInt(EnvH);
+        }
+
+        SDL_OUYA_NormalizeResolution(&CachedW, &CachedH);
+        if (0) {
+              SDL_Log("OUYA/API16 COMBO: selected native render resolution");
+          } else {
+              SDL_Log("OUYA/API16 COMBO: selected render resolution %dx%d", CachedW, CachedH);
+          }
+        Cached = 1;
+    }
+
+    *OutW = CachedW;
+    *OutH = CachedH;
+}
+
+#endif /* SDL_OUYA_RESOLUTION_H_ */

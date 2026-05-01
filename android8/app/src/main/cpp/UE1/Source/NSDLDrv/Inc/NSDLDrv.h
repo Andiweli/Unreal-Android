@@ -104,6 +104,7 @@ class NSDLDRV_API UNSDLClient : public UClient, public FNotifyHook
 	UBOOL InvertV;
 	FLOAT ScaleXYZ;
 	FLOAT ScaleRUV;
+	FLOAT Gamma;
 	FLOAT DeadZoneXYZ;
 	FLOAT DeadZoneRUV;
 
