@@ -1,4 +1,4 @@
-﻿#if defined(PLATFORM_ANDROID) && !defined(appStrlwr)
+#if defined(PLATFORM_ANDROID) && !defined(appStrlwr)
 static inline CHAR* AndroidLegacyAppStrlwr(CHAR* S)
 {
     if (!S)
@@ -14,6 +14,7 @@ static inline CHAR* AndroidLegacyAppStrlwr(CHAR* S)
 }
 #define appStrlwr AndroidLegacyAppStrlwr
 #endif
+
 /*=============================================================================
 	UnLinker.h: Unreal object linker.
 	Copyright 1997 Epic MegaGames, Inc. This software is a trade secret.
@@ -248,27 +249,9 @@ class FArchiveFileLoad : public FArchive
 public:
 	char Filename[256];
 	INT Pos;
-	BYTE* Buffer;
-	INT BufferSize;
-	INT BufferStart;
-	INT BufferEnd;
-
-	enum
-	{
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-		AndroidReadAheadSize = 256 * 1024
-#else
-		AndroidReadAheadSize = 0
-#endif
-	};
-
 	FArchiveFileLoad( const char* InFilename )
 	: File(NULL)
 	, Pos(0)
-	, Buffer(NULL)
-	, BufferSize(0)
-	, BufferStart(0)
-	, BufferEnd(0)
 	{
 		guard(FArchiveFileLoad::FArchiveFileLoad);
 		appStrcpy( Filename, InFilename );
@@ -278,40 +261,14 @@ public:
 		appFseek( File, 0, USEEK_END );
 		Eof = appFtell( File );
 		appFseek( File, 0, USEEK_SET );
-
-		if( AndroidReadAheadSize > 0 )
-		{
-			BufferSize = AndroidReadAheadSize;
-			Buffer = (BYTE*)appMalloc( BufferSize, "AndroidPackageReadAhead" );
-			verify( Buffer );
-
-			static UBOOL GAndroidReadAheadLogged = 0;
-			if( !GAndroidReadAheadLogged )
-			{
-				debugf( NAME_Log, "Android/API16 package read-ahead enabled: %i KB", BufferSize / 1024 );
-				GAndroidReadAheadLogged = 1;
-			}
-		}
 		unguard;
 	}
 	FArchiveFileLoad()
 	: File(NULL)
-	, Pos(0)
-	, Buffer(NULL)
-	, BufferSize(0)
-	, BufferStart(0)
-	, BufferEnd(0)
 	{}
 	~FArchiveFileLoad()
 	{
 		guard(FArchiveFileLoad::~FArchiveFileLoad);
-		if( Buffer )
-		{
-			appFree( Buffer );
-			Buffer = NULL;
-		}
-		BufferSize = 0;
-		BufferStart = BufferEnd = 0;
 		if( File )
 			appFclose( File );
 		File = NULL;
@@ -322,100 +279,37 @@ public:
 		guard(FArchiveFileLoad::Seek);
 		check(InPos>=0);
 		check(InPos<=Eof);
-
-		// Keep the logical position in UE1's archive. The physical stdio handle is
-		// moved lazily by Serialize(), which lets small backwards/forwards seeks
-		// hit the Android read-ahead buffer instead of the USB/storage layer.
-		Pos = InPos;
+		INT Result = appFseek(File,InPos,USEEK_SET);
+		if( Result!=0 )
+			appErrorf( "Seek Failed %i/%i (%i): %i %i", InPos, Eof, Pos, Result, appFerror(File) );
 		unguard;
+		Pos = InPos;
 	}
 	INT Tell()
 	{
-		return Pos;
+		return appFtell( File );
 	}
 	void Push( FFileStatus& St, BYTE* NewBuffer )
 	{
-		St.SavedPos = Pos;
+		St.SavedPos = appFtell( File );
 	}
 	void Pop( FFileStatus& St )
 	{
 		guardSlow(FArchiveFileLoad::Pop);
-		check(St.SavedPos>=0);
-		check(St.SavedPos<=Eof);
-		Pos = St.SavedPos;
-		unguardSlow;
-	}
-	UBOOL FillReadAhead( INT InPos )
-	{
-		guardSlow(FArchiveFileLoad::FillReadAhead);
-		check(Buffer);
-		check(InPos>=0);
-		check(InPos<=Eof);
-
-		BufferStart = InPos;
-		BufferEnd = InPos;
-
-		const INT ToRead = Min( BufferSize, Eof - InPos );
-		if( ToRead <= 0 )
-			return 0;
-
-		INT Result = appFseek( File, InPos, USEEK_SET );
+		INT Result = appFseek( File, St.SavedPos, USEEK_SET );
 		if( Result!=0 )
-			appErrorf( "Seek Failed %i/%i (%i): %i %i", InPos, Eof, Pos, Result, appFerror(File) );
-
-		const INT Count = appFread( Buffer, 1, ToRead, File );
-		if( Count!=ToRead )
-			appErrorf( "appFread read-ahead failed: Count=%i Length=%i Error=%i", Count, ToRead, appFerror(File) );
-
-		BufferEnd = BufferStart + Count;
-		return Count > 0;
+			appErrorf( "Seek Failed %i/%i (%i): %i %i", St.SavedPos, Eof, Pos, Result, appFerror(File) );
+		Pos = St.SavedPos;
 		unguardSlow;
 	}
 	FArchive& Serialize( void* V, INT Length )
 	{
-		guardSlow(FArchiveFileLoad::Serialize);
-		if( Length == 0 )
-			return *this;
-
-		check(Length>=0);
-		check(Pos>=0);
-		check(Pos+Length<=Eof);
-
-		if( !Buffer || BufferSize <= 0 || Length > BufferSize / 2 )
-		{
-			INT Result = appFseek( File, Pos, USEEK_SET );
-			if( Result!=0 )
-				appErrorf( "Seek Failed %i/%i (%i): %i %i", Pos, Eof, Pos, Result, appFerror(File) );
-			INT Count = appFread( V, Length, 1, File );
-			if( Count!=1 )
-				appErrorf( "appFread failed: Count=%i Length=%i Error=%i", Count, Length, appFerror(File) );
-			Pos += Length;
-			check(Pos<=Eof);
-			return *this;
-		}
-
-		BYTE* Dest = (BYTE*)V;
-		INT Remaining = Length;
-		while( Remaining > 0 )
-		{
-			if( Pos < BufferStart || Pos >= BufferEnd )
-			{
-				if( !FillReadAhead( Pos ) )
-					appErrorf( "appFread read-ahead empty at %i/%i", Pos, Eof );
-			}
-
-			const INT Available = BufferEnd - Pos;
-			const INT CopyCount = Min( Available, Remaining );
-			check(CopyCount>0);
-			appMemcpy( Dest, Buffer + ( Pos - BufferStart ), CopyCount );
-			Dest += CopyCount;
-			Pos += CopyCount;
-			Remaining -= CopyCount;
-		}
-
+		INT Count = appFread( V, Length, 1, File );
+		if( Count!=1 && Length!=0 )
+			appErrorf( "appFread failed: Count=%i Length=%i Error=%i", Count, Length, appFerror(File) );
+		Pos += Length;
 		check(Pos<=Eof);
 		return *this;
-		unguardSlow;
 	}
 //!!private:
 	FILE* File;

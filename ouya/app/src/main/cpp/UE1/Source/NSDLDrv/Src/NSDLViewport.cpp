@@ -162,7 +162,7 @@ static UBOOL UE1AndroidSetGammaMenuLabelOnObject( UObject* Object, UProperty* Me
 	unguard;
 }
 
-static void UE1AndroidRefreshGammaMenuLabel()
+static void UE1AndroidRefreshGammaMenuLabel( UObject* SpecificMenuObject = NULL )
 {
 	guard(UE1AndroidRefreshGammaMenuLabel);
 
@@ -178,6 +178,15 @@ static void UE1AndroidRefreshGammaMenuLabel()
 	UE1AndroidBuildGammaMenuLabel( Label, sizeof(Label) );
 
 	UE1AndroidSetGammaMenuLabelOnObject( MenuClass->GetDefaultObject(), MenuListProperty, Label );
+
+	// Hot path protection: when a live menu object is known, patch only that
+	// instance and avoid walking the complete UObject list every repaint.
+	if( SpecificMenuObject )
+	{
+		if( SpecificMenuObject->IsA( MenuClass ) )
+			UE1AndroidSetGammaMenuLabelOnObject( SpecificMenuObject, MenuListProperty, Label );
+		return;
+	}
 
 	for( TObjectIterator<UObject> It; It; ++It )
 	{
@@ -646,7 +655,7 @@ static UBOOL UE1AndroidPatchPlayerSetupMenu()
 	unguard;
 }
 
-static void UE1AndroidRefreshRuntimeMenuPatches()
+static void UE1AndroidRefreshRuntimeMenuPatches( UNSDLViewport* Viewport = NULL, UBOOL bForce = 0 )
 
 {
 	guard(UE1AndroidRefreshRuntimeMenuPatches);
@@ -657,6 +666,23 @@ static void UE1AndroidRefreshRuntimeMenuPatches()
 	static UBOOL JoinMenuPatched     = 0;
 	static UBOOL ServerMenuPatched   = 0;
 	static UBOOL PlayerMenuPatched   = 0;
+	static UBOOL GammaLabelPatched   = 0;
+	static DOUBLE LastPatchAttempt   = -1000.0;
+
+	AMenu* ActiveMenu = UE1AndroidGetActiveMenu( Viewport );
+
+	// This function used to run a number of FindObject/TObjectIterator passes on
+	// every Repaint(). On OUYA/Tegra 3 that is measurable CPU work even during
+	// normal gameplay. Keep the runtime UnrealScript-menu fixes, but only scan
+	// when a menu is actually active, when Exec() explicitly asks for it, or at a
+	// throttled interval while a menu is open.
+	if( !bForce && !ActiveMenu )
+		return;
+
+	const DOUBLE Now = appSeconds();
+	if( !bForce && ( Now - LastPatchAttempt ) < 0.50 )
+		return;
+	LastPatchAttempt = Now;
 
 	// AUDIO/VIDEO: hide the bottom Sound Quality entry. MenuLength=6 keeps
 	// Brightness, Toggle Gamma, Select Resolution, Texture Detail, Music Volume
@@ -668,10 +694,14 @@ static void UE1AndroidRefreshRuntimeMenuPatches()
 	if( !VideoMenuCosmetics )
 		VideoMenuCosmetics = UE1AndroidPatchVideoMenuCosmetics();
 
-	// Keep the AUDIO/VIDEO label correct before the user clicks it for the first time.
-	// This is intentionally refreshed each repaint/exec because UnrealScript can spawn
-	// fresh menu instances after the class default object was already patched.
-	UE1AndroidRefreshGammaMenuLabel();
+	// Keep the AUDIO/VIDEO label correct without doing a full UObject iteration
+	// every frame. If a specific active menu exists, patch only that instance;
+	// otherwise do one full pass on forced Exec()/initial refresh.
+	if( bForce || !GammaLabelPatched || ActiveMenu )
+	{
+		UE1AndroidRefreshGammaMenuLabel( ActiveMenu );
+		GammaLabelPatched = 1;
+	}
 
 	// MULTIPLAYER / JOIN: hide favorites and the obsolete Epic server list,
 	// rename Open to direct IP connect, while preserving the stock hardcoded
@@ -1492,7 +1522,7 @@ void UNSDLViewport::Repaint()
 {
 	guard(UNSDLViewport::Repaint);
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-	UE1AndroidRefreshRuntimeMenuPatches();
+	UE1AndroidRefreshRuntimeMenuPatches( this, 0 );
 #endif
 	if( !OnHold && RenDev && SizeX && SizeY )
 		Client->Engine->Draw( this, 0 );
@@ -2028,7 +2058,7 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 {
 	guard(UNSDLViewport::Exec);
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-	UE1AndroidRefreshRuntimeMenuPatches();
+	UE1AndroidRefreshRuntimeMenuPatches( this, 0 );
 	const char* GammaCmd = Cmd;
 	if( ParseCommand( &GammaCmd, "ToggleFullscreen" ) )
 	{

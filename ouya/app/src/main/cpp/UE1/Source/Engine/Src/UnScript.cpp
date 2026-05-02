@@ -116,7 +116,14 @@ void AActor::physMovingBrush( FLOAT DeltaTime )
 	if( IsA(AMover::StaticClass) )
 	{
 		AMover* Mover  = (AMover*)this;
-		INT KeyNum     = Clamp( (INT)Mover->KeyNum, (INT)0, (INT)ARRAY_COUNT(Mover->KeyPos) );
+		// OUYA/API16 release safety:
+		// KeyPos/KeyRot contain ARRAY_COUNT entries, so the highest valid index is
+		// ARRAY_COUNT-1. The original clamp allowed ARRAY_COUNT itself, which can
+		// read past KeyPos/KeyRot and produce broken or wildly rotating movers in
+		// optimized ARM builds if KeyNum ever becomes invalid. Also respect NumKeys
+		// when it is smaller than the fixed array size.
+		const INT MaxMoverKey = Clamp( (INT)Mover->NumKeys - 1, (INT)0, (INT)ARRAY_COUNT(Mover->KeyPos) - 1 );
+		INT KeyNum     = Clamp( (INT)Mover->KeyNum, (INT)0, MaxMoverKey );
 		while( Mover->bInterpolating && DeltaTime>0.0 )
 		{
 			// We are moving.
@@ -1714,7 +1721,7 @@ void AActor::execTouchingActors( FFrame& Stack, BYTE*& Result )
 	PRE_ITERATOR;
 		// Fetch next actor in the iteration.
 		*OutActor = NULL;
-		for( iTouching; iTouching<ARRAY_COUNT(Touching) && *OutActor==NULL; iTouching++ )
+		for( ; iTouching<ARRAY_COUNT(Touching) && *OutActor==NULL; iTouching++ )
 		{
 			AActor* TestActor = Touching[iTouching];
 			if(	TestActor && TestActor->IsA(BaseClass) )
@@ -1911,7 +1918,7 @@ void AZoneInfo::execZoneActors( FFrame& Stack, BYTE*& Result )
 			if
 			(	TestActor
 			&&	TestActor->IsA(BaseClass)
-			&&	TestActor->IsInZone(this) );
+			&&	TestActor->IsInZone(this) )
 				*OutActor = TestActor;
 		}
 		if( *OutActor == NULL )

@@ -24,10 +24,6 @@ class ENGINE_API UGameEngine : public UEngine
 	FURL			LastURL;
 	char			ServerActors[16][96];
 	char			ServerPackages[16][96];
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-	UBOOL			PrecacheInitialView;
-#endif
-
 	// Constructors.
 	static void InternalClassInitializer( UClass* Class );
 	UGameEngine();
@@ -55,9 +51,6 @@ class ENGINE_API UGameEngine : public UEngine
 	virtual void SaveGame( INT Position );
 	virtual void CancelPending();
 	virtual void PaintProgress();
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-	virtual void PrecacheInitialViewFrame( UBOOL bNetworkPending );
-#endif
 };
 
 /*-----------------------------------------------------------------------------

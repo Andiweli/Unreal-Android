@@ -79,6 +79,8 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 #if defined(UNREAL_ANDROID_OUYA)
 	UBOOL PerfSpikeLog;
 	FLOAT PerfSpikeThresholdMS;
+	UBOOL OuyaForceGLFlush;
+	DOUBLE OuyaRuntimeConfigLastRefresh;
 #endif
 
 	// All currently cached textures.
@@ -197,6 +199,16 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 
 	DOUBLE OuyaPerfFrameStart;
 	DOUBLE OuyaPerfLastLogTime;
+	DOUBLE OuyaPerfWindowStart;
+	FLOAT OuyaPerfWindowFrameMS;
+	INT OuyaPerfWindowFrames;
+	INT OuyaPerfWindowDrawCalls;
+	INT OuyaPerfWindowTriangles;
+	INT OuyaPerfWindowTextureBinds;
+	INT OuyaPerfWindowTextureUploads;
+	INT OuyaPerfWindowUploadKB;
+	INT OuyaPerfWindowStateChanges;
+	INT OuyaPerfWindowStateSkips;
 	DWORD OuyaPerfFrameIndex;
 	INT OuyaPerfDrawCalls;
 	INT OuyaPerfTriangles;
@@ -262,6 +274,7 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void OuyaBeginPerfFrame();
 	void OuyaEndPerfFrame();
 	void OuyaCountTextureUpload( const FTextureInfo& Info );
+	void OuyaPerfLogLine( const char* Fmt, ... );
 	void OuyaCachedActiveTexture( INT TMU );
 	void OuyaCachedBindTexture2D( INT TMU, GLuint Texture );
 	void OuyaCachedBindArrayBuffer( GLuint Buffer );

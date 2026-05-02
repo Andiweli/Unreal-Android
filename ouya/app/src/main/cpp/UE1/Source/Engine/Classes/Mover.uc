@@ -161,7 +161,7 @@ function Actor SpecialHandling(Pawn Other)
 // Interpolate to keyframe KeyNum in Seconds time.
 final function InterpolateTo( byte NewKeyNum, float Seconds )
 {
-	NewKeyNum = Clamp( NewKeyNum, 0, ArrayCount(KeyPos) );
+	NewKeyNum = Clamp( NewKeyNum, 0, ArrayCount(KeyPos)-1 );
 	if( NewKeyNum==PrevKeyNum && KeyNum!=PrevKeyNum )
 	{
 		// Reverse the movement smoothly.
@@ -188,7 +188,7 @@ final function InterpolateTo( byte NewKeyNum, float Seconds )
 // Set the specified keyframe.
 final function SetKeyframe( byte NewKeyNum, vector NewLocation, rotator NewRotation )
 {
-	KeyNum         = Clamp( NewKeyNum, 0, ArrayCount(KeyPos) );
+	KeyNum         = Clamp( NewKeyNum, 0, ArrayCount(KeyPos)-1 );
 	KeyPos[KeyNum] = NewLocation;
 	KeyRot[KeyNum] = NewRotation;
 }
@@ -291,7 +291,7 @@ function BeginPlay()
 
 	// Init key info.
 	Super.BeginPlay();
-	KeyNum         = Clamp( KeyNum, 0, ArrayCount(KeyPos) );
+	KeyNum         = Clamp( KeyNum, 0, ArrayCount(KeyPos)-1 );
 	PhysAlpha      = 0.0;
 
 	// Set initial location.

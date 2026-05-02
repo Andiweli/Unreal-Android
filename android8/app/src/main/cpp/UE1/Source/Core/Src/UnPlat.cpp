@@ -583,6 +583,21 @@
 #ifdef PLATFORM_ANDROID
 #include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
 #endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
+#ifdef PLATFORM_ANDROID
+#include <android/log.h> // UNREAL_ANDROID_LOGCAT_BRIDGE
+#endif
 UBOOL SaveAllConfigs(); // UNREAL_ANDROID_CONFIG_FORWARD
 #ifdef PLATFORM_ANDROID
 #include <android/log.h>

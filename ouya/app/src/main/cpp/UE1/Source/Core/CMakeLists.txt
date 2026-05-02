@@ -31,6 +31,18 @@ if(NOT MSVC AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
   set_source_files_properties("Src/UnProp.cpp" PROPERTIES COMPILE_FLAGS -Og)
 endif()
 
+
+# OUYA_API16_SCRIPTVM_SAFE_FLAGS_BEGIN
+# Override after any earlier per-file flags:
+# On OUYA/API16/Tegra3 the old UE1 UnrealScript VM/property interpreter is
+# sensitive in Release. Button-called lifts exercise foreach/event/state chains.
+if(ANDROID AND ANDROID_LEGACY_API16 AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+  set(_UE1_OUYA_CORE_SCRIPTVM_SAFE_FLAGS "-O0 -fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer")
+  set_source_files_properties("Src/UnCorSc.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_OUYA_CORE_SCRIPTVM_SAFE_FLAGS}")
+  set_source_files_properties("Src/UnProp.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_OUYA_CORE_SCRIPTVM_SAFE_FLAGS}")
+endif()
+# OUYA_API16_SCRIPTVM_SAFE_FLAGS_END
+
 add_library(${PROJECT_NAME} ${LIB_TYPE} ${SRC_FILES})
 
 target_include_directories(${PROJECT_NAME}

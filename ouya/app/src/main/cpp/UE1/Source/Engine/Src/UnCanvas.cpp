@@ -517,6 +517,8 @@ void UCanvas::execDrawText( FFrame& Stack, BYTE*& Result )
 
 	//debugf( "DrawText: '%s' %i", Text, CR );
 #ifdef PLATFORM_ANDROID // UE1_ANDROID_AUDIOVIDEO_MENU_DRAW_FIX
+	if( AndroidCanvasActiveMenuIs( this, "UnrealVideoMenu" ) )
+	{
 	// Runtime cleanup for the stock UnrealVideoMenu without rebuilding Unreal.u:
 	// - shift the AUDIO/VIDEO value column slightly right for Resolution/Texture Detail;
 	// - suppress the orphaned High/Low that UnrealVideoMenu.DrawMenu still draws for
@@ -562,6 +564,7 @@ void UCanvas::execDrawText( FFrame& Stack, BYTE*& Result )
 			if( AndroidIsHighLow )
 				CurX += AndroidSpaceX * 2;
 		}
+	}
 	}
 #endif
 

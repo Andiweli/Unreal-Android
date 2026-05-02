@@ -636,6 +636,21 @@ android {
 
             matchingFallbacks += listOf("debug")
         }
+
+
+        create("ouyaPerformance") {
+            initWith(getByName("release"))
+
+            // Optimierter, installierbarer OUYA-Testbuild für echte Frametimes.
+            signingConfig = signingConfigs.getByName("release")
+            isDebuggable = false
+            isJniDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = null
+            versionNameSuffix = "-OUYA-Perf"
+            matchingFallbacks += listOf("release")
+        }
     }
 
     // Replaces deprecated gradle.properties option: android.defaults.buildfeatures.buildconfig=true
@@ -654,7 +669,7 @@ android {
         minSdk = 16
         targetSdk = 19
         versionCode = 1
-        versionName = "1.1.0"
+        versionName = "1.2.0"
 
         ndk {
             abiFilters += listOf("armeabi-v7a")

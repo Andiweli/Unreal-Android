@@ -55,13 +55,31 @@ set(LIBTYPE SHARED CACHE STRING "" FORCE)
 set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
 set(ALSOFT_TESTS OFF CACHE BOOL "" FORCE)
-set(ALSOFT_CONFIG OFF CACHE BOOL "" FORCE)
+# ALSOFT_CONFIG is deprecated in newer OpenAL Soft versions.
+# Use the replacement option so CMake no longer emits the deprecation warning.
+set(ALSOFT_INSTALL_CONFIG OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
 set(ALSOFT_BACKEND_OPENSL ON CACHE BOOL "" FORCE)
 set(ALSOFT_BACKEND_OBOE OFF CACHE BOOL "" FORCE)
 set(ALSOFT_BACKEND_AAUDIO OFF CACHE BOOL "" FORCE)
 set(ALSOFT_REQUIRE_OPENSL ON CACHE BOOL "" FORCE)
 add_subdirectory("${OPENAL_ROOT}" "${CMAKE_BINARY_DIR}/openal-soft")
+
+# Keep UE1 warnings visible, but silence warning-only noise from bundled
+# third-party dependencies when building with modern Android Clang.
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    if(TARGET xmp_static)
+        target_compile_options(xmp_static PRIVATE -Wno-unused-function)
+    endif()
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    foreach(_ue1_thirdparty_cxx_target IN ITEMS OpenAL alsoft.common)
+        if(TARGET ${_ue1_thirdparty_cxx_target})
+            target_compile_options(${_ue1_thirdparty_cxx_target} PRIVATE -Wno-sign-conversion)
+        endif()
+    endforeach()
+endif()
 
 # Variables consumed by the upstream UE1 CMake files.
 set(USE_SDL ON CACHE BOOL "" FORCE)
@@ -126,3 +144,26 @@ foreach(_ue1_music_target IN ITEMS Unreal main UE1)
     endif()
 endforeach()
 # UE1_ANDROID_MUSIC_LIBXMP_LINK_END
+
+
+# OUYA_RELEASE_SAFE_ENGINE_TARGET_FLAGS_BEGIN
+# OUYA/API16 Release-only mover/lift safety.
+# After the native AMover KeyNum bounds fix, keep the signed ouyaPerformance build
+# as Release packaging, but compile the old UE1 Engine target without aggressive
+# ARMv7/Tegra3 optimisation in Release/RelWithDebInfo. The Android8 release does
+# not need this, but OUYA/API16 uses older NDK/API/ARM codegen and Debug already
+# proved that the gameplay path itself is correct.
+if(TARGET Engine)
+    target_compile_options(Engine PRIVATE
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-O0>"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-fno-strict-aliasing>"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-fno-strict-overflow>"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-fwrapv>"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-fno-delete-null-pointer-checks>"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:relwithdebinfo>>:-fno-omit-frame-pointer>"
+    )
+    message(STATUS "OUYA Release-safe Engine flags active: Engine target gets -O0 in release configs")
+else()
+    message(WARNING "OUYA Release-safe Engine flags: target Engine not found")
+endif()
+# OUYA_RELEASE_SAFE_ENGINE_TARGET_FLAGS_END

@@ -15,6 +15,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #endif
 #ifdef PLATFORM_ANDROID
 #include <android/log.h>
@@ -4169,6 +4171,52 @@ UEngine* InitEngine()
 	unguard;
 }
 
+
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+static UBOOL UE1OuyaPerfConfigBool( const char* Key, UBOOL DefaultValue )
+{
+	char Value[64];
+	if( GConfigCache.GetString( "OUYA.Performance", Key, Value, sizeof(Value) ) )
+	{
+		if( !appStricmp(Value, "True") || !appStricmp(Value, "Yes") || !appStricmp(Value, "On") || !appStrcmp(Value, "1") )
+			return 1;
+		if( !appStricmp(Value, "False") || !appStricmp(Value, "No") || !appStricmp(Value, "Off") || !appStrcmp(Value, "0") )
+			return 0;
+	}
+	return DefaultValue;
+}
+
+static INT UE1OuyaPerfConfigInt( const char* Key, INT DefaultValue, INT MinValue, INT MaxValue )
+{
+	char Value[64];
+	INT Result = DefaultValue;
+	if( GConfigCache.GetString( "OUYA.Performance", Key, Value, sizeof(Value) ) )
+		Result = appAtoi( Value );
+	return Clamp( Result, MinValue, MaxValue );
+}
+
+static FLOAT UE1OuyaPerfConfigFloat( const char* Key, FLOAT DefaultValue, FLOAT MinValue, FLOAT MaxValue )
+{
+	char Value[64];
+	FLOAT Result = DefaultValue;
+	if( GConfigCache.GetString( "OUYA.Performance", Key, Value, sizeof(Value) ) )
+		Result = appAtof( Value );
+	return Clamp( Result, MinValue, MaxValue );
+}
+
+static void UE1OuyaPerfLogLine( const char* Fmt, ... )
+{
+	char Buffer[1024];
+	va_list Args;
+	va_start( Args, Fmt );
+	vsnprintf( Buffer, sizeof(Buffer), Fmt, Args );
+	va_end( Args );
+	Buffer[sizeof(Buffer)-1] = 0;
+	__android_log_write( ANDROID_LOG_INFO, "UE1Perf", Buffer );
+	debugf( NAME_Log, "%s", Buffer );
+}
+#endif
+
 //
 // Unreal's main message loop.  All windows in Unreal receive messages
 // somewhere below this function on the stack.
@@ -4191,12 +4239,56 @@ void MainLoop( UEngine* Engine )
 		}
 #endif
 		// Update the world.
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		static DOUBLE PerfWindowStart = 0.0;
+		static FLOAT PerfWindowTickMS = 0.0f;
+		static INT PerfWindowFrames = 0;
+		static DOUBLE PerfConfigLastRefresh = 0.0;
+		static UBOOL bPerfLog = 0;
+		static FLOAT PerfSpikeMS = 40.0f;
+		static INT CachedFrameLimit = 0;
+		const DOUBLE LoopStartTime = appSeconds();
+		if( PerfConfigLastRefresh <= 0.0 || LoopStartTime - PerfConfigLastRefresh >= 0.5 )
+		{
+			bPerfLog = UE1OuyaPerfConfigBool( "EnablePerfLog", bPerfLog );
+			PerfSpikeMS = UE1OuyaPerfConfigFloat( "PerfSpikeMs", PerfSpikeMS, 5.0f, 500.0f );
+			CachedFrameLimit = UE1OuyaPerfConfigInt( "FrameLimit", CachedFrameLimit, 0, 120 );
+			PerfConfigLastRefresh = LoopStartTime;
+		}
+		DOUBLE NewTime = LoopStartTime;
+#else
 		DOUBLE NewTime = appSeconds();
+#endif
 		Engine->Tick( NewTime - OldTime );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		const DOUBLE TickEndTime = appSeconds();
+		const FLOAT TickMS = (FLOAT)( ( TickEndTime - LoopStartTime ) * 1000.0 );
+		if( bPerfLog )
+		{
+			PerfWindowTickMS += TickMS;
+			PerfWindowFrames++;
+			if( PerfWindowStart <= 0.0 )
+				PerfWindowStart = LoopStartTime;
+			if( TickMS >= PerfSpikeMS )
+				UE1OuyaPerfLogLine( "tick spikeMS=%.2f frameDeltaMS=%.2f", TickMS, (FLOAT)( ( NewTime - OldTime ) * 1000.0 ) );
+			if( TickEndTime - PerfWindowStart >= 5.0 )
+			{
+				const FLOAT AvgTick = PerfWindowFrames > 0 ? PerfWindowTickMS / PerfWindowFrames : 0.0f;
+				UE1OuyaPerfLogLine( "tick avg5s frames=%i avgTickMS=%.2f", PerfWindowFrames, AvgTick );
+				PerfWindowStart = TickEndTime;
+				PerfWindowTickMS = 0.0f;
+				PerfWindowFrames = 0;
+			}
+		}
+#endif
 		OldTime = NewTime;
 
 		// Enforce optional maximum tick rate.
 		INT MaxTickRate = Engine->GetMaxTickRate();
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		if( MaxTickRate <= 0 )
+			MaxTickRate = CachedFrameLimit;
+#endif
 		if( MaxTickRate )
 		{
 			DOUBLE Delta = (1.0/MaxTickRate) - (appSeconds()-OldTime);

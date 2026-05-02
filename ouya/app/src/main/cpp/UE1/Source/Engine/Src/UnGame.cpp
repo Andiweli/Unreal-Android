@@ -36,38 +36,6 @@ void UGameEngine::PaintProgress()
 	unguard;
 }
 
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-void UGameEngine::PrecacheInitialViewFrame( UBOOL bNetworkPending )
-{
-	guard(UGameEngine::PrecacheInitialViewFrame);
-
-	// OUYA/Tegra3 hitch reduction:
-	// Draw one loading-screen frame from the freshly spawned player view after
-	// BeginPlay, MatchViewportsToActors() and DetailChange(). This makes the
-	// first visible wall/actor/HUD texture uploads happen while the loading
-	// overlay is still up instead of during the first interactive gameplay frame.
-	if( !PrecacheInitialView || bNetworkPending )
-		return;
-	if( !Client || !Client->Viewports.Num() || !GLevel )
-		return;
-
-	UViewport* Viewport = Client->Viewports(0);
-	if( !Viewport || !Viewport->Actor || Viewport->Actor->XLevel != GLevel )
-		return;
-
-	ALevelInfo* Info = GLevel->GetLevelInfo();
-	const BYTE OldAction = Info->LevelAction;
-	Info->LevelAction = (BYTE)LEVACT_Loading;
-
-	debugf( NAME_Log, "OUYA/API16 initial view warmup frame" );
-	PaintProgress();
-
-	Info->LevelAction = OldAction;
-
-	unguard;
-}
-#endif
-
 INT UGameEngine::ChallengeResponse( INT Challenge )
 {
 	guard(UGameEngine::ChallengeResponse);
@@ -84,11 +52,7 @@ INT UGameEngine::ChallengeResponse( INT Challenge )
 //
 UGameEngine::UGameEngine()
 : LastURL("")
-{
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-	PrecacheInitialView = true;
-#endif
-}
+{}
 
 //
 // Class creator.
@@ -100,9 +64,6 @@ void UGameEngine::InternalClassInitializer( UClass* Class )
 	{
 		(new(Class,"ServerActors",  RF_Public)UStringProperty( CPP_PROPERTY(ServerActors  ), "Settings", CPF_Config, 96 ))->ArrayDim=16;
 		(new(Class,"ServerPackages",RF_Public)UStringProperty( CPP_PROPERTY(ServerPackages), "Settings", CPF_Config, 96 ))->ArrayDim=16;
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-		new(Class,"PrecacheInitialView",RF_Public)UBoolProperty( CPP_PROPERTY(PrecacheInitialView), "Settings", CPF_Config );
-#endif
 	}
 	unguard;
 }
@@ -877,12 +838,6 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 
 	// Init detail.
 	GLevel->DetailChange( Info->bHighDetailMode );
-
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-	// Conservative first-view warmup. Skip pending network loads because the
-	// join handshake and replicated actors should not be disturbed here.
-	PrecacheInitialViewFrame( Pending != NULL );
-#endif
 
 	// Remember the URL.
 	guard(RememberURL);
