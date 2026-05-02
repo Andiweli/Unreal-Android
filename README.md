@@ -18,7 +18,7 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 ## ◆ Status
 
 - Android 8.0+ support for newer Android devices.
-- OUYA (Android 4.x) legacy support - with a lower internal render resolution for better performance on legacy hardware.
+- OUYA (Android 4.x) legacy support - with a lower internal render resolution of 1280x720 and 960x540 or 1024x768 and 800x600 for better performance on legacy hardware.
 - Improved Game Data Import – Unreal data can be imported via folder or ZIP selection and automatically installs to the app's data folder.
 - Android 11+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
 - Improved Brightness and Gamma – Separate brightness/gamma logic with improved brightening of dark level areas.
