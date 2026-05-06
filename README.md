@@ -23,6 +23,7 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 - Android 11+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
 - Improved Brightness and Gamma – Separate brightness/gamma logic with improved brightening of dark level areas.
 - Local WiFi multiplayer and botmatches are available.
+- as a goodie I've added a compiled version for Windows so you can use Multiplayer Cross-platform
 
 
 <p align="center">
