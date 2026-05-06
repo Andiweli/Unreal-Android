@@ -1,0 +1,15 @@
+Intermediate
+Lib
+Bin
+*.log
+Source/.vs
+Source/UnrealED/obj
+
+# UE1 Windows generated files
+.vs/
+BUILDS/
+Source/build/
+*.bak
+*.bak_*
+*.orig
+*.rej

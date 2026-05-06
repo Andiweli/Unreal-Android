@@ -1,0 +1,94 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vs2026-win32-sdl-opengl",
+      "displayName": "Visual Studio 2026 Win32 - SDL2 + OpenGL + OpenAL",
+      "description": "Recommended Windows build for VS 2026: 32-bit UE1 executable, SDL2 window/input, NOpenGLDrv renderer, OpenAL audio. Requires CMake 4.2+ for the VS 2026 generator.",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/../Builds/_cmake/vs2026-win32-sdl-opengl",
+      "cacheVariables": {
+        "USE_SDL": "ON",
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SOFTDRV": "OFF",
+        "BUILD_NOPENGLDRV": "ON",
+        "BUILD_NOPENGLESDRV": "ON",
+        "BUILD_NULLSOUNDDRV": "OFF",
+        "BUILD_NOPENALDRV": "ON",
+        "BUILD_WINDRV": "OFF",
+        "BUILD_STATIC": "OFF"
+      }
+    },
+    {
+      "name": "vs2026-win32-sdl-opengl-nullsound",
+      "displayName": "Visual Studio 2026 Win32 - SDL2 + OpenGL + NullSound",
+      "description": "Fallback if OpenAL/libxmp causes trouble. Game renders with OpenGL but uses the null sound driver. Requires CMake 4.2+ for the VS 2026 generator.",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/../Builds/_cmake/vs2026-win32-sdl-opengl-nullsound",
+      "cacheVariables": {
+        "USE_SDL": "ON",
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SOFTDRV": "OFF",
+        "BUILD_NOPENGLDRV": "ON",
+        "BUILD_NOPENGLESDRV": "OFF",
+        "BUILD_NULLSOUNDDRV": "ON",
+        "BUILD_NOPENALDRV": "OFF",
+        "BUILD_WINDRV": "OFF",
+        "BUILD_STATIC": "OFF"
+      }
+    },
+    {
+      "name": "vs2022-win32-sdl-opengl",
+      "displayName": "Visual Studio 2022 Win32 - SDL2 + OpenGL + OpenAL",
+      "description": "Compatibility preset: 32-bit UE1 executable, SDL2 window/input, NOpenGLDrv renderer, OpenAL audio.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/../Builds/_cmake/vs2022-win32-sdl-opengl",
+      "cacheVariables": {
+        "USE_SDL": "ON",
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SOFTDRV": "OFF",
+        "BUILD_NOPENGLDRV": "ON",
+        "BUILD_NOPENGLESDRV": "OFF",
+        "BUILD_NULLSOUNDDRV": "OFF",
+        "BUILD_NOPENALDRV": "ON",
+        "BUILD_WINDRV": "OFF",
+        "BUILD_STATIC": "OFF"
+      }
+    },
+    {
+      "name": "vs2022-win32-sdl-opengl-nullsound",
+      "displayName": "Visual Studio 2022 Win32 - SDL2 + OpenGL + NullSound",
+      "description": "Compatibility fallback if OpenAL/libxmp causes trouble. Game renders with OpenGL but uses the null sound driver.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/../Builds/_cmake/vs2022-win32-sdl-opengl-nullsound",
+      "cacheVariables": {
+        "USE_SDL": "ON",
+        "BUILD_EDITOR": "OFF",
+        "BUILD_SOFTDRV": "OFF",
+        "BUILD_NOPENGLDRV": "ON",
+        "BUILD_NOPENGLESDRV": "OFF",
+        "BUILD_NULLSOUNDDRV": "ON",
+        "BUILD_NOPENALDRV": "OFF",
+        "BUILD_WINDRV": "OFF",
+        "BUILD_STATIC": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "build-vs2026-win32-relwithdebinfo", "configurePreset": "vs2026-win32-sdl-opengl", "configuration": "RelWithDebInfo", "targets": [ "ALL_BUILD" ] },
+    { "name": "build-vs2026-win32-debug", "configurePreset": "vs2026-win32-sdl-opengl", "configuration": "Debug", "targets": [ "ALL_BUILD" ] },
+    { "name": "build-vs2026-win32-nullsound-relwithdebinfo", "configurePreset": "vs2026-win32-sdl-opengl-nullsound", "configuration": "RelWithDebInfo", "targets": [ "ALL_BUILD" ] },
+    { "name": "build-vs2022-win32-relwithdebinfo", "configurePreset": "vs2022-win32-sdl-opengl", "configuration": "RelWithDebInfo", "targets": [ "ALL_BUILD" ] },
+    { "name": "build-vs2022-win32-debug", "configurePreset": "vs2022-win32-sdl-opengl", "configuration": "Debug", "targets": [ "ALL_BUILD" ] },
+    { "name": "build-vs2022-win32-nullsound-relwithdebinfo", "configurePreset": "vs2022-win32-sdl-opengl-nullsound", "configuration": "RelWithDebInfo", "targets": [ "ALL_BUILD" ] }
+  ]
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Solution>
+	<Configurations>
+		<BuildType Name="Debug"/>
+		<BuildType Name="Release"/>
+		<BuildType Name="MinSizeRel"/>
+		<BuildType Name="RelWithDebInfo"/>
+		<Platform Name="Win32"/>
+	</Configurations>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\ALL_BUILD.vcxproj" Id="fd17da29-7adf-3458-a300-087e3dd60816">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Fire\Fire.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\IpDrv\IpDrv.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\NOpenALDrv\NOpenALDrv.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\NOpenGLDrv\NOpenGLDrv.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\NSDLDrv\NSDLDrv.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Render\Render.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Unreal\Unreal.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj" Id="a7ba4c8f-761f-307e-bde7-c220696fbb88">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj" Id="82e6fb60-6313-3efb-a9fd-26ee0c180832">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\Fire\Fire.vcxproj" Id="3ea99653-b502-3f94-a2be-a3af7608e57a">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\INSTALL.vcxproj" Id="c63615ae-e268-3320-84fe-1c8db18e1152">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ALL_BUILD.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+		<Build Solution="Debug|*" Project="false"/>
+		<Build Solution="Release|*" Project="false"/>
+		<Build Solution="MinSizeRel|*" Project="false"/>
+		<Build Solution="RelWithDebInfo|*" Project="false"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\IpDrv\IpDrv.vcxproj" Id="68217b26-fe14-3892-a713-505f11aa0d5d">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\NOpenALDrv\NOpenALDrv.vcxproj" Id="aa88fd0d-56ab-33b2-8905-ff4b23bc13bf">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\NOpenGLDrv\NOpenGLDrv.vcxproj" Id="c0e968db-6d7a-3d9c-a076-886a76f39598">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Render\Render.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\NSDLDrv\NSDLDrv.vcxproj" Id="d9605f60-b8b4-3f38-9d82-049ff226e534">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\Render\Render.vcxproj" Id="c7a787cc-d694-3e08-8e87-0c92833baba8">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\Unreal\Unreal.vcxproj" Id="4723458a-916d-3aff-b931-ac74240cc08d">
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Core\Core.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\Engine\Engine.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\NSDLDrv\NSDLDrv.vcxproj"/>
+		<BuildDependency Project="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="Builds\_cmake\vs2026-win32-sdl-opengl\ZERO_CHECK.vcxproj" Id="d9ebb4cb-24d2-3e1e-8530-8e4d4510ea2b"/>
+</Solution>
