@@ -43,6 +43,120 @@ static FLOAT UE1AndroidGetConfiguredGammaModeValue()
 	unguard;
 }
 
+
+static UBOOL UE1AndroidIsFixedMenuResolution( INT X, INT Y )
+{
+	guard(UE1AndroidIsFixedMenuResolution);
+	return ( X == 1280 && Y == 720 ) || ( X == 1024 && Y == 768 );
+	unguard;
+}
+
+static void UE1AndroidGetNativeDrawableSize( SDL_Window* Window, SDL_GLContext Context, UNSDLClient* Client, INT& OutX, INT& OutY )
+{
+	guard(UE1AndroidGetNativeDrawableSize);
+
+	OutX = 0;
+	OutY = 0;
+
+	int WindowW = 0, WindowH = 0;
+	int DrawW = 0, DrawH = 0;
+	if( Window )
+	{
+		SDL_GetWindowSize( Window, &WindowW, &WindowH );
+		if( Context )
+			SDL_GL_GetDrawableSize( Window, &DrawW, &DrawH );
+	}
+
+	if( DrawW <= 0 || DrawH <= 0 )
+	{
+		DrawW = WindowW;
+		DrawH = WindowH;
+	}
+
+	if( ( DrawW <= 0 || DrawH <= 0 ) && Client )
+	{
+		DrawW = Client->GetDefaultDisplayMode().w;
+		DrawH = Client->GetDefaultDisplayMode().h;
+	}
+
+	if( DrawW > 0 && DrawH > 0 )
+	{
+		if( DrawH > DrawW )
+			Exchange( DrawW, DrawH );
+		OutX = Align( DrawW, 4 );
+		OutY = DrawH;
+	}
+
+	unguard;
+}
+
+static void UE1AndroidApplyConfiguredResolution( UNSDLClient* Client, SDL_Window* Window, SDL_GLContext Context, INT& X, INT& Y )
+{
+	guard(UE1AndroidApplyConfiguredResolution);
+
+	if( Client )
+	{
+		if( Client->AndroidResolutionMode == 1 )
+		{
+			X = 1280;
+			Y = 720;
+			return;
+		}
+		if( Client->AndroidResolutionMode == 2 )
+		{
+			X = 1024;
+			Y = 768;
+			return;
+		}
+	}
+
+	INT NativeX = 0, NativeY = 0;
+	UE1AndroidGetNativeDrawableSize( Window, Context, Client, NativeX, NativeY );
+	if( NativeX > 0 && NativeY > 0 )
+	{
+		X = NativeX;
+		Y = NativeY;
+	}
+
+	unguard;
+}
+
+static const char* UE1AndroidResolutionModeName( INT Mode )
+{
+	switch( Mode )
+	{
+		case 1: return "1280x720";
+		case 2: return "1024x768";
+		default: return "Native";
+	}
+}
+
+static INT UE1AndroidResolutionModeFromName( const char* Text, INT X, INT Y )
+{
+	if( Text && !appStricmp( Text, "Native" ) )
+		return 0;
+	if( X == 1280 && Y == 720 )
+		return 1;
+	if( X == 1024 && Y == 768 )
+		return 2;
+	return 0;
+}
+
+static FLOAT UE1AndroidGetRightStickMouseSensitivityScale( APlayerPawn* PlayerOwner )
+{
+	guard(UE1AndroidGetRightStickMouseSensitivityScale);
+
+	// The old Android right-stick mouse-look path naturally followed
+	// PlayerPawn.MouseSensitivity because it fed MouseX/MouseY. Since v53+ uses
+	// clean JoyU/JoyV axes for remapping, apply the same user-facing sensitivity
+	// factor explicitly here. Default UE1 value is 3.0, so v58 speed stays the
+	// baseline when Options > Mouse sensitivity is unchanged.
+	const FLOAT Sensitivity = PlayerOwner ? PlayerOwner->MouseSensitivity : 3.0f;
+	return Clamp( Sensitivity / 3.0f, 0.05f, 8.0f ); // ANDROID_GAMESIR_RIGHT_STICK_MOUSE_SENSITIVITY_V59
+
+	unguard;
+}
+
 static INT UE1AndroidGetNearestGammaModeIndex()
 {
 	guard(UE1AndroidGetNearestGammaModeIndex);
@@ -877,15 +991,10 @@ const BYTE UNSDLViewport::JoyAxisMap[SDL_CONTROLLER_AXIS_MAX] =
 {
 	/* AXIS_LEFT_X          */ IK_JoyX,
 	/* AXIS_LEFT_Y          */ IK_JoyY,
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_RIGHT_STICK_MOUSELOOK
-	/* AXIS_RIGHT_X         */ IK_MouseX,
-	/* AXIS_RIGHT_Y         */ IK_MouseY,
-#else
-	/* AXIS_RIGHT_X         */ IK_JoyU,
-	/* AXIS_RIGHT_Y         */ IK_JoyV,
-#endif
-	/* AXIS_LTRIGGER        */ IK_Joy12,
-	/* AXIS_RTRIGGER        */ IK_Joy13,
+	/* AXIS_RIGHT_X         */ IK_JoyU, // ANDROID_GAMESIR_ANALOG_REMAP_V59 keeps Gradle marker UNREAL_ANDROID_RIGHT_STICK_MOUSELOOK but uses remappable JoyU
+	/* AXIS_RIGHT_Y         */ IK_JoyV, // ANDROID_GAMESIR_ANALOG_REMAP_V59 keeps Gradle marker UNREAL_ANDROID_RIGHT_STICK_MOUSELOOK but uses remappable JoyV
+	/* AXIS_LTRIGGER        */ IK_JoyZ, // ANDROID_GAMESIR_TRIGGER_AXIS_V57
+	/* AXIS_RTRIGGER        */ IK_JoyR, // ANDROID_GAMESIR_TRIGGER_AXIS_V57
 };
 
 //
@@ -893,15 +1002,13 @@ const BYTE UNSDLViewport::JoyAxisMap[SDL_CONTROLLER_AXIS_MAX] =
 //
 const FLOAT UNSDLViewport::JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_MAX] =
 {
+	// Keep UE1's classic joystick timing model: the per-frame DeltaTime below
+	// cancels UInput::ReadInput's inverse frame-scale. v54 removed DeltaTime and
+	// made JoyU/JoyV far too fast on Android. // ANDROID_GAMESIR_ANALOG_INPUT_FIX_V59 / UNREAL_ANDROID_MOUSELOOK_SLOWER marker retained
 	/* AXIS_LEFT_X          */ +60.f,
 	/* AXIS_LEFT_Y          */ -60.f,
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MOUSELOOK_SLOWER
-	/* AXIS_RIGHT_X         */ +4.f,
-	/* AXIS_RIGHT_Y         */ +4.f,
-#else
-	/* AXIS_RIGHT_X         */ +60.f,
-	/* AXIS_RIGHT_Y         */ +60.f,
-#endif
+	/* AXIS_RIGHT_X         */ +0.34f,
+	/* AXIS_RIGHT_Y         */ +0.34f,
 	/* AXIS_LTRIGGER        */ +60.f,
 	/* AXIS_RTRIGGER        */ +60.f,
 };
@@ -999,6 +1106,9 @@ UNSDLViewport::UNSDLViewport( ULevel* InLevel, UNSDLClient* InClient )
 	DisplaySize.h = InClient->GetDefaultDisplayMode().h;
 
 	// Init input.
+	appMemset( (void*)JoyAxis, 0, sizeof(JoyAxis) );
+	appMemset( (void*)JoyAxisPressed, 0, sizeof(JoyAxisPressed) );
+	appMemset( (void*)JoyAxisDirPressed, 0, sizeof(JoyAxisDirPressed) );
 	if( GIsEditor )
 		Input->Init( this, GSystem );
 
@@ -1173,18 +1283,32 @@ void UNSDLViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX,
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_PRECREATE_DISPLAY_SIZE
 		// Android/SDL may otherwise use UE1's historical 800x600 startup
 		// size to decide orientation and SurfaceView bounds. Use the real
-		// display size before SDL_CreateWindow, then resync with drawable size.
-		SDL_DisplayMode AndroidMode;
-		if( SDL_GetCurrentDisplayMode( 0, &AndroidMode ) == 0 && AndroidMode.w > 0 && AndroidMode.h > 0 )
+		// display size for Native mode before SDL_CreateWindow. The two explicit
+		// menu resolutions are kept as requested logical render sizes and then
+		// scaled by the GLES viewport to the real surface. // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+		if( !UE1AndroidIsFixedMenuResolution( NewX, NewY ) && Client->AndroidResolutionMode == 0 )
 		{
-			INT AndroidW = AndroidMode.w;
-			INT AndroidH = AndroidMode.h;
-			if( AndroidH > AndroidW )
-				Exchange( AndroidW, AndroidH );
-			if( NewX != AndroidW || NewY != AndroidH )
-				debugf( NAME_Log, "Android pre-create display size: requested=%ix%i -> %ix%i", NewX, NewY, AndroidW, AndroidH );
-			NewX = Align( AndroidW, 4 );
-			NewY = AndroidH;
+			INT NativeX = 0, NativeY = 0;
+			UE1AndroidGetNativeDrawableSize( hWnd, GLCtx, Client, NativeX, NativeY );
+			if( NativeX <= 0 || NativeY <= 0 )
+			{
+				SDL_DisplayMode AndroidMode;
+				if( SDL_GetCurrentDisplayMode( 0, &AndroidMode ) == 0 && AndroidMode.w > 0 && AndroidMode.h > 0 )
+				{
+					NativeX = AndroidMode.w;
+					NativeY = AndroidMode.h;
+					if( NativeY > NativeX )
+						Exchange( NativeX, NativeY );
+					NativeX = Align( NativeX, 4 );
+				}
+			}
+			if( NativeX > 0 && NativeY > 0 )
+			{
+				if( NewX != NativeX || NewY != NativeY )
+					debugf( NAME_Log, "Android pre-create display size: requested=%ix%i -> Native %ix%i", NewX, NewY, NativeX, NativeY );
+				NewX = NativeX;
+				NewY = NativeY;
+			}
 		}
 #endif
 
@@ -1263,25 +1387,16 @@ void UNSDLViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX,
 
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_SYNC_DRAWABLE_SIZE
 		// Android may create a fullscreen surface whose real drawable size differs
-		// from UE1's requested startup viewport. If SizeX/SizeY keep that old
-		// value, GLES renders only into the lower-left part of the screen.
-		int AndroidWindowW = 0, AndroidWindowH = 0;
-		int AndroidDrawW = 0, AndroidDrawH = 0;
-		SDL_GetWindowSize( hWnd, &AndroidWindowW, &AndroidWindowH );
-		if( DoOpenGL )
-			SDL_GL_GetDrawableSize( hWnd, &AndroidDrawW, &AndroidDrawH );
-		if( AndroidDrawW <= 0 || AndroidDrawH <= 0 )
+		// from UE1's requested startup viewport. Native mode tracks the drawable;
+		// fixed menu resolutions deliberately keep SizeX/SizeY lower and are scaled
+		// by the GLES viewport. // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+		if( Client->AndroidResolutionMode == 0 && !UE1AndroidIsFixedMenuResolution( NewX, NewY ) )
 		{
-			AndroidDrawW = AndroidWindowW;
-			AndroidDrawH = AndroidWindowH;
-		}
-		if( AndroidDrawW > 0 && AndroidDrawH > 0 )
-		{
-			INT FixedX = Align( AndroidDrawW, 4 );
-			INT FixedY = AndroidDrawH;
-			if( NewX != FixedX || NewY != FixedY )
+			INT FixedX = 0, FixedY = 0;
+			UE1AndroidGetNativeDrawableSize( hWnd, DoOpenGL ? GLCtx : NULL, Client, FixedX, FixedY );
+			if( FixedX > 0 && FixedY > 0 && ( NewX != FixedX || NewY != FixedY ) )
 			{
-				debugf( NAME_Log, "Android drawable size: window=%ix%i drawable=%ix%i viewport=%ix%i -> %ix%i", AndroidWindowW, AndroidWindowH, AndroidDrawW, AndroidDrawH, NewX, NewY, FixedX, FixedY );
+				debugf( NAME_Log, "Android drawable size: viewport=%ix%i -> Native %ix%i", NewX, NewY, FixedX, FixedY );
 				NewX = FixedX;
 				NewY = FixedY;
 			}
@@ -1482,21 +1597,10 @@ void UNSDLViewport::SetClientSize( INT NewX, INT NewY, UBOOL UpdateProfile )
 		SDL_SetWindowSize( hWnd, NewX, NewY );
 #endif
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_SETCLIENT_DRAWABLE_SIZE
-		int AndroidWindowW = 0, AndroidWindowH = 0;
-		int AndroidDrawW = 0, AndroidDrawH = 0;
-		SDL_GetWindowSize( hWnd, &AndroidWindowW, &AndroidWindowH );
-		if( GLCtx )
-			SDL_GL_GetDrawableSize( hWnd, &AndroidDrawW, &AndroidDrawH );
-		if( AndroidDrawW <= 0 || AndroidDrawH <= 0 )
-		{
-			AndroidDrawW = AndroidWindowW;
-			AndroidDrawH = AndroidWindowH;
-		}
-		if( AndroidDrawW > 0 && AndroidDrawH > 0 )
-		{
-			NewX = Align( AndroidDrawW, 4 );
-			NewY = AndroidDrawH;
-		}
+		// Native mode follows the real Android drawable. Fixed menu resolutions
+		// keep their requested logical SizeX/SizeY and are expanded to the surface
+		// by NOpenGLESDrv. // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+		UE1AndroidApplyConfiguredResolution( Client, hWnd, GLCtx, NewX, NewY );
 #endif
 		// Resize output texture if required.
 		if( SDLRen && SDLTex )
@@ -1553,22 +1657,10 @@ void UNSDLViewport::MakeFullscreen( INT NewX, INT NewY, UBOOL UpdateProfile )
 	Client->FullscreenViewport = this;
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_FULLSCREEN_NO_MODE_SWITCH
 	// Keep Android in Activity fullscreen only. A real SDL fullscreen mode switch
-	// can produce a portrait-sized rotated buffer on some handhelds.
-	int AndroidWindowW = 0, AndroidWindowH = 0;
-	int AndroidDrawW = 0, AndroidDrawH = 0;
-	SDL_GetWindowSize( hWnd, &AndroidWindowW, &AndroidWindowH );
-	if( GLCtx )
-		SDL_GL_GetDrawableSize( hWnd, &AndroidDrawW, &AndroidDrawH );
-	if( AndroidDrawW <= 0 || AndroidDrawH <= 0 )
-	{
-		AndroidDrawW = AndroidWindowW;
-		AndroidDrawH = AndroidWindowH;
-	}
-	if( AndroidDrawW > 0 && AndroidDrawH > 0 )
-	{
-		NewX = Align( AndroidDrawW, 4 );
-		NewY = AndroidDrawH;
-	}
+	// can produce a portrait-sized rotated buffer on some handhelds. Resolution
+	// selection is therefore a logical render-size switch: Native tracks the real
+	// drawable, fixed entries keep 1280x720 or 1024x768. // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+	UE1AndroidApplyConfiguredResolution( Client, hWnd, GLCtx, NewX, NewY );
 	SetClientSize( NewX, NewY, false );
 #else
 	SetClientSize( NewX, NewY, false );
@@ -1595,19 +1687,12 @@ void UNSDLViewport::EndFullscreen()
 	guard(UNSDLViewport::EndFullscreen);
 
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_FULLSCREEN_END_NOOP
-	// Stay in Activity fullscreen on Android; just resync to current surface.
-	int AndroidWindowW = 0, AndroidWindowH = 0;
-	int AndroidDrawW = 0, AndroidDrawH = 0;
-	SDL_GetWindowSize( hWnd, &AndroidWindowW, &AndroidWindowH );
-	if( GLCtx )
-		SDL_GL_GetDrawableSize( hWnd, &AndroidDrawW, &AndroidDrawH );
-	if( AndroidDrawW <= 0 || AndroidDrawH <= 0 )
-	{
-		AndroidDrawW = AndroidWindowW;
-		AndroidDrawH = AndroidWindowH;
-	}
-	if( AndroidDrawW > 0 && AndroidDrawH > 0 )
-		SetClientSize( Align(AndroidDrawW,4), AndroidDrawH, false );
+	// Stay in Activity fullscreen on Android; just resync to the selected logical
+	// render size. Native tracks the drawable; fixed modes remain fixed.
+	INT NewX = SizeX;
+	INT NewY = SizeY;
+	UE1AndroidApplyConfiguredResolution( Client, hWnd, GLCtx, NewX, NewY ); // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+	SetClientSize( NewX, NewY, false );
 #else
 	SDL_SetWindowFullscreen( hWnd, 0 );
 	SetClientSize( SavedX, SavedY, false );
@@ -1624,7 +1709,11 @@ void UNSDLViewport::UpdateInput( UBOOL Reset )
 	guard(UNSDLViewport::UpdateInput);
 
 	if( Reset )
+	{
 		appMemset( (void*)JoyAxis, 0, sizeof(JoyAxis) );
+		appMemset( (void*)JoyAxisPressed, 0, sizeof(JoyAxisPressed) );
+		appMemset( (void*)JoyAxisDirPressed, 0, sizeof(JoyAxisDirPressed) );
+	}
 
 	unguard;
 }
@@ -1652,6 +1741,10 @@ void UNSDLViewport::SetMouseCapture( UBOOL Capture, UBOOL Clip, UBOOL OnlyFocus 
 	unguard;
 }
 
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+static UBOOL UE1AndroidDispatchFriendlyKeyCapture( UNSDLViewport* Viewport, INT Key );
+#endif
+
 UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta )
 {
 	guard(UWindowsViewport::CauseInputEvent);
@@ -1660,6 +1753,12 @@ UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta
 	if( iKey > 0 )
 	{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// The stock Unreal key menu gets display text from the compiled EInputKey
+		// enum. For Android controller buttons we inject clearer labels here, then
+		// translate them back to the real internal keys in Exec("SET Input ...").
+		if( Action == IST_Press && UE1AndroidDispatchFriendlyKeyCapture( this, iKey ) )
+			return 1;
+
 		// UnrealPlayerMenu originally exposes only Name/Team/Skin. The restored
 		// Class row is handled natively because the compiled Unreal.u cannot be
 		// changed safely on-device.
@@ -1674,6 +1773,330 @@ UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta
 	}
 	else
 		return 0;
+
+	unguard;
+}
+
+static UBOOL UE1SDLJoyAxisUsesRUVScale( INT Axis, BYTE Key )
+{
+	return
+		Key == IK_JoyR ||
+		Key == IK_JoyU ||
+		Key == IK_JoyV ||
+		Axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ||
+		Axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+}
+
+static BYTE UE1SDLJoyAxisDirectionalKey( INT Axis, INT Direction )
+{
+	// Directional remap keys must stay unique. D-Pad keeps JoyPov*, while both
+	// sticks get their own pseudo-keys with friendly Android labels in the key menu.
+	// The original analog JoyX/JoyY/JoyU/JoyV axes are still sent too.
+	// ANDROID_GAMESIR_DIRECTIONAL_REMAP_V57
+	if( Direction < 0 )
+	{
+		switch( Axis )
+		{
+			case SDL_CONTROLLER_AXIS_LEFTX:  return IK_UnknownD8; // LJoyLeft
+			case SDL_CONTROLLER_AXIS_LEFTY:  return IK_UnknownDA; // LJoyUp / forward
+			case SDL_CONTROLLER_AXIS_RIGHTX: return IK_Joy14;     // RJoyLeft
+			case SDL_CONTROLLER_AXIS_RIGHTY: return IK_Joy16;     // RJoyUp
+		}
+	}
+	else if( Direction > 0 )
+	{
+		switch( Axis )
+		{
+			case SDL_CONTROLLER_AXIS_LEFTX:  return IK_UnknownD9; // LJoyRight
+			case SDL_CONTROLLER_AXIS_LEFTY:  return IK_UnknownDF; // LJoyDown / backward
+			case SDL_CONTROLLER_AXIS_RIGHTX: return IK_Joy15;     // RJoyRight
+			case SDL_CONTROLLER_AXIS_RIGHTY: return IK_UnknownEA; // RJoyDown
+		}
+	}
+
+	return IK_None;
+}
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+static INT GAndroidLastKeyNameQueryKey = -1;
+static INT GAndroidLastCapturedFriendlyKey = -1;
+
+static const char* UE1AndroidFriendlyKeyName( INT Key )
+{
+	switch( Key )
+	{
+		case IK_Joy1:        return "A";
+		case IK_Joy2:        return "B";
+		case IK_Joy3:        return "X";
+		case IK_Joy4:        return "Y";
+		case IK_Joy5:        return "Back";
+		case IK_Joy6:        return "Guide";
+		case IK_Joy7:        return "Start";
+		case IK_Joy8:        return "LJoyPush";
+		case IK_Joy9:        return "RJoyPush";
+		case IK_Joy10:       return "ShoulderL";
+		case IK_Joy11:       return "ShoulderR";
+		case IK_JoyZ:        return "TriggerL";
+		case IK_JoyR:        return "TriggerR";
+		case IK_UnknownD8:   return "LJoyLeft";
+		case IK_UnknownD9:   return "LJoyRight";
+		case IK_UnknownDA:   return "LJoyUp";
+		case IK_UnknownDF:   return "LJoyDown";
+		case IK_Joy14:       return "RJoyLeft";
+		case IK_Joy15:       return "RJoyRight";
+		case IK_Joy16:       return "RJoyUp";
+		case IK_UnknownEA:   return "RJoyDown";
+		case IK_JoyPovUp:    return "DPadUp";
+		case IK_JoyPovDown:  return "DPadDown";
+		case IK_JoyPovLeft:  return "DPadLeft";
+		case IK_JoyPovRight: return "DPadRight";
+		case IK_UnknownC5:   return "Key12";
+		case IK_UnknownC6:   return "Key13";
+		case IK_UnknownC7:   return "Key14";
+		case IK_UnknownF4:   return "Key15";
+		case IK_UnknownF5:   return "Key16";
+	}
+	return NULL;
+}
+
+static INT UE1AndroidFriendlyKeyFromName( const char* KeyName )
+{
+	if( !KeyName || !*KeyName )
+		return IK_None;
+
+	struct FFriendlyKeyPair
+	{
+		const char* Name;
+		INT Key;
+	};
+	static const FFriendlyKeyPair FriendlyKeys[] =
+	{
+		{ "A", IK_Joy1 }, { "B", IK_Joy2 }, { "X", IK_Joy3 }, { "Y", IK_Joy4 },
+		{ "Back", IK_Joy5 }, { "Guide", IK_Joy6 }, { "Start", IK_Joy7 },
+		{ "LJoyPush", IK_Joy8 }, { "RJoyPush", IK_Joy9 },
+		{ "ShoulderL", IK_Joy10 }, { "ShoulderR", IK_Joy11 },
+		{ "TriggerL", IK_JoyZ }, { "TriggerR", IK_JoyR },
+		{ "LJoyLeft", IK_UnknownD8 }, { "LJoyRight", IK_UnknownD9 },
+		{ "LJoyUp", IK_UnknownDA }, { "LJoyDown", IK_UnknownDF },
+		{ "RJoyLeft", IK_Joy14 }, { "RJoyRight", IK_Joy15 },
+		{ "RJoyUp", IK_Joy16 }, { "RJoyDown", IK_UnknownEA },
+		{ "DPadUp", IK_JoyPovUp }, { "DPadDown", IK_JoyPovDown },
+		{ "DPadLeft", IK_JoyPovLeft }, { "DPadRight", IK_JoyPovRight },
+		{ "Key12", IK_UnknownC5 }, { "Key13", IK_UnknownC6 },
+		{ "Key14", IK_UnknownC7 }, { "Key15", IK_UnknownF4 },
+		{ "Key16", IK_UnknownF5 },
+	};
+
+	for( INT i=0; i<(INT)(sizeof(FriendlyKeys)/sizeof(FriendlyKeys[0])); ++i )
+		if( !appStricmp( KeyName, FriendlyKeys[i].Name ) )
+			return FriendlyKeys[i].Key;
+
+	if( !appStrnicmp( KeyName, "Key", 3 ) )
+	{
+		const INT RawButton = appAtoi( KeyName + 3 );
+		switch( RawButton )
+		{
+			case 12: return IK_UnknownC5;
+			case 13: return IK_UnknownC6;
+			case 14: return IK_UnknownC7;
+			case 15: return IK_UnknownF4;
+			case 16: return IK_UnknownF5;
+		}
+	}
+
+	return IK_None;
+}
+
+
+static BYTE UE1AndroidRawFallbackButtonKey( INT Button )
+{
+	// Raw Android HID fallback for pads that are not recognized as SDL
+	// GameControllers. Keep a small stable pool and label it as Key<ID>.
+	switch( Button )
+	{
+		case 12: return IK_UnknownC5;
+		case 13: return IK_UnknownC6;
+		case 14: return IK_UnknownC7;
+		case 15: return IK_UnknownF4;
+		case 16: return IK_UnknownF5;
+	}
+	return IK_None;
+}
+
+static UBOOL UE1AndroidConsoleIsKeyMenuing( UNSDLViewport* Viewport )
+{
+	return Viewport &&
+		Viewport->Console &&
+		((UObject*)Viewport->Console)->GetMainFrame() &&
+		((UObject*)Viewport->Console)->GetMainFrame()->StateNode &&
+		((UObject*)Viewport->Console)->GetMainFrame()->StateNode->GetFName() == "KeyMenuing";
+}
+
+static UBOOL UE1AndroidDispatchFriendlyKeyCapture( UNSDLViewport* Viewport, INT Key )
+{
+	guard(UE1AndroidDispatchFriendlyKeyCapture);
+
+	const char* FriendlyName = UE1AndroidFriendlyKeyName( Key );
+	if( !FriendlyName || !UE1AndroidConsoleIsKeyMenuing( Viewport ) )
+		return 0;
+
+	AMenu* Menu = UE1AndroidGetActiveMenu( Viewport );
+	if( !Menu )
+		return 0;
+
+	FName FunctionName( "ProcessMenuKey", FNAME_Find );
+	if( FunctionName == NAME_None )
+		return 0;
+
+	UFunction* Function = Menu->FindFunction( FunctionName );
+	if( !Function )
+		return 0;
+
+	struct FProcessMenuKeyParms
+	{
+		INT KeyNo;
+		CHAR KeyName[32];
+	} Parms;
+	appMemset( &Parms, 0, sizeof(Parms) );
+	Parms.KeyNo = Key;
+	appStrncpy( Parms.KeyName, FriendlyName, ARRAY_COUNT(Parms.KeyName) );
+	Parms.KeyName[ARRAY_COUNT(Parms.KeyName)-1] = 0;
+
+	GAndroidLastCapturedFriendlyKey = Key;
+	Menu->ProcessEvent( Function, &Parms );
+
+	// Console.uc normally leaves KeyMenuing immediately after ProcessMenuKey().
+	// the previous friendly-name patch injected the label directly, but returned before the original
+	// Console KeyEvent could run, so the menu displayed the key and then stayed
+	// stuck waiting forever. Finish the same state transition natively here.
+	if( Viewport->Console )
+		((UObject*)Viewport->Console)->GotoState( FName("Menuing") );
+
+	return 1; // ANDROID_GAMESIR_FRIENDLY_KEY_NAMES_V57 / ANDROID_GAMESIR_KEYCAPTURE_CONFIRM_V57
+
+	unguard;
+}
+#endif
+
+static UBOOL UE1SDLJoyAxisIsTrigger( INT Axis )
+{
+	return Axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || Axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+}
+
+void UNSDLViewport::HandleJoyAxisMotion( INT Axis, INT Value, UBOOL RawJoystick )
+{
+	guard(UNSDLViewport::HandleJoyAxisMotion);
+
+	if( Axis < 0 || Axis >= SDL_CONTROLLER_AXIS_MAX )
+		return;
+
+	const BYTE Key = JoyAxisMap[Axis];
+	if( Key == IK_None )
+		return;
+
+	INT NewValue = Clamp( Value, -32767, 32767 );
+	const INT DeadZone = (INT)(( UE1SDLJoyAxisUsesRUVScale( Axis, Key ) ? Client->DeadZoneRUV : Client->DeadZoneXYZ ) * 32767.f); // UNREAL_ANDROID_MOUSELOOK_AXIS_DEADZONE marker retained
+	if( Abs(NewValue) < DeadZone )
+		NewValue = 0;
+
+	// UE1's keybinding menu waits for Press/Release, not IST_Axis.
+	// Triggers remain normal positive axes (JoyZ/JoyR). Stick axes additionally
+	// expose direction-specific existing keys, so the controls menu can distinguish
+	// left from right and forward from backward without recompiling Unreal.u.
+	if( UE1SDLJoyAxisIsTrigger( Axis ) )
+	{
+		const INT AbsValue = Abs(NewValue);
+		const UBOOL bWasPressed = JoyAxisPressed[Axis];
+		const UBOOL bNowPressed = bWasPressed ? ( AbsValue >= JoyAxisReleaseThreshold ) : ( AbsValue >= JoyAxisPressThreshold );
+		if( bWasPressed != bNowPressed )
+		{
+			JoyAxisPressed[Axis] = bNowPressed;
+
+			// In the Controls menu, pulse JoyZ/JoyR so the key-capture state closes
+			// immediately. In-game, keep the trigger key held until the analog trigger
+			// returns below the release threshold, otherwise weapons mapped to
+			// TriggerL/TriggerR only fire a single click instead of continuous fire.
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			const UBOOL bTriggerKeyMenuing = UE1AndroidConsoleIsKeyMenuing( this );
+#else
+			const UBOOL bTriggerKeyMenuing = 0;
+#endif
+			if( bTriggerKeyMenuing )
+			{
+				if( bNowPressed )
+				{
+					CauseInputEvent( Key, IST_Press );
+					CauseInputEvent( Key, IST_Release );
+				}
+			}
+			else
+			{
+				CauseInputEvent( Key, bNowPressed ? IST_Press : IST_Release );
+			}
+
+			// Compatibility for older Android configs that treated L2/R2 as digital
+			// Joy12/Joy13. Suppress these while the key menu is capturing, otherwise
+			// the legacy button would overwrite the new TriggerL/TriggerR capture.
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			const UBOOL bAllowLegacyTriggerButton = !UE1AndroidConsoleIsKeyMenuing( this );
+#else
+			const UBOOL bAllowLegacyTriggerButton = 1;
+#endif
+			if( bAllowLegacyTriggerButton )
+			{
+				if( Axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT )
+					CauseInputEvent( IK_Joy12, bNowPressed ? IST_Press : IST_Release );
+				else if( Axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT )
+					CauseInputEvent( IK_Joy13, bNowPressed ? IST_Press : IST_Release );
+			}
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			static INT TriggerLogBudget = 64;
+			if( TriggerLogBudget > 0 )
+			{
+				--TriggerLogBudget;
+				debugf( NAME_Log, "UE1_CONTROLLER_AXIS v68 source=%s axis=%i key=%i value=%i state=%s", RawJoystick ? "raw" : "gamecontroller", Axis, Key, NewValue, bNowPressed ? "press" : "release" );
+			}
+#endif
+		}
+	}
+	else
+	{
+		for( INT DirIndex=0; DirIndex<2; ++DirIndex )
+		{
+			const INT Direction = DirIndex == 0 ? -1 : 1;
+			const BYTE DirKey = UE1SDLJoyAxisDirectionalKey( Axis, Direction );
+			if( DirKey == IK_None )
+				continue;
+
+			const INT DirValue = Direction < 0 ? -NewValue : NewValue;
+			const UBOOL bWasPressed = JoyAxisDirPressed[Axis][DirIndex];
+			const UBOOL bNowPressed = bWasPressed ? ( DirValue >= JoyAxisReleaseThreshold ) : ( DirValue >= JoyAxisPressThreshold );
+			if( bWasPressed != bNowPressed )
+			{
+				JoyAxisDirPressed[Axis][DirIndex] = bNowPressed;
+
+				// Pulse the directional remap key for key capture only. Actual movement
+				// stays analog via the IST_Axis feed in TickInput().
+				if( bNowPressed )
+				{
+					CauseInputEvent( DirKey, IST_Press );
+					CauseInputEvent( DirKey, IST_Release );
+				}
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+				static INT DirectionLogBudget = 96;
+				if( DirectionLogBudget > 0 )
+				{
+					--DirectionLogBudget;
+					debugf( NAME_Log, "UE1_CONTROLLER_AXIS v68 source=%s axis=%i dir=%i dirkey=%i value=%i state=%s", RawJoystick ? "raw" : "gamecontroller", Axis, Direction, DirKey, NewValue, bNowPressed ? "press" : "release" );
+				}
+#endif
+			}
+		}
+	}
+
+	JoyAxis[Axis] = (SWORD)NewValue;
 
 	unguard;
 }
@@ -1745,7 +2168,7 @@ UBOOL UNSDLViewport::TickInput()
 	SDL_Event Ev;
 	INT Tmp;
 	const FLOAT CurTime = appSeconds();
-	const FLOAT DeltaTime = CurTime - InputUpdateTime;
+	const FLOAT DeltaTime = Clamp( CurTime - InputUpdateTime, 0.0f, 0.1f );
 #ifdef __ANDROID__
 	// ANDROID_SOFT_KEYBOARD_V5_MENUTYPING_TICK
 	UE1Android_UpdateSoftKeyboardForMenuTyping( (UObject*)Console, SizeX, SizeY );
@@ -1877,7 +2300,7 @@ UBOOL UNSDLViewport::TickInput()
 								Key = bIsInUI ? IK_Escape : IK_Joy5;
 								break;
 							default:
-								Key = IK_None;
+								Key = UE1AndroidRawFallbackButtonKey( Ev.jbutton.button );
 								break;
 						}
 					}
@@ -1898,41 +2321,18 @@ UBOOL UNSDLViewport::TickInput()
 				CauseInputEvent( IK_JoyPovLeft,  ( Ev.jhat.value & SDL_HAT_LEFT  ) ? IST_Press : IST_Release );
 				CauseInputEvent( IK_JoyPovRight, ( Ev.jhat.value & SDL_HAT_RIGHT ) ? IST_Press : IST_Release );
 				break;
+
+			case SDL_JOYAXISMOTION:
+				// Raw joystick axes are only used when SDL cannot expose the device as
+				// a GameController. This keeps odd Android HID pads from losing sticks
+				// completely, while avoiding duplicate input on normal controllers.
+				if( Client && Client->GetController() )
+					break;
+				HandleJoyAxisMotion( Ev.jaxis.axis, Ev.jaxis.value, 1 );
+				break;
 #endif
 			case SDL_CONTROLLERAXISMOTION:
-				{
-					const BYTE Key = JoyAxisMap[Ev.caxis.axis];
-					const INT PrevValue = JoyAxis[Ev.caxis.axis];
-					INT NewValue = Ev.caxis.value;
-					INT DeadZone = 0;
-					if ( Key < IK_JoyX
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MOUSELOOK_AXIS_DEADZONE
-						&& Key != IK_MouseX && Key != IK_MouseY
-#endif
-					)
-					{
-						// Treat the axis like a trigger.
-						if ( PrevValue < JoyAxisPressThreshold && NewValue >= JoyAxisPressThreshold )
-							CauseInputEvent( Key, IST_Press );
-						else if ( PrevValue >= JoyAxisPressThreshold && NewValue < JoyAxisPressThreshold )
-							CauseInputEvent( Key, IST_Release );
-					}
-					else
-					{
-						// Apply deadzone.
-						if ( Key >= IK_JoyX && Key <= IK_JoyZ )
-							DeadZone = Client->DeadZoneXYZ * 32767.f;
-						else if ( Key == IK_JoyR || Key == IK_JoyU || Key == IK_JoyV
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MOUSELOOK_AXIS_DEADZONE_RUV
-							|| Key == IK_MouseX || Key == IK_MouseY
-#endif
-						)
-							DeadZone = Client->DeadZoneRUV * 32767.f;
-						if ( Abs(NewValue) < DeadZone )
-							NewValue = 0;
-					}
-					JoyAxis[Ev.caxis.axis] = NewValue;
-				}
+				HandleJoyAxisMotion( Ev.caxis.axis, Ev.caxis.value, 0 );
 				break;
 			case SDL_MOUSEMOTION:
 				if( !Client->FullscreenViewport && !SDL_GetRelativeMouseMode() )
@@ -1959,7 +2359,10 @@ UBOOL UNSDLViewport::TickInput()
 		}
 	}
 
-	// Constantly hammer the input system with axis events for axes that are not zero.
+	// Constantly feed held analog axes to the input system. UE1 scales input
+	// floats by 20/DeltaSeconds in UInput::ReadInput, so keep the classic SDL
+	// driver model and include DeltaTime here. Directional pseudo keys receive
+	// positive analog magnitude only; their bound alias supplies the direction.
 	for ( INT i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i )
 	{
 		const BYTE Key = JoyAxisMap[i];
@@ -1967,11 +2370,27 @@ UBOOL UNSDLViewport::TickInput()
 		if ( Value && Key && Key >= IK_JoyX )
 		{
 			const FLOAT FltValue = Clamp( Value / 32767.f, -1.f, 1.f );
-			FLOAT Scale = ( Key >= IK_JoyX && Key <= IK_JoyZ ) ? Client->ScaleXYZ : Client->ScaleRUV;
+			FLOAT Scale = UE1SDLJoyAxisUsesRUVScale( i, Key ) ? Client->ScaleRUV : Client->ScaleXYZ;
 			Scale *= JoyAxisDefaultScale[i] * DeltaTime;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			if( i == SDL_CONTROLLER_AXIS_RIGHTX || i == SDL_CONTROLLER_AXIS_RIGHTY )
+				Scale *= UE1AndroidGetRightStickMouseSensitivityScale( Actor );
+#endif
 			if ( ( Client->InvertV && Key == IK_JoyV ) || ( Client->InvertY && Key == IK_JoyY ) )
 				Scale = -Scale;
 			CauseInputEvent( Key, IST_Axis, FltValue * Scale );
+
+			if( !UE1SDLJoyAxisIsTrigger( i ) )
+			{
+				const INT Direction = Value < 0 ? -1 : 1;
+				const BYTE DirKey = UE1SDLJoyAxisDirectionalKey( i, Direction );
+				if( DirKey != IK_None )
+				{
+					const FLOAT DirValue = FltValue < 0.f ? -FltValue : FltValue;
+					const FLOAT DirScale = Scale < 0.f ? -Scale : Scale;
+					CauseInputEvent( DirKey, IST_Axis, DirValue * DirScale );
+				}
+			}
 		}
 	}
 
@@ -1992,6 +2411,130 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 	UE1AndroidRefreshRuntimeMenuPatches();
 #endif
+	const char* AndroidLegacyJoystickCmd = Cmd;
+	if( ParseCommand( &AndroidLegacyJoystickCmd, "GET" ) )
+	{
+		char ClassName[128], PropName[128];
+		if( ParseToken( AndroidLegacyJoystickCmd, ClassName, ARRAY_COUNT(ClassName), 0 )
+		 && ParseToken( AndroidLegacyJoystickCmd, PropName, ARRAY_COUNT(PropName), 0 )
+		 && !appStricmp( ClassName, "windrv.windowsclient" )
+		 && !appStricmp( PropName, "usejoystick" ) )
+		{
+			// Stock Unreal.u still asks WinDrv.WindowsClient for this option. On
+			// Android the active viewport manager is NSDLDrv.NSDLClient.
+			if( Out )
+				Out->Log( Client->UseJoystick ? "True" : "False" );
+			return 1; // ANDROID_GAMESIR_USEJOYSTICK_MENU_ALIAS_V57
+		}
+	}
+
+	AndroidLegacyJoystickCmd = Cmd;
+	if( ParseCommand( &AndroidLegacyJoystickCmd, "SET" ) )
+	{
+		char ClassName[128], PropName[128], ValueName[128];
+		if( ParseToken( AndroidLegacyJoystickCmd, ClassName, ARRAY_COUNT(ClassName), 0 )
+		 && ParseToken( AndroidLegacyJoystickCmd, PropName, ARRAY_COUNT(PropName), 0 )
+		 && ParseToken( AndroidLegacyJoystickCmd, ValueName, ARRAY_COUNT(ValueName), 0 )
+		 && !appStricmp( ClassName, "windrv.windowsclient" )
+		 && !appStricmp( PropName, "usejoystick" ) )
+		{
+			const UBOOL bNewJoystick = appAtoi(ValueName) != 0 || !appStricmp( ValueName, "True" );
+			Client->UseJoystick = bNewJoystick;
+			GConfigCache.SetString( "NSDLDrv.NSDLClient", "UseJoystick", bNewJoystick ? "True" : "False" );
+			Client->SaveConfig();
+			GConfigCache.SaveAllConfigs();
+			debugf( NAME_Log, "UE1_CONTROLLER_AXIS v68 UseJoystick menu alias set %s", bNewJoystick ? "True" : "False" );
+			return 1; // ANDROID_GAMESIR_USEJOYSTICK_MENU_ALIAS_V57
+		}
+	}
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	const char* AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "KEYNAME" ) )
+	{
+		const INT KeyNo = appAtoi( AndroidKeyCmd );
+		GAndroidLastKeyNameQueryKey = KeyNo;
+		const char* FriendlyName = UE1AndroidFriendlyKeyName( KeyNo );
+		if( Out )
+			Out->Log( FriendlyName ? FriendlyName : ( Input ? Input->GetKeyName( (EInputKey)KeyNo ) : "" ) );
+		return 1; // ANDROID_GAMESIR_FRIENDLY_KEY_NAMES_V57
+	}
+
+	AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "KEYBINDING" ) )
+	{
+		char KeyName[64];
+		if( ParseToken( AndroidKeyCmd, KeyName, ARRAY_COUNT(KeyName), 0 ) && Input )
+		{
+			INT Key = IK_None;
+			const char* LastQueryName = UE1AndroidFriendlyKeyName( GAndroidLastKeyNameQueryKey );
+			if( !LastQueryName && GAndroidLastKeyNameQueryKey >= 0 && GAndroidLastKeyNameQueryKey < IK_MAX )
+				LastQueryName = Input->GetKeyName( (EInputKey)GAndroidLastKeyNameQueryKey );
+
+			if( LastQueryName && !appStricmp( KeyName, LastQueryName ) )
+				Key = GAndroidLastKeyNameQueryKey;
+			else
+			{
+				const char* LastCapturedName = UE1AndroidFriendlyKeyName( GAndroidLastCapturedFriendlyKey );
+				if( LastCapturedName && !appStricmp( KeyName, LastCapturedName ) )
+					Key = GAndroidLastCapturedFriendlyKey;
+			}
+
+			if( Key == IK_None )
+				Key = UE1AndroidFriendlyKeyFromName( KeyName );
+
+			if( Key == IK_None )
+			{
+				EInputKey NativeKey = IK_None;
+				if( Input->FindKeyName( KeyName, NativeKey ) )
+					Key = NativeKey;
+			}
+
+			if( Out && Key > 0 && Key < IK_MAX )
+				Out->Log( *Input->Bindings[Key] );
+		}
+		return 1; // ANDROID_GAMESIR_FRIENDLY_KEY_NAMES_V57
+	}
+
+	AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "SET" ) )
+	{
+		char ClassName[128], PropName[128];
+		if( ParseToken( AndroidKeyCmd, ClassName, ARRAY_COUNT(ClassName), 0 )
+		 && ParseToken( AndroidKeyCmd, PropName, ARRAY_COUNT(PropName), 0 )
+		 && !appStricmp( ClassName, "Input" )
+		 && Input )
+		{
+			INT Key = IK_None;
+			const char* LastCapturedName = UE1AndroidFriendlyKeyName( GAndroidLastCapturedFriendlyKey );
+			if( LastCapturedName && !appStricmp( PropName, LastCapturedName ) )
+				Key = GAndroidLastCapturedFriendlyKey;
+
+			if( Key == IK_None )
+				Key = UE1AndroidFriendlyKeyFromName( PropName );
+
+			if( Key == IK_None )
+			{
+				EInputKey NativeKey = IK_None;
+				if( Input->FindKeyName( PropName, NativeKey ) )
+					Key = NativeKey;
+			}
+
+			if( Key > 0 && Key < IK_MAX )
+			{
+				while( *AndroidKeyCmd == ' ' )
+					++AndroidKeyCmd;
+				Input->Bindings[Key] = AndroidKeyCmd;
+				Input->SaveConfig();
+				GConfigCache.SaveAllConfigs();
+				debugf( NAME_Log, "UE1_CONTROLLER_AXIS v68 set input %s key=%i binding='%s'", PropName, Key, AndroidKeyCmd );
+				return 1; // ANDROID_GAMESIR_FRIENDLY_KEY_NAMES_V57
+			}
+		}
+	}
+
+#endif
+
 	if( UViewport::Exec( Cmd, Out ) )
 	{
 		return 1;
@@ -2017,12 +2560,56 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 	{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 		UE1AndroidRefreshGammaMenuLabel();
-#endif
+		Out->Log( UE1AndroidResolutionModeName( Client ? Client->AndroidResolutionMode : 0 ) ); // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+#else
 		Out->Logf( "%ix%i", SizeX, SizeY );
+#endif
 		return 1;
 	}
 	else if( ParseCommand(&Cmd, "SetRes") )
 	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		char RequestedRes[64];
+		appStrncpy( RequestedRes, Cmd, ARRAY_COUNT(RequestedRes) );
+		RequestedRes[ARRAY_COUNT(RequestedRes)-1] = 0;
+		while( RequestedRes[0] == ' ' )
+			appMemmove( RequestedRes, RequestedRes + 1, appStrlen(RequestedRes) );
+		INT X = appAtoi(RequestedRes);
+		INT Y = appAtoi(appStrchr(RequestedRes,'x') ? appStrchr(RequestedRes,'x')+1 : appStrchr(RequestedRes,'X') ? appStrchr(RequestedRes,'X')+1 : "");
+		const INT Mode = UE1AndroidResolutionModeFromName( RequestedRes, X, Y );
+		if( Client )
+			Client->AndroidResolutionMode = Mode;
+		if( Mode == 1 )
+		{
+			X = 1280;
+			Y = 720;
+		}
+		else if( Mode == 2 )
+		{
+			X = 1024;
+			Y = 768;
+		}
+		else
+		{
+			X = SizeX;
+			Y = SizeY;
+			UE1AndroidApplyConfiguredResolution( Client, hWnd, GLCtx, X, Y );
+		}
+
+		if( X && Y )
+		{
+			if( Client->FullscreenViewport )
+				MakeFullscreen( X, Y, 1 );
+			else
+				SetClientSize( X, Y, 1 );
+			if( Client )
+			{
+				Client->SaveConfig();
+				GConfigCache.SaveAllConfigs();
+			}
+			debugf( NAME_Log, "UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59 SetRes %s -> mode=%i size=%ix%i", RequestedRes, Mode, X, Y );
+		}
+#else
 		INT X=appAtoi(Cmd), Y=appAtoi(appStrchr(Cmd,'x') ? appStrchr(Cmd,'x')+1 : appStrchr(Cmd,'X') ? appStrchr(Cmd,'X')+1 : "");
 		if( X && Y )
 		{
@@ -2031,6 +2618,7 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 			else
 				SetClientSize( X, Y, 1 );
 		}
+#endif
 		return 1;
 	}
 	else if( ParseCommand(&Cmd, "Preferences") )

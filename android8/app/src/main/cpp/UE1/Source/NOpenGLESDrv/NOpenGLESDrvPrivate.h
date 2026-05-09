@@ -145,6 +145,22 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	glm::mat4 MtxMVP;
 	FPlane ColorMod;
 
+	// Android fixed-resolution target. Native mode renders directly to the window
+	// backbuffer; 1280x720/1024x768 render into this real low-res FBO and are then
+	// stretched fullscreen to the Android drawable. // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	GLuint AndroidSceneFBO;
+	GLuint AndroidSceneColorTex;
+	GLuint AndroidSceneDepthRB;
+	GLuint AndroidSceneBlitProg;
+	GLuint AndroidSceneBlitVS;
+	GLuint AndroidSceneBlitFS;
+	GLint AndroidSceneBlitTextureLoc;
+	INT AndroidSceneFBOSizeX;
+	INT AndroidSceneFBOSizeY;
+	INT AndroidSceneDrawableX;
+	INT AndroidSceneDrawableY;
+	UBOOL AndroidSceneFBOActive;
+
 	struct FCachedSceneNode
 	{
 		FLOAT FovAngle;
@@ -152,6 +168,7 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		INT X, Y;
 		INT XB, YB;
 		INT SizeX, SizeY;
+		INT DrawableX, DrawableY; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
 	} CurrentSceneNode;
 
 	// Constructors.
@@ -185,6 +202,14 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void SetShader( DWORD ShaderFlags );
 	void SetSceneNode( FSceneNode* Frame );
 	void SetBlend( DWORD PolyFlags, UBOOL InverseOrder = false );
+	void GetAndroidDrawableSize( INT& OutX, INT& OutY ); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	UBOOL ShouldUseAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	UBOOL EnsureAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	void ReleaseAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	void BindAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	void PresentAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	GLuint CompileAndroidSceneBlitShader( GLenum Type, const char* Text ); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	void EnsureAndroidSceneBlitProgram(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
 	void SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFlags, FLOAT PanBias );
 	void ResetTexture( INT TMU );
 	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture, INT BaseMip );

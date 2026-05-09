@@ -174,44 +174,55 @@ UBOOL AUdpLink::Tick( FLOAT DeltaTime, enum ELevelTick TickType )
 			if( UdpMode==UDP_Text )
 			{
 				Buffer[Count]=0;
-				// ANDROID_LAN_BEACON_LOOPBACK_FIX:
-				// Einige Android-Hosts bewerben im LAN-Beacon 127.0.0.1/localhost.
-				// Für LAN-Join muss der Client aber die echte UDP-Quell-IP verwenden.
-				#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID)
+				// UE1_WINDOWS_LAN_BEACON_LOOPBACK_FIX_V18:
+				// Some platforms can advertise 127.x.x.x/localhost in LAN beacons.
+				// For LAN joins the menu must use the real UDP source address instead.
 				{
-				    char* Token = strchr( Buffer, ' ' );
-				    if( Token != NULL && Token[1] != 0 )
-				    {
-				        char* Url = Token + 1;
-				        const char* Tail = NULL;
-				
-				        if( strncmp( Url, "127.0.0.1", 9 ) == 0 )
-				            Tail = Url + 9;
-				        else if( strncmp( Url, "localhost", 9 ) == 0 )
-				            Tail = Url + 9;
-				
-				        if( Tail != NULL && (*Tail == '/' || *Tail == ':' || *Tail == ' ' || *Tail == 0) )
-				        {
-				            const DWORD SourceAddr = ntohl( FromAddr.sin_addr.s_addr );
-				            const INT SourceA = (INT)((SourceAddr >> 24) & 255);
-				            const INT SourceB = (INT)((SourceAddr >> 16) & 255);
-				            const INT SourceC = (INT)((SourceAddr >>  8) & 255);
-				            const INT SourceD = (INT)((SourceAddr      ) & 255);
-				
-				            char SourceIp[64];
-				            appSprintf( SourceIp, "%i.%i.%i.%i", SourceA, SourceB, SourceC, SourceD );
-				
-				            char FixedBuffer[512];
-				            *Token = 0;
-				            appSprintf( FixedBuffer, "%s %s%s", Buffer, SourceIp, Tail );
-				            strncpy( Buffer, FixedBuffer, ARRAY_COUNT(Buffer)-1 );
-				            Buffer[ARRAY_COUNT(Buffer)-1] = 0;
-				
-				            debugf( NAME_Log, "Android LAN beacon address corrected: %s", Buffer );
-				        }
-				    }
+					char* Token = strchr( Buffer, ' ' );
+					if( Token != NULL && Token[1] != 0 )
+					{
+						char* Url = Token + 1;
+						const char* Tail = NULL;
+
+						if( Url[0] == '1' && Url[1] == '2' && Url[2] == '7' && Url[3] == '.' )
+						{
+							Tail = Url + 4;
+							while( *Tail >= '0' && *Tail <= '9' )
+								Tail++;
+							for( INT Dots = 0; Dots < 2 && *Tail == '.'; Dots++ )
+							{
+								Tail++;
+								while( *Tail >= '0' && *Tail <= '9' )
+									Tail++;
+							}
+						}
+						else if( appStrnicmp( Url, "localhost", 9 ) == 0 )
+							Tail = Url + 9;
+
+						if( Tail != NULL && (*Tail == '/' || *Tail == ':' || *Tail == ' ' || *Tail == 0) )
+						{
+							const DWORD SourceAddr = ntohl( FromAddr.sin_addr.s_addr );
+							const INT SourceA = (INT)((SourceAddr >> 24) & 255);
+							const INT SourceB = (INT)((SourceAddr >> 16) & 255);
+							const INT SourceC = (INT)((SourceAddr >>  8) & 255);
+							const INT SourceD = (INT)((SourceAddr      ) & 255);
+
+							if( SourceA != 0 && SourceA != 127 )
+							{
+								char SourceIp[64];
+								appSprintf( SourceIp, "%i.%i.%i.%i", SourceA, SourceB, SourceC, SourceD );
+
+								char FixedBuffer[512];
+								*Token = 0;
+								appSprintf( FixedBuffer, "%s %s%s", Buffer, SourceIp, Tail );
+								strncpy( Buffer, FixedBuffer, ARRAY_COUNT(Buffer)-1 );
+								Buffer[ARRAY_COUNT(Buffer)-1] = 0;
+
+								debugf( NAME_Log, "LAN beacon loopback address corrected: %s", Buffer );
+							}
+						}
+					}
 				}
-				#endif
 				FIpAddr Addr;
 				Addr.Addr = ntohl( FromAddr.sin_addr.s_addr );
 				Addr.Port = ntohs( FromAddr.sin_port );

@@ -2,6 +2,9 @@
 #include "glad.h"
 #include "glm/matrix.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+#include <android/log.h>
+#endif
 
 #include "NOpenGLESDrvPrivate.h"
 
@@ -101,6 +104,51 @@ static FLOAT UE1GLESConfigFloat( const char* Section, const char* Key, FLOAT Def
 	if( !GConfigCache.GetString( Section, Key, Value, sizeof(Value) ) )
 		return DefaultValue;
 	return appAtof( Value );
+}
+
+static INT UE1GLESConfigInt( const char* Section, const char* Key, INT DefaultValue )
+{
+	char Value[64];
+	if( !GConfigCache.GetString( Section, Key, Value, sizeof(Value) ) )
+		return DefaultValue;
+	return appAtoi( Value );
+}
+
+static void UE1GLESAndroidLogResolutionV71( const char* Text )
+{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	__android_log_print( ANDROID_LOG_INFO, "UE1Android", "%s", Text );
+#endif
+	debugf( NAME_Log, "%s", Text );
+}
+
+static INT UE1GLESAndroidResolutionModeV71()
+{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	return UE1GLESConfigInt( "NSDLDrv.NSDLClient", "AndroidResolutionMode", 0 );
+#else
+	return 0;
+#endif
+}
+
+static UBOOL UE1GLESAndroidFixedRenderSizeV71( INT& OutX, INT& OutY )
+{
+	const INT Mode = UE1GLESAndroidResolutionModeV71();
+	if( Mode == 1 )
+	{
+		OutX = 1280;
+		OutY = 720;
+		return true;
+	}
+	if( Mode == 2 )
+	{
+		OutX = 1024;
+		OutY = 768;
+		return true;
+	}
+	OutX = 0;
+	OutY = 0;
+	return false;
 }
 
 static UBOOL UE1GLESIsMaineffectTexture( const FTextureInfo& Info )
@@ -263,6 +311,29 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	CurrentBrightnessScale = -1.f;
 	CurrentWorldGamma = -1.f;
 	CurrentWorldShadowLift = -1.f;
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.Y = -1;
+	CurrentSceneNode.XB = -1;
+	CurrentSceneNode.YB = -1;
+	CurrentSceneNode.SizeX = -1;
+	CurrentSceneNode.SizeY = -1;
+	CurrentSceneNode.DrawableX = -1;
+	CurrentSceneNode.DrawableY = -1;
+	CurrentSceneNode.FX = -1.f;
+	CurrentSceneNode.FY = -1.f;
+	CurrentSceneNode.FovAngle = -1.f; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneFBO = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneColorTex = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneDepthRB = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneBlitProg = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneBlitVS = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneBlitFS = 0; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneBlitTextureLoc = -1; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneFBOSizeX = -1; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneFBOSizeY = -1; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneDrawableX = -1; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneDrawableY = -1; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	AndroidSceneFBOActive = false; // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
 	SwapInterval = 1;
 }
 
@@ -383,6 +454,13 @@ void UNOpenGLESRenderDevice::Exit()
 
 	Flush();
 
+	ReleaseAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	if( AndroidSceneBlitProg )
+	{
+		glDeleteProgram( AndroidSceneBlitProg );
+		AndroidSceneBlitProg = 0;
+	}
+
 	if( Compose )
 	{
 		appFree( Compose );
@@ -442,6 +520,355 @@ UBOOL UNOpenGLESRenderDevice::Exec( const char* Cmd, FOutputDevice* Out )
 	return false;
 }
 
+void UNOpenGLESRenderDevice::GetAndroidDrawableSize( INT& OutX, INT& OutY )
+{
+	guard(UNOpenGLESRenderDevice::GetAndroidDrawableSize);
+
+	OutX = Viewport ? Viewport->SizeX : 0;
+	OutY = Viewport ? Viewport->SizeY : 0;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	if( Viewport )
+	{
+		SDL_Window* AndroidWindow = (SDL_Window*)Viewport->GetWindow();
+		if( AndroidWindow )
+		{
+			int AndroidDrawW = 0, AndroidDrawH = 0;
+			SDL_GL_GetDrawableSize( AndroidWindow, &AndroidDrawW, &AndroidDrawH );
+			if( AndroidDrawW > 0 && AndroidDrawH > 0 )
+			{
+				OutX = AndroidDrawW;
+				OutY = AndroidDrawH;
+			}
+		}
+	}
+#endif
+
+	unguard;
+}
+
+UBOOL UNOpenGLESRenderDevice::ShouldUseAndroidSceneFBO()
+{
+	guard(UNOpenGLESRenderDevice::ShouldUseAndroidSceneFBO);
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	if( !Viewport || Viewport->SizeX <= 0 || Viewport->SizeY <= 0 )
+		return false;
+
+	INT FixedX = 0, FixedY = 0;
+	if( UE1GLESAndroidFixedRenderSizeV71( FixedX, FixedY ) )
+		return FixedX > 0 && FixedY > 0;
+
+	return false;
+#else
+	return false;
+#endif
+
+	unguard;
+}
+
+GLuint UNOpenGLESRenderDevice::CompileAndroidSceneBlitShader( GLenum Type, const char* Text )
+{
+	guard(UNOpenGLESRenderDevice::CompileAndroidSceneBlitShader);
+
+	GLuint Id = glCreateShader( Type );
+	const char* Src[] = { Text, NULL };
+	glShaderSource( Id, 1, Src, NULL );
+	glCompileShader( Id );
+
+	GLint Status = 0;
+	glGetShaderiv( Id, GL_COMPILE_STATUS, &Status );
+	if( !Status )
+	{
+		char Tmp[2048] = { 0 };
+		glGetShaderInfoLog( Id, sizeof(Tmp), NULL, Tmp );
+		appErrorf( "Android resolution blit %s shader compilation failed:\n%s", ( Type == GL_FRAGMENT_SHADER ) ? "fragment" : "vertex", Tmp );
+	}
+
+	return Id;
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::EnsureAndroidSceneBlitProgram()
+{
+	guard(UNOpenGLESRenderDevice::EnsureAndroidSceneBlitProgram);
+
+	if( AndroidSceneBlitProg )
+		return;
+
+	static const char* BlitVS =
+		"#version 100\n"
+		"attribute mediump vec2 aPosition;\n"
+		"attribute mediump vec2 aTexCoord;\n"
+		"varying mediump vec2 vTexCoord;\n"
+		"void main()\n"
+		"{\n"
+		"\tvTexCoord = aTexCoord;\n"
+		"\tgl_Position = vec4(aPosition, 0.0, 1.0);\n"
+		"}\n";
+	static const char* BlitFS =
+		"#version 100\n"
+		"varying mediump vec2 vTexCoord;\n"
+		"uniform sampler2D uTexture;\n"
+		"void main()\n"
+		"{\n"
+		"\tgl_FragColor = texture2D(uTexture, vTexCoord);\n"
+		"}\n";
+
+	AndroidSceneBlitVS = CompileAndroidSceneBlitShader( GL_VERTEX_SHADER, BlitVS );
+	AndroidSceneBlitFS = CompileAndroidSceneBlitShader( GL_FRAGMENT_SHADER, BlitFS );
+	AndroidSceneBlitProg = glCreateProgram();
+	glAttachShader( AndroidSceneBlitProg, AndroidSceneBlitVS );
+	glAttachShader( AndroidSceneBlitProg, AndroidSceneBlitFS );
+	glBindAttribLocation( AndroidSceneBlitProg, 0, "aPosition" );
+	glBindAttribLocation( AndroidSceneBlitProg, 1, "aTexCoord" );
+	glLinkProgram( AndroidSceneBlitProg );
+
+	GLint Status = 0;
+	glGetProgramiv( AndroidSceneBlitProg, GL_LINK_STATUS, &Status );
+	if( !Status )
+	{
+		char Tmp[2048] = { 0 };
+		glGetProgramInfoLog( AndroidSceneBlitProg, sizeof(Tmp), NULL, Tmp );
+		appErrorf( "Android resolution blit shader link failed:\n%s", Tmp );
+	}
+
+	AndroidSceneBlitTextureLoc = glGetUniformLocation( AndroidSceneBlitProg, "uTexture" );
+	glDeleteShader( AndroidSceneBlitVS );
+	glDeleteShader( AndroidSceneBlitFS );
+	AndroidSceneBlitVS = 0;
+	AndroidSceneBlitFS = 0;
+
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::ReleaseAndroidSceneFBO()
+{
+	guard(UNOpenGLESRenderDevice::ReleaseAndroidSceneFBO);
+
+	if( AndroidSceneFBO )
+	{
+		glDeleteFramebuffers( 1, &AndroidSceneFBO );
+		AndroidSceneFBO = 0;
+	}
+	if( AndroidSceneColorTex )
+	{
+		glDeleteTextures( 1, &AndroidSceneColorTex );
+		AndroidSceneColorTex = 0;
+	}
+	if( AndroidSceneDepthRB )
+	{
+		glDeleteRenderbuffers( 1, &AndroidSceneDepthRB );
+		AndroidSceneDepthRB = 0;
+	}
+
+	AndroidSceneFBOSizeX = -1;
+	AndroidSceneFBOSizeY = -1;
+	AndroidSceneDrawableX = -1;
+	AndroidSceneDrawableY = -1;
+	AndroidSceneFBOActive = false;
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.FX = -1.f;
+
+	unguard;
+}
+
+UBOOL UNOpenGLESRenderDevice::EnsureAndroidSceneFBO()
+{
+	guard(UNOpenGLESRenderDevice::EnsureAndroidSceneFBO);
+
+	if( !ShouldUseAndroidSceneFBO() )
+	{
+		if( AndroidSceneFBO || AndroidSceneColorTex || AndroidSceneDepthRB )
+			ReleaseAndroidSceneFBO();
+		AndroidSceneFBOActive = false;
+		return false;
+	}
+
+	INT DrawableX = 0, DrawableY = 0;
+	GetAndroidDrawableSize( DrawableX, DrawableY );
+	INT RenderX = Viewport->SizeX;
+	INT RenderY = Viewport->SizeY;
+	INT FixedX = 0, FixedY = 0;
+	if( UE1GLESAndroidFixedRenderSizeV71( FixedX, FixedY ) )
+	{
+		RenderX = FixedX;
+		RenderY = FixedY;
+	}
+	if( DrawableX <= 0 || DrawableY <= 0 || RenderX <= 0 || RenderY <= 0 )
+		return false;
+
+	if( AndroidSceneFBO && AndroidSceneColorTex && AndroidSceneDepthRB &&
+		AndroidSceneFBOSizeX == RenderX && AndroidSceneFBOSizeY == RenderY &&
+		AndroidSceneDrawableX == DrawableX && AndroidSceneDrawableY == DrawableY )
+	{
+		AndroidSceneFBOActive = true;
+		return true;
+	}
+
+	ReleaseAndroidSceneFBO();
+	EnsureAndroidSceneBlitProgram();
+
+	glGenTextures( 1, &AndroidSceneColorTex );
+	glBindTexture( GL_TEXTURE_2D, AndroidSceneColorTex );
+	// UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	// Fixed Android modes render into this real low-res colour target and are then
+	// stretched fullscreen to the Android drawable.  Use nearest so 1280x720 and
+	// 1024x768 are visibly different from Native and avoid extra filtering around
+	// old modulated overlays such as WaterRings2.
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, RenderX, RenderY, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
+
+	glGenRenderbuffers( 1, &AndroidSceneDepthRB );
+	glBindRenderbuffer( GL_RENDERBUFFER, AndroidSceneDepthRB );
+	glRenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, RenderX, RenderY );
+
+	glGenFramebuffers( 1, &AndroidSceneFBO );
+	glBindFramebuffer( GL_FRAMEBUFFER, AndroidSceneFBO );
+	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, AndroidSceneColorTex, 0 );
+	glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, AndroidSceneDepthRB );
+
+	GLenum Status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+	if( Status != GL_FRAMEBUFFER_COMPLETE )
+	{
+		char WarnLine[256];
+		appSprintf( WarnLine, "UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71 framebuffer incomplete: 0x%04x; using native backbuffer", (INT)Status );
+		UE1GLESAndroidLogResolutionV71( WarnLine );
+		ReleaseAndroidSceneFBO();
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		return false;
+	}
+
+	AndroidSceneFBOSizeX = RenderX;
+	AndroidSceneFBOSizeY = RenderY;
+	AndroidSceneDrawableX = DrawableX;
+	AndroidSceneDrawableY = DrawableY;
+	AndroidSceneFBOActive = true;
+	TexInfo[0].CurrentCacheID = 0;
+	TexInfo[1].CurrentCacheID = 0;
+	TexInfo[2].CurrentCacheID = 0;
+	TexInfo[3].CurrentCacheID = 0;
+	ShaderInfo = NULL;
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.FX = -1.f;
+
+	char LogLine[256];
+	appSprintf( LogLine, "UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71 enabled: mode=%i render=%ix%i viewport=%ix%i drawable=%ix%i", UE1GLESAndroidResolutionModeV71(), AndroidSceneFBOSizeX, AndroidSceneFBOSizeY, Viewport->SizeX, Viewport->SizeY, AndroidSceneDrawableX, AndroidSceneDrawableY );
+	UE1GLESAndroidLogResolutionV71( LogLine );
+
+	return true;
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::BindAndroidSceneFBO()
+{
+	guard(UNOpenGLESRenderDevice::BindAndroidSceneFBO);
+
+	if( EnsureAndroidSceneFBO() )
+	{
+		glBindFramebuffer( GL_FRAMEBUFFER, AndroidSceneFBO );
+		glViewport( 0, 0, AndroidSceneFBOSizeX, AndroidSceneFBOSizeY );
+	}
+	else
+	{
+		AndroidSceneFBOActive = false;
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		INT DrawableX = Viewport ? Viewport->SizeX : 0;
+		INT DrawableY = Viewport ? Viewport->SizeY : 0;
+		GetAndroidDrawableSize( DrawableX, DrawableY );
+		if( DrawableX > 0 && DrawableY > 0 )
+			glViewport( 0, 0, DrawableX, DrawableY );
+	}
+
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.FX = -1.f;
+
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::PresentAndroidSceneFBO()
+{
+	guard(UNOpenGLESRenderDevice::PresentAndroidSceneFBO);
+
+	if( !AndroidSceneFBOActive || !AndroidSceneColorTex )
+		return;
+
+	INT DrawableX = 0, DrawableY = 0;
+	GetAndroidDrawableSize( DrawableX, DrawableY );
+	if( DrawableX <= 0 || DrawableY <= 0 )
+		return;
+
+	static INT LastPresentModeV71 = -999;
+	static INT LastPresentRenderXV71 = -1;
+	static INT LastPresentRenderYV71 = -1;
+	static INT LastPresentDrawableXV71 = -1;
+	static INT LastPresentDrawableYV71 = -1;
+	if( LastPresentModeV71 != UE1GLESAndroidResolutionModeV71() ||
+		LastPresentRenderXV71 != AndroidSceneFBOSizeX || LastPresentRenderYV71 != AndroidSceneFBOSizeY ||
+		LastPresentDrawableXV71 != DrawableX || LastPresentDrawableYV71 != DrawableY )
+	{
+		char LogLine[256];
+		appSprintf( LogLine, "UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71 present: mode=%i render=%ix%i viewport=%ix%i drawable=%ix%i", UE1GLESAndroidResolutionModeV71(), AndroidSceneFBOSizeX, AndroidSceneFBOSizeY, Viewport ? Viewport->SizeX : 0, Viewport ? Viewport->SizeY : 0, DrawableX, DrawableY );
+		UE1GLESAndroidLogResolutionV71( LogLine );
+		LastPresentModeV71 = UE1GLESAndroidResolutionModeV71();
+		LastPresentRenderXV71 = AndroidSceneFBOSizeX;
+		LastPresentRenderYV71 = AndroidSceneFBOSizeY;
+		LastPresentDrawableXV71 = DrawableX;
+		LastPresentDrawableYV71 = DrawableY;
+	}
+
+	EnsureAndroidSceneBlitProgram();
+
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+	glViewport( 0, 0, DrawableX, DrawableY );
+	glDisable( GL_DEPTH_TEST );
+	glDepthMask( GL_FALSE );
+	glDisable( GL_BLEND );
+	glBlendFunc( GL_ONE, GL_ZERO );
+	glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+
+	glActiveTexture( GL_TEXTURE0 );
+	glBindTexture( GL_TEXTURE_2D, AndroidSceneColorTex );
+	if( UseVAO )
+		glBindBuffer( GL_ARRAY_BUFFER, 0 );
+	glUseProgram( AndroidSceneBlitProg );
+	if( AndroidSceneBlitTextureLoc >= 0 )
+		glUniform1i( AndroidSceneBlitTextureLoc, 0 );
+
+	static const GLfloat BlitVerts[] = {
+		-1.f, -1.f, 0.f, 0.f,
+		+1.f, -1.f, 1.f, 0.f,
+		-1.f, +1.f, 0.f, 1.f,
+		+1.f, +1.f, 1.f, 1.f,
+	};
+	glEnableVertexAttribArray( 0 );
+	glEnableVertexAttribArray( 1 );
+	glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), BlitVerts );
+	glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), BlitVerts + 2 );
+	glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+
+	// The fullscreen blit uses its own GL state. Force the regular UE1 state cache
+	// to rebuild cleanly on the next frame. // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	TexInfo[0].CurrentCacheID = 0;
+	TexInfo[1].CurrentCacheID = 0;
+	TexInfo[2].CurrentCacheID = 0;
+	TexInfo[3].CurrentCacheID = 0;
+	CurrentShaderFlags = 0;
+	CurrentPolyFlags = 0xffffffff;
+	ShaderInfo = NULL;
+	CurrentSceneNode.X = -1;
+	CurrentSceneNode.FX = -1.f;
+
+	if( UseVAO )
+		glBindBuffer( GL_ARRAY_BUFFER, GLBuf );
+	glDepthMask( GL_TRUE );
+	glEnable( GL_DEPTH_TEST );
+
+	unguard;
+}
+
 void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane ScreenClear, DWORD RenderLockFlags, BYTE* InHitData, INT* InHitSize )
 {
 	guard(UNOpenGLESRenderDevice::Lock);
@@ -449,6 +876,8 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
 	glClearDepthf( 1.f );
 	glDepthFunc( GL_LEQUAL );
+
+	BindAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
 
 	UpdateRuntimeConfig();
 
@@ -506,6 +935,11 @@ void UNOpenGLESRenderDevice::Unlock( UBOOL Blit )
 	guard(UNOpenGLESRenderDevice::Unlock);
 
 	FlushTriangles();
+
+	if( Blit )
+		PresentAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+	else if( AndroidSceneFBOActive )
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
 	glFlush();
 
@@ -1044,21 +1478,77 @@ void UNOpenGLESRenderDevice::SetSceneNode( FSceneNode* Frame )
 		CurrentSceneNode.X = -1;
 		CurrentSceneNode.FX = -1.f;
 		CurrentSceneNode.SizeX = -1;
+		CurrentSceneNode.DrawableX = -1;
+		CurrentSceneNode.DrawableY = -1;
 		return;
 	}
 
+	INT DrawableX = Viewport->SizeX;
+	INT DrawableY = Viewport->SizeY;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	SDL_Window* AndroidWindow = (SDL_Window*)Viewport->GetWindow();
+	if( AndroidWindow )
+	{
+		int AndroidDrawW = 0, AndroidDrawH = 0;
+		SDL_GL_GetDrawableSize( AndroidWindow, &AndroidDrawW, &AndroidDrawH );
+		if( AndroidDrawW > 0 && AndroidDrawH > 0 )
+		{
+			DrawableX = AndroidDrawW;
+			DrawableY = AndroidDrawH;
+		}
+	}
+#endif
+
 	if( Frame->X != CurrentSceneNode.X || Frame->Y != CurrentSceneNode.Y ||
 			Frame->XB != CurrentSceneNode.XB || Frame->YB != CurrentSceneNode.YB ||
-			Viewport->SizeX != CurrentSceneNode.SizeX || Viewport->SizeY != CurrentSceneNode.SizeY )
+			Viewport->SizeX != CurrentSceneNode.SizeX || Viewport->SizeY != CurrentSceneNode.SizeY ||
+			DrawableX != CurrentSceneNode.DrawableX || DrawableY != CurrentSceneNode.DrawableY )
 	{
 		FlushTriangles();
-		glViewport( Frame->XB, Viewport->SizeY - Frame->Y - Frame->YB, Frame->X, Frame->Y );
+
+		INT GLX = Frame->XB;
+		INT GLY = Viewport->SizeY - Frame->Y - Frame->YB;
+		INT GLW = Frame->X;
+		INT GLH = Frame->Y;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		if( AndroidSceneFBOActive && AndroidSceneFBOSizeX > 0 && AndroidSceneFBOSizeY > 0 &&
+			Viewport->SizeX > 0 && Viewport->SizeY > 0 &&
+			( AndroidSceneFBOSizeX != Viewport->SizeX || AndroidSceneFBOSizeY != Viewport->SizeY ) )
+		{
+			// UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
+			// Render SceneNode rectangles into the real low-res FBO. This is only a
+			// safety path if the UE1 viewport and requested FBO diverge; normally they
+			// are identical for 1280x720 and 1024x768.
+			const FLOAT ScaleX = (FLOAT)AndroidSceneFBOSizeX / (FLOAT)Viewport->SizeX;
+			const FLOAT ScaleY = (FLOAT)AndroidSceneFBOSizeY / (FLOAT)Viewport->SizeY;
+			GLX = appRound( (FLOAT)Frame->XB * ScaleX );
+			GLY = appRound( (FLOAT)( Viewport->SizeY - Frame->Y - Frame->YB ) * ScaleY );
+			GLW = Max( 1, appRound( (FLOAT)Frame->X * ScaleX ) );
+			GLH = Max( 1, appRound( (FLOAT)Frame->Y * ScaleY ) );
+		}
+		else if( !AndroidSceneFBOActive && DrawableX > 0 && DrawableY > 0 && Viewport->SizeX > 0 && Viewport->SizeY > 0 &&
+			( DrawableX != Viewport->SizeX || DrawableY != Viewport->SizeY ) )
+		{
+			// Fallback only: if the FBO cannot be created, at least keep the selected
+			// logical resolution fullscreen instead of drawing a small lower-left image.
+			// UE1_ANDROID_RESOLUTION_STRETCH_FULL_V71
+			const FLOAT ScaleX = (FLOAT)DrawableX / (FLOAT)Viewport->SizeX;
+			const FLOAT ScaleY = (FLOAT)DrawableY / (FLOAT)Viewport->SizeY;
+			GLX = appRound( (FLOAT)Frame->XB * ScaleX );
+			GLY = appRound( (FLOAT)( Viewport->SizeY - Frame->Y - Frame->YB ) * ScaleY );
+			GLW = Max( 1, appRound( (FLOAT)Frame->X * ScaleX ) );
+			GLH = Max( 1, appRound( (FLOAT)Frame->Y * ScaleY ) );
+		}
+#endif
+		glViewport( GLX, GLY, GLW, GLH );
 		CurrentSceneNode.X = Frame->X;
 		CurrentSceneNode.Y = Frame->Y;
 		CurrentSceneNode.XB = Frame->XB;
 		CurrentSceneNode.YB = Frame->YB;
 		CurrentSceneNode.SizeX = Viewport->SizeX;
 		CurrentSceneNode.SizeY = Viewport->SizeY;
+		CurrentSceneNode.DrawableX = DrawableX;
+		CurrentSceneNode.DrawableY = DrawableY;
 	}
 
 	if( Frame->FX != CurrentSceneNode.FX || Frame->FY != CurrentSceneNode.FY ||
@@ -1425,6 +1915,8 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 			const DWORD* Pal = (const DWORD*)Info.Palette;
 			const DWORD Count = Mip->USize * Mip->VSize;
 			BYTE WR2Corner0 = 0, WR2Corner1 = 0, WR2Corner2 = 0, WR2Corner3 = 0;
+			FColor WR2NeutralColor( 255, 255, 255, 255 );
+			INT WR2NeutralLuma = 255;
 			if( bHubWaterRings2 && Mip->USize > 0 && Mip->VSize > 0 )
 			{
 				const BYTE* P8 = (const BYTE*)Mip->DataPtr;
@@ -1432,6 +1924,51 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 				WR2Corner1 = P8[Mip->USize - 1];
 				WR2Corner2 = P8[(Mip->VSize - 1) * Mip->USize];
 				WR2Corner3 = P8[(Mip->VSize - 1) * Mip->USize + (Mip->USize - 1)];
+
+				// UE1_ANDROID_WATERRINGS_BORDER_NEUTRAL_V70
+				// WaterRings2 is drawn with GL_ZERO/GL_SRC_COLOR, so the neutral
+				// background must be exact white.  Earlier fixes picked the most
+				// common colour from the whole animated frame and could accidentally
+				// choose a ripple colour, whitening the waves away.  The frame border
+				// is the stable neutral area; derive the neutral palette entry from
+				// there and only remap near-neutral texels to white.
+				INT BorderCounts[256];
+				appMemset( BorderCounts, 0, sizeof(BorderCounts) );
+				for( INT Y = 0; Y < Mip->VSize; ++Y )
+				{
+					for( INT X = 0; X < Mip->USize; ++X )
+					{
+						if( X != 0 && Y != 0 && X != Mip->USize - 1 && Y != Mip->VSize - 1 )
+							continue;
+						BorderCounts[P8[Y * Mip->USize + X]]++;
+					}
+				}
+
+				INT BestIndex = WR2Corner0;
+				INT BestCount = -1;
+				INT BestLuma = -1;
+				for( INT PaletteIndex = 0; PaletteIndex < 256; ++PaletteIndex )
+				{
+					if( BorderCounts[PaletteIndex] <= 0 )
+						continue;
+					FColor C = Info.Palette[PaletteIndex];
+					INT Luma = ( (INT)C.R + (INT)C.G + (INT)C.B ) / 3;
+					if( Luma < 96 )
+						continue;
+					if( BorderCounts[PaletteIndex] > BestCount || ( BorderCounts[PaletteIndex] == BestCount && Luma > BestLuma ) )
+					{
+						BestIndex = PaletteIndex;
+						BestCount = BorderCounts[PaletteIndex];
+						BestLuma = Luma;
+					}
+				}
+				WR2NeutralColor = Info.Palette[BestIndex];
+				WR2NeutralLuma = ( (INT)WR2NeutralColor.R + (INT)WR2NeutralColor.G + (INT)WR2NeutralColor.B ) / 3;
+				if( WR2NeutralLuma < 96 )
+				{
+					WR2NeutralColor = FColor( 255, 255, 255, 255 );
+					WR2NeutralLuma = 255;
+				}
 			}
 
 			if( bLegacyEffectSprite )
@@ -1447,9 +1984,33 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 
 					if( bHubWaterRings2 )
 					{
-						// Do not recolour WaterRings2 here. Its original white/near-white
-						// background is correct for the special GL_ZERO,GL_SRC_COLOR
-						// blend used in DrawComplexSurface; darker texels remain the ripples.
+						// UE1_ANDROID_WATERRINGS_BORDER_NEUTRAL_V70
+						// For multiplicative modulation, source white means "do not change".
+						// Make only the neutral background exact white and remap darker
+						// deviations around that border-derived neutral to visible ripple
+						// darkening.  Alpha is intentionally kept opaque because the active
+						// WaterRings2 blend reads RGB, not alpha.
+						INT Luma = ( (INT)Color.R + (INT)Color.G + (INT)Color.B ) / 3;
+						INT DR = ( (INT)Color.R > (INT)WR2NeutralColor.R ) ? ( (INT)Color.R - (INT)WR2NeutralColor.R ) : ( (INT)WR2NeutralColor.R - (INT)Color.R );
+						INT DG = ( (INT)Color.G > (INT)WR2NeutralColor.G ) ? ( (INT)Color.G - (INT)WR2NeutralColor.G ) : ( (INT)WR2NeutralColor.G - (INT)Color.G );
+						INT DB = ( (INT)Color.B > (INT)WR2NeutralColor.B ) ? ( (INT)Color.B - (INT)WR2NeutralColor.B ) : ( (INT)WR2NeutralColor.B - (INT)Color.B );
+						INT MaxAbsDelta = Max( DR, Max( DG, DB ) );
+						INT DarkDelta = WR2NeutralLuma - Luma;
+
+						if( MaxAbsDelta <= 7 || DarkDelta <= 3 )
+						{
+							Color.R = 255;
+							Color.G = 255;
+							Color.B = 255;
+						}
+						else
+						{
+							INT Strength = Min( 192, Max( 8, DarkDelta * 5 ) );
+							BYTE V = (BYTE)Max( 48, 255 - Strength );
+							Color.R = V;
+							Color.G = V;
+							Color.B = V;
+						}
 					}
 					*Dst++ = Color.R;
 					*Dst++ = Color.G;

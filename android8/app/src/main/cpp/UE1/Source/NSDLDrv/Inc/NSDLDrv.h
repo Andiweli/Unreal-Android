@@ -62,6 +62,7 @@ private:
 	static const BYTE JoyAxisMap[SDL_CONTROLLER_AXIS_MAX]; // SDL_GameControllerAxis -> EInputKey map
 	static const FLOAT JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_MAX];
 	static const SWORD JoyAxisPressThreshold = 8192;
+	static const SWORD JoyAxisReleaseThreshold = 4096; // ANDROID_GAMESIR_ANALOG_INPUT_FIX_V57
 
 	// Variables.
 	class UNSDLClient* Client;
@@ -74,6 +75,8 @@ private:
 	INT DisplayIndex;
 	SDL_Rect DisplaySize;
 	SWORD JoyAxis[SDL_CONTROLLER_AXIS_MAX];
+	UBOOL JoyAxisPressed[SDL_CONTROLLER_AXIS_MAX]; // ANDROID_GAMESIR_ANALOG_INPUT_FIX_V57
+	UBOOL JoyAxisDirPressed[SDL_CONTROLLER_AXIS_MAX][2]; // ANDROID_GAMESIR_DIRECTIONAL_REMAP_V57
 	UBOOL QuitRequested;
 	FLOAT InputUpdateTime;
 
@@ -83,6 +86,7 @@ private:
 	// UNSDLViewport private methods.
 	static void InitKeyMap();
 	UBOOL CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta=0.0 );
+	void HandleJoyAxisMotion( INT Axis, INT Value, UBOOL RawJoystick ); // ANDROID_GAMESIR_ANALOG_INPUT_FIX_V57
 };
 
 /*-----------------------------------------------------------------------------
@@ -107,6 +111,7 @@ class NSDLDRV_API UNSDLClient : public UClient, public FNotifyHook
 	FLOAT Gamma;
 	FLOAT DeadZoneXYZ;
 	FLOAT DeadZoneRUV;
+	INT AndroidResolutionMode; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59: 0=Native, 1=1280x720, 2=1024x768
 
 	// Constructors.
 	UNSDLClient();
