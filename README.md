@@ -51,6 +51,9 @@ This Android version contains multiple porting and gameplay improvements compare
 - Improved Brightness and Gamma – Separate brightness/gamma logic with improved brightening of dark level areas.
 - Local WiFi multiplayer and botmatches are available.
 
+> [!NOTE]
+> If you are experiencing problems with your player moving or turning slowly, please go to OPTIONS and Customize Controls.
+
 ## ▣ Requirements
 
 - Android 8.0 or newer for the regular Android build.
