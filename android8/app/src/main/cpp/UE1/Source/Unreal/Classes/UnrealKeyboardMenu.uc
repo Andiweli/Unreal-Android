@@ -54,7 +54,7 @@ function SetUpMenu()
 				pos = InStr(Alias, " " );
 				if ( pos != -1 )
 					Alias = Left(Alias, pos);
-				for ( j=1; j<20; j++ )
+				for ( j=1; j<MenuLength; j++ ) // CLEAN_NEXTWEAPON_ONLY_V86
 				{
 					if ( AliasNames[j] == Alias )
 					{
@@ -78,7 +78,7 @@ function ProcessMenuKey( int KeyNo, string[32] KeyName )
 		return;
 
 	// make sure no overlapping
-	for ( i=1; i<20; i++ )
+	for ( i=1; i<MenuLength; i++ ) // CLEAN_NEXTWEAPON_ONLY_V86
 	{
 		if ( MenuValues2[i] == KeyName )
 			MenuValues2[i] = "";
@@ -88,10 +88,26 @@ function ProcessMenuKey( int KeyNo, string[32] KeyName )
 			MenuValues2[i] = "";
 		}
 	}
-	if ( MenuValues1[Selection] != "_" )
-		MenuValues2[Selection] = MenuValues1[Selection];
-	else if ( MenuValues2[Selection] == "_" )
+	// Android/v86: NextWeapon is the last real action before RESET and older
+	// configs often bind both GreyPlus and Slash to it. When assigning a new key
+	// here, replace those old defaults instead of keeping one as secondary,
+	// otherwise the last Controls row keeps showing "GreyPlus or Slash" and the
+	// new key looks unsaved.
+	if ( AliasNames[Selection] == "NextWeapon" )
+	{
+		if ( (MenuValues1[Selection] != "") && (MenuValues1[Selection] != "_") && (MenuValues1[Selection] != KeyName) )
+			AddPending( "SET Input "$MenuValues1[Selection]$" " );
+		if ( (MenuValues2[Selection] != "") && (MenuValues2[Selection] != "_") && (MenuValues2[Selection] != KeyName) )
+			AddPending( "SET Input "$MenuValues2[Selection]$" " );
 		MenuValues2[Selection] = "";
+	}
+	else
+	{
+		if ( MenuValues1[Selection] != "_" )
+			MenuValues2[Selection] = MenuValues1[Selection];
+		else if ( MenuValues2[Selection] == "_" )
+			MenuValues2[Selection] = "";
+	}
 
 	MenuValues1[Selection] = KeyName;
 	AddPending("SET Input "$KeyName$" "$AliasNames[Selection]);

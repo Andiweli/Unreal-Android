@@ -43,7 +43,9 @@ void UNSDLClient::InternalClassInitializer( UClass* Class )
 		new(Class, "ScaleXYZ",          RF_Public)UFloatProperty(CPP_PROPERTY(ScaleXYZ),         "Joystick", CPF_Config );
 		new(Class, "ScaleRUV",          RF_Public)UFloatProperty(CPP_PROPERTY(ScaleRUV),         "Joystick", CPF_Config );
 		new(Class, "Gamma",             RF_Public)UFloatProperty(CPP_PROPERTY(Gamma),            "Display",  CPF_Config );
-		new(Class, "AndroidResolutionMode", RF_Public)UIntProperty(CPP_PROPERTY(AndroidResolutionMode), "Display", CPF_Config ); // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+		new(Class, "AndroidResolutionMode", RF_Public)UIntProperty(CPP_PROPERTY(AndroidResolutionMode), "Display", CPF_Config ); // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
+		new(Class, "AndroidNativeController", RF_Public)UBoolProperty(CPP_PROPERTY(AndroidNativeController), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
+		new(Class, "AndroidNativeRightStickScale", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeRightStickScale), "Joystick", CPF_Config ); // ANDROID_CONTROLLER_NATIVE_SENSITIVITY_V88
 		new(Class, "InvertY",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertY),           "Joystick", CPF_Config );
 		new(Class, "InvertV",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertV),           "Joystick", CPF_Config );
 	}
@@ -62,7 +64,9 @@ UNSDLClient::UNSDLClient()
 	ScaleXYZ = 100.f;
 	ScaleRUV = 100.f;
 	Gamma = 1.0f;
-	AndroidResolutionMode = 0; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
+	AndroidResolutionMode = 0; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
+	AndroidNativeController = true; // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
+	AndroidNativeRightStickScale = 0.35f; // ANDROID_CONTROLLER_NATIVE_SENSITIVITY_V88
 	DeadZoneXYZ = 0.1f;
 	DeadZoneRUV = 0.1f;
 	unguard;
@@ -345,12 +349,9 @@ UBOOL UNSDLClient::Exec( const char* Cmd, FOutputDevice* Out )
 	{
 		FString Result;
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-		// Android cannot safely switch the Activity fullscreen mode like desktop SDL.
-		// Expose a small, deterministic logical render-resolution list instead:
-		// Native means the real drawable/native screen size, the other entries are
-		// fixed internal render sizes that the GLES viewport scales to the surface.
-		// UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_V59
-		Result = "Native 1280x720 1024x768 ";
+		// Clean v83: expose only the deterministic Android resolution choices.
+		// Native uses the actual drawable, 1280x720/1024x768 use the GLES FBO path.
+		Result = "Native 1280x720 1024x768 "; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
 #else
 		GetDisplayResolutions();
 		for( INT i=0; i<DisplayResolutions.Num(); ++i )
