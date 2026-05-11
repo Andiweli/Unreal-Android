@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -e
+DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+if [ -f "$DIR/gradle/wrapper/gradle-wrapper.jar" ]; then
+  exec java -classpath "$DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"
+fi
+if command -v gradle >/dev/null 2>&1; then
+  exec gradle "$@"
+fi
+for g in "$HOME"/.gradle/wrapper/dists/*8.13*/*/gradle-8.13/bin/gradle; do
+  if [ -x "$g" ]; then exec "$g" "$@"; fi
+done
+echo "Could not find Gradle 8.13. Open the project in Android Studio Otter 2 or install Gradle once." >&2
+exit 1
