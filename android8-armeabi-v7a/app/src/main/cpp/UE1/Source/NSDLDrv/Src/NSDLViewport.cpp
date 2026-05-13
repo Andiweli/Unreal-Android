@@ -1,5 +1,6 @@
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 #include <jni.h>
 #include <android/log.h>
@@ -18,7 +19,7 @@ extern "C" int UE1AndroidShouldIgnoreEarlyQuit();
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 // Optional Android-native controller backend. Java captures Android KeyEvent and
 // MotionEvent input, C++ normalizes it to the old stable UE1 Joy* keys. SDL stays
-// available as fallback when AndroidNativeController=False. ANDROID_NATIVE_CONTROLLER_BACKEND_V92
+// available as fallback when AndroidNativeController=False. ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97 ANDROID_NATIVE_CONTROLLER_LEFT_STICK_ANALOG_AXIS_V98 ANDROID_NATIVE_CONTROLLER_LEFTY_DIRECTION_SENSITIVITY_V99 ANDROID_NATIVE_CONTROLLER_LEFT_STICK_SMOOTHER_LINEAR_V100
 static volatile INT GAndroidNativeControllerRuntimeEnabled = 1;
 static const INT GAndroidNativeControllerQueueSize = 256;
 static const SWORD GAndroidNativeAxisReleaseThreshold = 4096;
@@ -53,11 +54,11 @@ static INT GAndroidNativeControllerQueueCount = 0;
 static UBOOL GAndroidNativeButtonPressed[IK_MAX];
 static UBOOL GAndroidNativeAxisDirPressed[SDL_CONTROLLER_AXIS_MAX][2];
 static UBOOL GAndroidNativeHatPressed[2][2];
-static UBOOL GAndroidNativeControllerWasInNormalMenu = 0; // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V92
-static UBOOL GAndroidNativeControllerWasInKeyMenuing = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
-static UBOOL GAndroidNativeKeyMenuingAxisArmed = 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
-static FLOAT GAndroidNativeKeyMenuingIgnoreMotionUntil = 0.0f; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
-static UBOOL GAndroidNativeKeyMenuingCaptureDone = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+static UBOOL GAndroidNativeControllerWasInNormalMenu = 0; // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
+static UBOOL GAndroidNativeControllerWasInKeyMenuing = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
+static UBOOL GAndroidNativeKeyMenuingAxisArmed = 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
+static FLOAT GAndroidNativeKeyMenuingIgnoreMotionUntil = 0.0f; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
+static UBOOL GAndroidNativeKeyMenuingCaptureDone = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 
 static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT Key );
 
@@ -175,15 +176,79 @@ static BYTE UE1AndroidNativeKeyCodeToUE1Key( INT KeyCode, UBOOL bIsInUI )
 	return IK_None;
 }
 
-static SWORD UE1AndroidNativeFloatToAxis( FLOAT Value )
+static FLOAT UE1AndroidNativeLinearRampV97( FLOAT T )
 {
-	return (SWORD)Clamp( (INT)( Clamp( Value, -1.0f, 1.0f ) * 32767.0f ), -32767, 32767 );
+	// ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+	// Simple, predictable analogue response: after the configured deadzone the
+	// remaining physical stick travel maps linearly from 0.0 to 1.0.  This keeps
+	// tiny stick movement slow, medium tilt medium, and full tilt full speed
+	// without the over-heavy v96 progressive table.
+	return Clamp( T, 0.0f, 1.0f );
 }
 
-static SWORD UE1AndroidNativeTriggerToAxis( FLOAT A, FLOAT B )
+static FLOAT UE1AndroidNativeApplyDeadzoneCurve( FLOAT Value, FLOAT Deadzone, FLOAT Curve, UBOOL bSigned )
 {
-	const FLOAT Value = Max( Clamp( A, 0.0f, 1.0f ), Clamp( B, 0.0f, 1.0f ) );
-	return (SWORD)Clamp( (INT)( Value * 32767.0f ), 0, 32767 );
+	// ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
+	// ANDROID_NATIVE_CONTROLLER_PROGRESSIVE_AXIS_CURVE_V94
+	// ANDROID_NATIVE_CONTROLLER_RIGHT_STICK_SOFT_START_V95
+	// ANDROID_NATIVE_CONTROLLER_TRUE_PROGRESSIVE_AXIS_V96
+	// ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+	Deadzone = Clamp( Deadzone, 0.0f, 0.85f );
+	// Keep the config field for compatibility, but v97 intentionally uses a
+	// linear ramp.  Earlier high exponent curves made the stick too sluggish.
+	(void)Curve;
+
+	FLOAT Clamped = bSigned ? Clamp( Value, -1.0f, 1.0f ) : Clamp( Value, 0.0f, 1.0f );
+	const FLOAT Sign = Clamped < 0.0f ? -1.0f : 1.0f;
+	FLOAT Magnitude = (FLOAT)fabsf( Clamped );
+	if( Magnitude <= Deadzone )
+		return 0.0f;
+
+	Magnitude = ( Magnitude - Deadzone ) / Max( 1.0f - Deadzone, 0.0001f );
+	Magnitude = UE1AndroidNativeLinearRampV97( Magnitude );
+
+	return bSigned ? Sign * Magnitude : Magnitude;
+}
+
+static UBOOL UE1AndroidNativeBindingStartsWithAliasV96( const char* Binding, const char* Alias )
+{
+	if( !Binding || !Alias || !*Alias )
+		return 0;
+	while( *Binding == ' ' )
+		++Binding;
+	const INT Len = appStrlen( Alias );
+	if( appStrnicmp( Binding, Alias, Len ) )
+		return 0;
+	return Binding[Len] == 0 || Binding[Len] == ' ' || Binding[Len] == '|' || Binding[Len] == '\t';
+}
+
+static UBOOL UE1AndroidNativeBindingIsAnalogAxisAliasV96( const char* Binding )
+{
+	// Directional friendly stick keys such as RJoyLeft should not behave like
+	// keyboard keys for movement/look aliases.  Keyboard-style Press/Hold makes
+	// them instantly full speed.  These aliases are therefore driven as analogue
+	// IST_Axis events below.
+	return UE1AndroidNativeBindingStartsWithAliasV96( Binding, "MoveForward" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "MoveBackward" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "TurnLeft" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "TurnRight" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "StrafeLeft" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "StrafeRight" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "LookUp" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "LookDown" );
+}
+
+static SWORD UE1AndroidNativeFloatToAxis( FLOAT Value, FLOAT Deadzone, FLOAT Curve )
+{
+	const FLOAT Filtered = UE1AndroidNativeApplyDeadzoneCurve( Value, Deadzone, Curve, 1 );
+	return (SWORD)Clamp( (INT)( Filtered * 32767.0f ), -32767, 32767 );
+}
+
+static SWORD UE1AndroidNativeTriggerToAxis( FLOAT A, FLOAT B, FLOAT Deadzone )
+{
+	const FLOAT RawValue = Max( Clamp( A, 0.0f, 1.0f ), Clamp( B, 0.0f, 1.0f ) );
+	const FLOAT Filtered = UE1AndroidNativeApplyDeadzoneCurve( RawValue, Deadzone, 1.0f, 0 );
+	return (SWORD)Clamp( (INT)( Filtered * 32767.0f ), 0, 32767 );
 }
 
 static UBOOL UE1AndroidNativeMotionIsNeutralForKeyCaptureV90( const FAndroidNativeControllerEvent& Event )
@@ -264,7 +329,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAn
 	JNIEnv* Env, jclass, jint DeviceId, jint VendorId, jint ProductId, jint Source, jstring DeviceName, jint EventType )
 {
 	const char* Name = DeviceName ? Env->GetStringUTFChars( DeviceName, NULL ) : NULL;
-	__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "ANDROID_NATIVE_CONTROLLER_BACKEND_V92 device event=%d id=%d vendor=%d product=%d source=0x%x name=%s", EventType, DeviceId, VendorId, ProductId, Source, Name ? Name : "" );
+	__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97 device event=%d id=%d vendor=%d product=%d source=0x%x name=%s", EventType, DeviceId, VendorId, ProductId, Source, Name ? Name : "" );
 	if( Name )
 		Env->ReleaseStringUTFChars( DeviceName, Name );
 }
@@ -2139,7 +2204,7 @@ UBOOL UNSDLViewport::TickInput()
 			// When entering normal menus, discard held native gameplay state.
 			// Menu input is handled as short taps below, so stale press/release pairs
 			// cannot make the next menu button require a second physical press.
-			UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V92
+			UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
 			appMemset( JoyAxis, 0, sizeof(JoyAxis) );
 		}
 		if( bAndroidNativeKeyMenuing && !GAndroidNativeControllerWasInKeyMenuing )
@@ -2147,7 +2212,7 @@ UBOOL UNSDLViewport::TickInput()
 			// Entering Customize Controls: the DPad/stick/confirm input used to select
 			// the row can still be present in Android's motion stream. Do not let that
 			// stale navigation input become the new binding.
-			UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+			UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 			appMemset( JoyAxis, 0, sizeof(JoyAxis) );
 			GAndroidNativeKeyMenuingAxisArmed = 1;
 			GAndroidNativeKeyMenuingCaptureDone = 0;
@@ -2246,7 +2311,7 @@ UBOOL UNSDLViewport::TickInput()
 				{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 					if( bAndroidNativeController )
-						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V92: Java path owns controller buttons
+						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97: Java path owns controller buttons
 #endif
 					// HACK: Swap to alternate bindings when in menus, but not when waiting for keypress in the keybind menu.
 					const UBOOL bIsInUI = Console &&
@@ -2269,7 +2334,7 @@ UBOOL UNSDLViewport::TickInput()
 			case SDL_JOYBUTTONUP:
 				{
 					if( bAndroidNativeController )
-						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V92
+						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
 
 					// Raw joystick events are only a fallback for devices that SDL does not
 					// expose as GameController. If a GameController is active, SDL may emit
@@ -2314,7 +2379,7 @@ UBOOL UNSDLViewport::TickInput()
 
 			case SDL_JOYHATMOTION:
 				if( bAndroidNativeController )
-					break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V92
+					break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
 
 				// Same duplicate-event guard as above. D-Pad from GameController is handled
 				// via SDL_CONTROLLERBUTTONDOWN/UP and mapped to IK_Up/IK_Down in UI.
@@ -2331,7 +2396,7 @@ UBOOL UNSDLViewport::TickInput()
 				{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 					if( bAndroidNativeController )
-						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V92: Java MotionEvent path owns axes
+						break; // ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97: Java MotionEvent path owns axes
 #endif
 					const BYTE Key = JoyAxisMap[Ev.caxis.axis];
 					const INT PrevValue = JoyAxis[Ev.caxis.axis];
@@ -2420,7 +2485,7 @@ UBOOL UNSDLViewport::TickInput()
 						// Customize Controls must only accept one explicit physical DOWN.
 						// Release/repeat/stale confirm events are swallowed here so they cannot
 						// become ghost bindings after reopening the menu.
-						// ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+						// ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 						if( bPressed && NE.RepeatCount == 0 && !GAndroidNativeKeyMenuingCaptureDone && CurTime >= GAndroidNativeKeyMenuingIgnoreMotionUntil )
 						{
 							if( UE1AndroidCleanDispatchKeyCaptureV86( this, Key ) )
@@ -2438,7 +2503,7 @@ UBOOL UNSDLViewport::TickInput()
 						// Normal UE1 menus are more reliable with discrete tap events.
 						// The stateful press/release path is still used for gameplay, but
 						// Menuing gets an immediate press+release.
-						// ANDROID_CONTROLLER_NATIVE_MENU_TAP_V92
+						// ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
 						GAndroidNativeButtonPressed[Key] = 0;
 						if( bPressed )
 						{
@@ -2466,14 +2531,15 @@ UBOOL UNSDLViewport::TickInput()
 					// normal press/release path. Capture exactly one explicit threshold
 					// crossing and swallow everything else. This fixes both ghost bindings
 					// and the previous "press twice" behaviour.
-					// ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+					// ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 					if( CurTime < GAndroidNativeKeyMenuingIgnoreMotionUntil || GAndroidNativeKeyMenuingCaptureDone )
 						continue;
 
 					BYTE CaptureKey = IK_None;
 					const FLOAT CaptureThreshold = 0.55f;
-					const SWORD TriggerLeft = UE1AndroidNativeTriggerToAxis( NE.AxisLTrigger, NE.AxisBrake );
-					const SWORD TriggerRight = UE1AndroidNativeTriggerToAxis( NE.AxisRTrigger, NE.AxisGas );
+					const FLOAT NativeTriggerDeadzone = Client ? Clamp( Client->AndroidNativeTriggerDeadzone, 0.0f, 0.85f ) : 0.12f;
+					const SWORD TriggerLeft = UE1AndroidNativeTriggerToAxis( NE.AxisLTrigger, NE.AxisBrake, NativeTriggerDeadzone );
+					const SWORD TriggerRight = UE1AndroidNativeTriggerToAxis( NE.AxisRTrigger, NE.AxisGas, NativeTriggerDeadzone );
 
 					if( TriggerLeft >= JoyAxisPressThreshold )
 						CaptureKey = IK_Joy12;
@@ -2558,12 +2624,25 @@ UBOOL UNSDLViewport::TickInput()
 				}
 
 				SWORD NativeAxisValues[SDL_CONTROLLER_AXIS_MAX];
-				NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] = UE1AndroidNativeFloatToAxis( NE.AxisX );
-				NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] = UE1AndroidNativeFloatToAxis( NE.AxisY );
-				NativeAxisValues[SDL_CONTROLLER_AXIS_RIGHTX] = UE1AndroidNativeFloatToAxis( NE.AxisZ );
-				NativeAxisValues[SDL_CONTROLLER_AXIS_RIGHTY] = UE1AndroidNativeFloatToAxis( NE.AxisRZ );
-				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] = UE1AndroidNativeTriggerToAxis( NE.AxisLTrigger, NE.AxisBrake );
-				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] = UE1AndroidNativeTriggerToAxis( NE.AxisRTrigger, NE.AxisGas );
+				FLOAT NativeLeftDeadzone = Client ? Clamp( Client->AndroidNativeLeftStickDeadzone, 0.0f, 0.85f ) : 0.06f;
+				// ANDROID_NATIVE_CONTROLLER_LEFT_STICK_SMOOTHER_LINEAR_V100
+				// Keep the left stick genuinely linear for walking/strafing, but remove
+				// most of the deadzone step that made the first movement feel uneven.
+				// Existing v97/v98/v99 installs may still have 0.10 or 0.14 saved, so
+				// treat those exact defaults as the new smoother 0.06 default while
+				// preserving deliberate custom values.
+				if( ( NativeLeftDeadzone > 0.099f && NativeLeftDeadzone < 0.101f ) ||
+					( NativeLeftDeadzone > 0.139f && NativeLeftDeadzone < 0.141f ) )
+					NativeLeftDeadzone = 0.06f;
+				const FLOAT NativeRightDeadzone = Client ? Clamp( Client->AndroidNativeRightStickDeadzone, 0.0f, 0.85f ) : 0.14f;
+				const FLOAT NativeTriggerDeadzone = Client ? Clamp( Client->AndroidNativeTriggerDeadzone, 0.0f, 0.85f ) : 0.12f;
+				const FLOAT NativeAxisCurve = Client ? Clamp( Client->AndroidNativeAxisCurve, 0.50f, 5.00f ) : 1.00f; // ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+				NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] = UE1AndroidNativeFloatToAxis( NE.AxisX, NativeLeftDeadzone, NativeAxisCurve );
+				NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] = UE1AndroidNativeFloatToAxis( NE.AxisY, NativeLeftDeadzone, NativeAxisCurve );
+				NativeAxisValues[SDL_CONTROLLER_AXIS_RIGHTX] = UE1AndroidNativeFloatToAxis( NE.AxisZ, NativeRightDeadzone, NativeAxisCurve );
+				NativeAxisValues[SDL_CONTROLLER_AXIS_RIGHTY] = UE1AndroidNativeFloatToAxis( NE.AxisRZ, NativeRightDeadzone, NativeAxisCurve );
+				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] = UE1AndroidNativeTriggerToAxis( NE.AxisLTrigger, NE.AxisBrake, NativeTriggerDeadzone );
+				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] = UE1AndroidNativeTriggerToAxis( NE.AxisRTrigger, NE.AxisGas, NativeTriggerDeadzone );
 
 				for( INT Axis=0; Axis<SDL_CONTROLLER_AXIS_MAX; ++Axis )
 				{
@@ -2598,7 +2677,22 @@ UBOOL UNSDLViewport::TickInput()
 							if( DirKey == IK_None )
 								continue;
 							const INT DirValue = Direction < 0 ? -NewValue : NewValue;
+							const char* DirBinding = ( Input && DirKey > 0 && DirKey < IK_MAX && Input->Bindings[DirKey].Length() ) ? *Input->Bindings[DirKey] : NULL;
+							const UBOOL bAnalogAxisAlias = UE1AndroidNativeBindingIsAnalogAxisAliasV96( DirBinding );
 							const UBOOL bWasPressed = GAndroidNativeAxisDirPressed[Axis][DirIndex];
+							if( bAnalogAxisAlias )
+							{
+								// ANDROID_NATIVE_CONTROLLER_TRUE_PROGRESSIVE_AXIS_V96
+								// Movement/look aliases are fed as analogue axis events in the per-frame
+								// loop below.  Do not create a held digital key here, because that is what
+								// made a tiny stick tilt turn/run at full keyboard speed.
+								if( bWasPressed )
+								{
+									GAndroidNativeAxisDirPressed[Axis][DirIndex] = 0;
+									CauseInputEvent( DirKey, IST_Release );
+								}
+								continue;
+							}
 							const UBOOL bNowPressed = bWasPressed ? ( DirValue >= GAndroidNativeAxisReleaseThreshold ) : ( DirValue >= JoyAxisPressThreshold );
 							if( bWasPressed != bNowPressed )
 							{
@@ -2646,20 +2740,73 @@ UBOOL UNSDLViewport::TickInput()
 		if ( Value && Key && Key >= IK_JoyX )
 		{
 			const FLOAT FltValue = Clamp( Value / 32767.f, -1.f, 1.f );
+			FLOAT AxisOutputValue = FltValue;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			if( bAndroidNativeController && i == SDL_CONTROLLER_AXIS_LEFTY )
+			{
+				// ANDROID_NATIVE_CONTROLLER_LEFTY_DIRECTION_SENSITIVITY_V99
+				// Keep the Android/SDL left-Y sign for the real analogue JoyY path.
+				// v98 inverted this output and made forward/backward reversed on the
+				// tested controller.  Directional LJoyUp/LJoyDown capture still uses
+				// the raw stored JoyAxis value above, so no extra capture inversion is
+				// needed here.
+			}
+#endif
 			FLOAT Scale = ( Key >= IK_JoyX && Key <= IK_JoyZ ) ? Client->ScaleXYZ : Client->ScaleRUV;
 			Scale *= JoyAxisDefaultScale[i] * DeltaTime;
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			if( bAndroidNativeController && ( i == SDL_CONTROLLER_AXIS_LEFTX || i == SDL_CONTROLLER_AXIS_LEFTY ) )
+			{
+				// ANDROID_NATIVE_CONTROLLER_LEFT_STICK_SMOOTHER_LINEAR_V100
+				// Still a straight linear ramp, just slightly more responsive and with a
+				// much smaller deadzone above.  Right stick/mouselook is deliberately not
+				// touched because v97+ right-stick behaviour tested well.
+				Scale *= 1.35f;
+			}
 			if( bAndroidNativeController && ( i == SDL_CONTROLLER_AXIS_RIGHTX || i == SDL_CONTROLLER_AXIS_RIGHTY ) )
 			{
+				// ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+				// Keep the already-deadzoned axis linear here.  MouseSensitivity should
+				// scale the whole curve, not turn tiny stick movement into instant max speed.
 				const FLOAT MouseSensitivity = Actor ? Actor->MouseSensitivity : 3.0f;
-				const FLOAT MouseFactor = Clamp( MouseSensitivity / 3.0f, 0.15f, 3.0f );
-				const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 0.35f;
-				Scale *= NativeRightStickScale * MouseFactor; // ANDROID_CONTROLLER_NATIVE_SENSITIVITY_V89
+				const FLOAT MouseFactor = Clamp( MouseSensitivity / 4.0f, 0.20f, 3.00f );
+				const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 0.50f;
+				Scale *= NativeRightStickScale * MouseFactor;
+			}
+
+			if( bAndroidNativeController && ( i == SDL_CONTROLLER_AXIS_RIGHTX || i == SDL_CONTROLLER_AXIS_RIGHTY ) )
+			{
+				UBOOL bSentDirectionalAxis = 0;
+				for( INT DirIndex=0; DirIndex<2; ++DirIndex )
+				{
+					const INT Direction = DirIndex == 0 ? -1 : 1;
+					const BYTE DirKey = UE1AndroidNativeDirectionalAxisKey( i, Direction );
+					if( DirKey == IK_None )
+						continue;
+					const char* DirBinding = ( Input && DirKey > 0 && DirKey < IK_MAX && Input->Bindings[DirKey].Length() ) ? *Input->Bindings[DirKey] : NULL;
+					if( !UE1AndroidNativeBindingIsAnalogAxisAliasV96( DirBinding ) )
+						continue;
+					// ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+					// v98 uses the left stick through the real JoyX/JoyY analogue axis path.
+					// This block is now right-stick only, keeping RJoyLeft/RJoyRight/RJoyUp/RJoyDown
+					// analogue for mouselook-style bindings without turning them into full-speed keys.
+					const FLOAT DirectionalAxisValue = AxisOutputValue;
+					const FLOAT DirMagnitude = Direction < 0 ? Max( -DirectionalAxisValue, 0.0f ) : Max( DirectionalAxisValue, 0.0f );
+					if( DirMagnitude <= 0.0001f )
+						continue;
+					// Feed movement/look aliases with a linear analogue delta.  This keeps the
+					// configured friendly keys analogue, but avoids v96's overly slow multiplier.
+					const FLOAT DirectionalScale = Scale * 0.16f;
+					CauseInputEvent( DirKey, IST_Axis, DirMagnitude * DirectionalScale );
+					bSentDirectionalAxis = 1;
+				}
+				if( bSentDirectionalAxis )
+					continue;
 			}
 #endif
 			if ( ( Client->InvertV && Key == IK_JoyV ) || ( Client->InvertY && Key == IK_JoyY ) )
 				Scale = -Scale;
-			CauseInputEvent( Key, IST_Axis, FltValue * Scale );
+			CauseInputEvent( Key, IST_Axis, AxisOutputValue * Scale );
 		}
 	}
 
@@ -2674,8 +2821,8 @@ UBOOL UNSDLViewport::TickInput()
 // Clean v83: cosmetic controller names only. This does not change SDL event
 // handling, axis speed, default bindings, or controller backend logic.
 static INT GAndroidCleanLastKeyNameQueryKey = -1;
-static INT GAndroidCleanPendingCapturedKeyV92 = -1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
-static UBOOL GAndroidCleanFriendlyAliasScrubDoneV92 = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+static INT GAndroidCleanPendingCapturedKeyV93 = -1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
+static UBOOL GAndroidCleanFriendlyAliasScrubDoneV93 = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 
 static const char* UE1AndroidCleanFriendlyKeyName( INT Key )
 {
@@ -2795,7 +2942,7 @@ static UBOOL UE1AndroidCleanKeyboardMenuSelectionAliasNameV92( AMenu* Menu, char
 
 	appStrncpy( OutAlias, Alias, OutSize );
 	OutAlias[OutSize-1] = 0;
-	return 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92
+	return 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 }
 
 static UBOOL UE1AndroidCleanResolveCapturedKeyNameV92( UInput* Input, const char* KeyName, INT& OutKey )
@@ -2808,13 +2955,13 @@ static UBOOL UE1AndroidCleanResolveCapturedKeyNameV92( UInput* Input, const char
 	// ambiguous: keyboard A and controller A share the same text. Prefer the
 	// key that was just physically captured, then fall back to friendly/native
 	// lookup. This prevents controller A from being saved/displayed as keyboard A.
-	if( GAndroidCleanPendingCapturedKeyV92 > 0 && GAndroidCleanPendingCapturedKeyV92 < IK_MAX )
+	if( GAndroidCleanPendingCapturedKeyV93 > 0 && GAndroidCleanPendingCapturedKeyV93 < IK_MAX )
 	{
-		const char* Friendly = UE1AndroidCleanFriendlyKeyName( GAndroidCleanPendingCapturedKeyV92 );
-		const char* Native = Input->GetKeyName( (EInputKey)GAndroidCleanPendingCapturedKeyV92 );
+		const char* Friendly = UE1AndroidCleanFriendlyKeyName( GAndroidCleanPendingCapturedKeyV93 );
+		const char* Native = Input->GetKeyName( (EInputKey)GAndroidCleanPendingCapturedKeyV93 );
 		if( ( Friendly && !appStricmp( KeyName, Friendly ) ) || ( Native && !appStricmp( KeyName, Native ) ) )
 		{
-			OutKey = GAndroidCleanPendingCapturedKeyV92;
+			OutKey = GAndroidCleanPendingCapturedKeyV93;
 			return 1;
 		}
 	}
@@ -2919,10 +3066,10 @@ static void UE1AndroidCleanScrubFriendlyAliasDuplicatesV92( UInput* Input )
 {
 	guard(UE1AndroidCleanScrubFriendlyAliasDuplicatesV92);
 
-	if( !Input || GAndroidCleanFriendlyAliasScrubDoneV92 )
+	if( !Input || GAndroidCleanFriendlyAliasScrubDoneV93 )
 		return;
 
-	GAndroidCleanFriendlyAliasScrubDoneV92 = 1;
+	GAndroidCleanFriendlyAliasScrubDoneV93 = 1;
 
 	UClass* MenuClass = ::FindObject<UClass>( ANY_PACKAGE, "UnrealKeyboardMenu" );
 	if( !MenuClass )
@@ -2983,7 +3130,7 @@ static void UE1AndroidCleanScrubFriendlyAliasDuplicatesV92( UInput* Input )
 	{
 		Input->SaveConfig();
 		GConfigCache.SaveAllConfigs();
-		debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92 scrubbed %i legacy keyboard/default bindings", ClearedTotal );
+		debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93 scrubbed %i legacy keyboard/default bindings", ClearedTotal );
 	}
 
 	unguard;
@@ -3110,8 +3257,8 @@ static void UE1AndroidCleanSaveCapturedAliasV92( UNSDLViewport* Viewport, AMenu*
 	GConfigCache.SaveAllConfigs();
 	UE1AndroidCleanKeyboardMenuWriteSelectionV86( Menu, DisplayName, "" );
 	UE1AndroidCleanPatchKeyboardMenuNextWeaponV86( Viewport );
-	GAndroidCleanFriendlyAliasScrubDoneV92 = 0;
-	debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92 saved alias='%s' key=%i display='%s' cleared=%i", Alias, Key, DisplayName ? DisplayName : "", Cleared );
+	GAndroidCleanFriendlyAliasScrubDoneV93 = 0;
+	debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93 saved alias='%s' key=%i display='%s' cleared=%i", Alias, Key, DisplayName ? DisplayName : "", Cleared );
 }
 
 static void UE1AndroidCleanSaveCapturedNextWeaponV86( UNSDLViewport* Viewport, AMenu* Menu, INT Key, const char* DisplayName )
@@ -3175,13 +3322,13 @@ static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT 
 	Parms.KeyName[ARRAY_COUNT(Parms.KeyName)-1] = 0;
 
 	GAndroidCleanLastKeyNameQueryKey = Key;
-	GAndroidCleanPendingCapturedKeyV92 = Key;
+	GAndroidCleanPendingCapturedKeyV93 = Key;
 	Menu->ProcessEvent( Function, &Parms );
 	if( SelectionAliasV92[0] )
 		UE1AndroidCleanSaveCapturedAliasV92( Viewport, Menu, Key, DisplayName, SelectionAliasV92 );
 	else
 		UE1AndroidCleanSaveCapturedNextWeaponV86( Viewport, Menu, Key, DisplayName );
-	GAndroidCleanPendingCapturedKeyV92 = -1;
+	GAndroidCleanPendingCapturedKeyV93 = -1;
 
 	if( Viewport->Console )
 		((UObject*)Viewport->Console)->GotoState( FName("Menuing") );
@@ -3230,6 +3377,48 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 	}
 
 	AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "GET" ) )
+	{
+		char ClassName[128], PropName[128];
+		if( ParseToken( AndroidKeyCmd, ClassName, ARRAY_COUNT(ClassName), 0 )
+		 && ParseToken( AndroidKeyCmd, PropName, ARRAY_COUNT(PropName), 0 )
+		 && !appStricmp( PropName, "UseJoystick" )
+		 && ( !appStricmp( ClassName, "WinDrv.WindowsClient" )
+		   || !appStricmp( ClassName, "WindowsClient" )
+		   || !appStricmp( ClassName, "NSDLDrv.NSDLClient" )
+		   || !appStricmp( ClassName, "NSDLClient" ) ) )
+		{
+			if( Out )
+				Out->Log( "True" );
+			return 1; // ANDROID_OPTIONS_JOYPAD_GETSET_TRUE_V107
+		}
+	}
+
+	AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "SET" ) )
+	{
+		char ClassName[128], PropName[128];
+		if( ParseToken( AndroidKeyCmd, ClassName, ARRAY_COUNT(ClassName), 0 )
+		 && ParseToken( AndroidKeyCmd, PropName, ARRAY_COUNT(PropName), 0 )
+		 && !appStricmp( PropName, "UseJoystick" )
+		 && ( !appStricmp( ClassName, "WinDrv.WindowsClient" )
+		   || !appStricmp( ClassName, "WindowsClient" )
+		   || !appStricmp( ClassName, "NSDLDrv.NSDLClient" )
+		   || !appStricmp( ClassName, "NSDLClient" ) ) )
+		{
+			if( Client )
+			{
+				Client->UseJoystick = true;
+				Client->SaveConfig();
+			}
+			GConfigCache.SetString( "NSDLDrv.NSDLClient", "UseJoystick", "True" );
+			GConfigCache.SetString( "WinDrv.WindowsClient", "UseJoystick", "True" );
+			GConfigCache.SaveAllConfigs();
+			return 1; // ANDROID_OPTIONS_JOYPAD_GETSET_TRUE_V107
+		}
+	}
+
+	AndroidKeyCmd = Cmd;
 	if( ParseCommand( &AndroidKeyCmd, "SET" ) )
 	{
 		char ClassName[128], PropName[128];
@@ -3257,8 +3446,8 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 				Input->SaveConfig();
 				GConfigCache.SaveAllConfigs();
 				UE1AndroidCleanPatchKeyboardMenuNextWeaponV86( this );
-				GAndroidCleanFriendlyAliasScrubDoneV92 = 0;
-				debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V92 SET Input key=%i keyname='%s' binding='%s'", Key, NativeKeyName ? NativeKeyName : "", AndroidKeyCmd );
+				GAndroidCleanFriendlyAliasScrubDoneV93 = 0;
+				debugf( NAME_Log, "ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93 SET Input key=%i keyname='%s' binding='%s'", Key, NativeKeyName ? NativeKeyName : "", AndroidKeyCmd );
 				return 1; // ANDROID_CONTROLLER_FRIENDLY_NAMES_CLEAN_V86 / CLEAN_NEXTWEAPON_ONLY_V86
 			}
 		}

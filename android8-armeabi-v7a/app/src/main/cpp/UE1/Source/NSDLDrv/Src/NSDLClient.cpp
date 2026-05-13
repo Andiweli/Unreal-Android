@@ -46,6 +46,10 @@ void UNSDLClient::InternalClassInitializer( UClass* Class )
 		new(Class, "AndroidResolutionMode", RF_Public)UIntProperty(CPP_PROPERTY(AndroidResolutionMode), "Display", CPF_Config ); // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
 		new(Class, "AndroidNativeController", RF_Public)UBoolProperty(CPP_PROPERTY(AndroidNativeController), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
 		new(Class, "AndroidNativeRightStickScale", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeRightStickScale), "Joystick", CPF_Config ); // ANDROID_CONTROLLER_NATIVE_SENSITIVITY_V88
+		new(Class, "AndroidNativeLeftStickDeadzone", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeLeftStickDeadzone), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
+		new(Class, "AndroidNativeRightStickDeadzone", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeRightStickDeadzone), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
+		new(Class, "AndroidNativeTriggerDeadzone", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeTriggerDeadzone), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
+		new(Class, "AndroidNativeAxisCurve", RF_Public)UFloatProperty(CPP_PROPERTY(AndroidNativeAxisCurve), "Joystick", CPF_Config ); // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
 		new(Class, "InvertY",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertY),           "Joystick", CPF_Config );
 		new(Class, "InvertV",           RF_Public)UBoolProperty(CPP_PROPERTY(InvertV),           "Joystick", CPF_Config );
 	}
@@ -66,7 +70,11 @@ UNSDLClient::UNSDLClient()
 	Gamma = 1.0f;
 	AndroidResolutionMode = 0; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
 	AndroidNativeController = true; // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
-	AndroidNativeRightStickScale = 0.35f; // ANDROID_CONTROLLER_NATIVE_SENSITIVITY_V88
+	AndroidNativeRightStickScale = 0.50f; // ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+	AndroidNativeLeftStickDeadzone = 0.06f; // ANDROID_NATIVE_CONTROLLER_LEFT_STICK_SMOOTHER_LINEAR_V100
+	AndroidNativeRightStickDeadzone = 0.14f; // ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
+	AndroidNativeTriggerDeadzone = 0.12f; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94
+	AndroidNativeAxisCurve = 1.00f; // ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
 	DeadZoneXYZ = 0.1f;
 	DeadZoneRUV = 0.1f;
 	unguard;

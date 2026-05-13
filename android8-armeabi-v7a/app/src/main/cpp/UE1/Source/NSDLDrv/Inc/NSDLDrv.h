@@ -110,6 +110,10 @@ class NSDLDRV_API UNSDLClient : public UClient, public FNotifyHook
 	INT AndroidResolutionMode; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83: 0=Native, 1=1280x720, 2=1024x768
 	UBOOL AndroidNativeController; // ANDROID_NATIVE_CONTROLLER_BACKEND_V88: optional Android InputDevice backend
 	FLOAT AndroidNativeRightStickScale; // ANDROID_NATIVE_CONTROLLER_SENSITIVITY_V88: extra native right-stick speed scale
+	FLOAT AndroidNativeLeftStickDeadzone; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94: left stick native deadzone before UE1 axis
+	FLOAT AndroidNativeRightStickDeadzone; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94: right stick native deadzone before UE1 axis
+	FLOAT AndroidNativeTriggerDeadzone; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94: trigger native deadzone before UE1 axis
+	FLOAT AndroidNativeAxisCurve; // ANDROID_NATIVE_CONTROLLER_RIGHT_STICK_SOFT_START_V95: exponent curve for native stick axes
 
 	// Constructors.
 	UNSDLClient();

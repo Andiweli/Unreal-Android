@@ -21,8 +21,10 @@ function bool ProcessYes()
 		PlayerOwner.ChangeAutoAim(0.93);
 	else if ( Selection == 2 )
 	{
+		// Android: Joypad support is always handled by NSDLDrv/Android native input.
+		// Keep this legacy menu row as an informational label only.
+		// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
 		bJoystick = true;
-		PlayerOwner.ConsoleCommand("set windrv.windowsclient usejoystick "$int(bJoystick));
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = True;
@@ -44,8 +46,9 @@ function bool ProcessNo()
 		PlayerOwner.ChangeAutoAim(1);
 	else if ( Selection == 2 )
 	{
-		bJoystick = false;
-		PlayerOwner.ConsoleCommand("set windrv.windowsclient usejoystick "$int(bJoystick));
+		// Android: do not allow the old WinDrv joystick value to be toggled off from this menu.
+		// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
+		bJoystick = true;
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = False;
@@ -73,8 +76,9 @@ function bool ProcessLeft()
 	}
 	else if ( Selection == 2 )
 	{
-		bJoystick = !bJoystick;
-		PlayerOwner.ConsoleCommand("set windrv.windowsclient usejoystick "$int(bJoystick));
+		// Android: informational row only; no legacy WinDrv set command.
+		// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
+		bJoystick = true;
 	}
 	else if ( Selection == 3 )
 		PlayerOwner.UpdateSensitivity(FMax(1,PlayerOwner.MouseSensitivity - 1));
@@ -125,8 +129,9 @@ function bool ProcessRight()
 	}
 	else if ( Selection == 2 )
 	{
-		bJoystick = !bJoystick;
-		PlayerOwner.ConsoleCommand("set windrv.windowsclient usejoystick "$int(bJoystick));
+		// Android: informational row only; no legacy WinDrv set command.
+		// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
+		bJoystick = true;
 	}
 	else if ( Selection == 3 )
 		PlayerOwner.UpdateSensitivity(PlayerOwner.MouseSensitivity + 1);
@@ -179,8 +184,9 @@ function bool ProcessSelection()
 	}
 	else if ( Selection == 2 )
 	{
-		bJoystick = !bJoystick;
-		PlayerOwner.ConsoleCommand("set windrv.windowsclient usejoystick "$int(bJoystick));
+		// Android: informational row only; no legacy WinDrv set command.
+		// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
+		bJoystick = true;
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = !PlayerOwner.bInvertMouse;
@@ -270,8 +276,13 @@ function DrawMenu(canvas Canvas)
 	// draw text
 	DrawList(Canvas, false, Spacing, StartX, StartY);  
 	MenuValues[1] = string( PlayerOwner.MyAutoAim < 1 );
-	bJoystick =	bool(PlayerOwner.ConsoleCommandResult("get windrv.windowsclient usejoystick"));
-	MenuValues[2] = string(bJoystick);
+	// Android: avoid the legacy WinDrv query here; it can report FALSE or emit
+	// an unrecognized-command warning on Android builds. The real controller
+	// enable state is handled by NSDLDrv.NSDLClient. This row is an informational
+	// label only, so no TRUE/FALSE value is drawn next to it.
+	// ANDROID_OPTIONS_JOYPAD_ENABLED_HIDE_VALUE_V107
+	bJoystick = true;
+	MenuValues[2] = "";
 	MenuValues[3] = string(int(PlayerOwner.MouseSensitivity));
 	MenuValues[4] = string(PlayerOwner.bInvertMouse);
 	MenuValues[5] = string(PlayerOwner.bSnapToLevel);
@@ -317,7 +328,7 @@ defaultproperties
      HUDIcon(5)=Unreal.Hud6
 	 MenuTitle="OPTIONS MENU"
 	 MenuList(1)="Auto Aim"
-	 MenuList(2)="Joystick Enabled"
+	 MenuList(2)="Joypad enabled"
 	 MenuList(3)="Mouse Sensitivity"
 	 MenuList(4)="Invert Mouse"
 	 MenuList(5)="LookSpring"
@@ -332,7 +343,7 @@ defaultproperties
 	 MenuList(14)="View Bob"
 	 MenuList(15)="Advanced Options"
      HelpMessage(1)="Enable or disable vertical aiming help."
-	 HelpMessage(2)="Toggle enabling of joystick."
+	 HelpMessage(2)="Joypad/controller support is handled by the Android input backend and remains enabled."
      HelpMessage(3)="Adjust the mouse sensitivity, or how far you have to move the mouse to produce a given motion in the game."
      HelpMessage(4)="Invert the mouse X axis.  When true, pushing the mouse forward causes you to look down rather than up."
      HelpMessage(5)="If true, when you let go of the mouselook key the view will automatically center itself."
