@@ -22,7 +22,7 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 ---
 
 <p align="center">
-<a href="[https://ibb.co/jBD2zVZ](https://github.com/user-attachments/assets/58f261b8-8403-4400-a6be-3944bd51f770)"><img src="https://i.ibb.co/5tLykYx/screen-Video.jpg" alt="screen-Video" border="0" width="320" height="180"></a>
+<a href="https://github.com/user-attachments/assets/58f261b8-8403-4400-a6be-3944bd51f770"><img src="https://i.ibb.co/5tLykYx/screen-Video.jpg" alt="screen-Video" border="0" width="320" height="180"></a>
 <a href="https://ibb.co/tpv15z3K"><img src="https://i.ibb.co/0y6z3KQ2/screen-A.png" alt="screen-A" border="0" width="320" height="180"></a>
 <a href="https://ibb.co/zVsG0bJP"><img src="https://i.ibb.co/RT2zVPyQ/screen-B.png" alt="screen-B" border="0" width="320" height="180"></a>
 </p>
