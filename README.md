@@ -15,8 +15,10 @@ The goal of this project is to make Epic's original Unreal playable on modern An
 Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.
 
 > [!IMPORTANT]
-> It ONLY works with v200 (or v205) and no other editions or releases like "Unreal Gold" or any. Search on [archive.org](https://www.archive.org). 
-
+> This project is for preservation, experimentation and personal use only.  
+> Unreal, Unreal Engine and related trademarks are owned by Epic Games.  
+> This project is not affiliated with or endorsed by Epic Games.
+ 
 ## ◆ Status
 
 - Android 8.0+ support for newer Android devices (incl. Android Input support).
