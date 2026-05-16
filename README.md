@@ -77,14 +77,34 @@ Required folders:
 
 ```text
 Unreal/
-+System/
-+Maps/
-+Textures/
-+Sounds/
-+Shared/
-+Music/
-+Help/
+├── System/
+├── Maps/
+├── Textures/
+├── Sounds/
+├── Shared/
+└── Music/
 ```
+
+---
+
+## ▣ Game data notes
+
+Game data is not bundled with this repository.
+
+You need to provide your own legal copy of Unreal 1998.  
+The Android installer checks for the required folders:
+
+```text
+System
+Maps
+Textures
+Sounds
+Music
+```
+
+If these folders are missing, the game will not start and the installer screen will ask you to select a valid folder or ZIP file.
+
+---
 
 ## ◎ Notes
 
