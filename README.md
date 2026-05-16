@@ -18,6 +18,16 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 > This project is for preservation, experimentation and personal use only.  
 > Unreal, Unreal Engine and related trademarks are owned by Epic Games.  
 > This project is not affiliated with or endorsed by Epic Games.
+
+---
+
+<p align="center">
+<a href="[https://ibb.co/jBD2zVZ](https://github.com/user-attachments/assets/58f261b8-8403-4400-a6be-3944bd51f770)"><img src="https://i.ibb.co/5tLykYx/screen-Video.jpg" alt="screen-Video" border="0" width="320" height="180"></a>
+<a href="https://ibb.co/tpv15z3K"><img src="https://i.ibb.co/0y6z3KQ2/screen-A.png" alt="screen-A" border="0" width="320" height="180"></a>
+<a href="https://ibb.co/zVsG0bJP"><img src="https://i.ibb.co/RT2zVPyQ/screen-B.png" alt="screen-B" border="0" width="320" height="180"></a>
+</p>
+
+---
  
 ## ◆ Status
 
@@ -29,21 +39,6 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 - Added lower 16:9 and 4:3 resolutions if your device isn't powerful enough.
 - Local WiFi multiplayer and botmatches are available.
 - as a goodie I've added a compiled version for Windows so you can use Multiplayer Cross-platform 😉
-
-
-<p align="center">
-  <a href="https://github.com/user-attachments/assets/58f261b8-8403-4400-a6be-3944bd51f770">
-    <img width="640" height="360" alt="Unreal Android gameplay video showing Unreal Engine 1 running on Android" src="https://github.com/user-attachments/assets/d74b4628-5d7a-45c5-89ef-7b15c8c6005a" />
-  </a>
-</p>
-
-<p align="center">
-  <img width="640" height="360" alt="Unreal Android screenshot with classic Unreal gameplay" src="https://github.com/user-attachments/assets/c262f8db-8353-4216-8826-9bf91bd10c08" />
-</p>
-
-<p align="center">
-  <img width="640" height="360" alt="Unreal Engine 1 Android port screenshot" src="https://github.com/user-attachments/assets/869dba74-24ae-4222-8a12-cb5e02965d4c" />
-</p>
 
 ## ◈ Features and improvements
 
