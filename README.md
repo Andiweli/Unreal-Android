@@ -29,17 +29,6 @@ Original Unreal game data is **not included**. You need a valid Unreal installat
 
 ---
  
-## ◆ Status
-
-- Android 8.0+ support for newer Android devices (incl. Android Input support).
-- OUYA (Android 4.x) legacy support - with a lower internal render resolution of 1280x720 and 960x540 or 1024x768 and 800x600 for better performance on legacy hardware.
-- Improved Game Data Import – Unreal data can be imported via folder or ZIP selection and automatically installs to the app's data folder.
-- Android 11+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
-- Improved Brightness and Gamma – Separate brightness/gamma logic with improved brightening of dark level areas.
-- Added lower 16:9 and 4:3 resolutions if your device isn't powerful enough.
-- Local WiFi multiplayer and botmatches are available.
-- as a goodie I've added a compiled version for Windows so you can use Multiplayer Cross-platform 😉
-
 ## ◈ Features and improvements
 
 This Android version contains multiple porting and gameplay improvements compared to the first experimental Android builds:
@@ -60,7 +49,7 @@ This Android version contains multiple porting and gameplay improvements compare
 - Android 4.x / API16 compatible device for the OUYA legacy build.
 - OpenGL ES 2.0 capable GPU.
 - Android-compatible game controller recommended.
-- Original Unreal v200 retail game data.
+- Original Unreal [v200 retail game data](https://archive.org/download/epicmegagames-unreal-v200/EpicMegagames-Unreal-v200.zip).
 
 > [!IMPORTANT]
 > ## Installation procedere
