@@ -1,21 +1,21 @@
 R""(
 
-attribute mediump vec3 aPosition;
-varying mediump vec3 vPosition;
+attribute highp vec3 aPosition; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
+varying highp vec3 vPosition; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 #ifdef SF_Texture0
-attribute mediump vec2 aTexCoord0;
+attribute highp vec2 aTexCoord0; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 varying mediump vec2 vTexCoord0;
 #endif
 #ifdef SF_Texture1
-attribute mediump vec2 aTexCoord1;
+attribute highp vec2 aTexCoord1; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 varying mediump vec2 vTexCoord1;
 #endif
 #ifdef SF_Texture2
-attribute mediump vec2 aTexCoord2;
+attribute highp vec2 aTexCoord2; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 varying mediump vec2 vTexCoord2;
 #endif
 #ifdef SF_Texture3
-attribute mediump vec2 aTexCoord3;
+attribute highp vec2 aTexCoord3; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 varying mediump vec2 vTexCoord3;
 #endif
 #ifdef SF_VtxColor
@@ -27,7 +27,7 @@ attribute lowp vec4 aVtxFog;
 varying lowp vec4 vVtxFog;
 #endif
 
-uniform mat4 uMtx;
+uniform highp mat4 uMtx; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
 
 void main()
 {

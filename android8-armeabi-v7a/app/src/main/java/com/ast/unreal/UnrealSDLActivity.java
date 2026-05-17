@@ -219,8 +219,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                             device.getName(),
                             event.getAxisValue(MotionEvent.AXIS_X),
                             event.getAxisValue(MotionEvent.AXIS_Y),
-                            event.getAxisValue(MotionEvent.AXIS_Z),
-                            event.getAxisValue(MotionEvent.AXIS_RZ),
+                            getSignedControllerAxisWithFallback(event, device, MotionEvent.AXIS_Z, MotionEvent.AXIS_RX), // ANDROID_NATIVE_CONTROLLER_RIGHT_STICK_RXRY_FALLBACK_V116
+                            getSignedControllerAxisWithFallback(event, device, MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY), // ANDROID_NATIVE_CONTROLLER_RIGHT_STICK_RXRY_FALLBACK_V116
                             event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
                             event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
                             event.getAxisValue(MotionEvent.AXIS_BRAKE),
@@ -234,6 +234,27 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             }
         }
         return super.dispatchGenericMotionEvent(event);
+    }
+
+    private static float getSignedControllerAxisWithFallback(MotionEvent event, InputDevice device, int primaryAxis, int fallbackAxis) {
+        // ANDROID_NATIVE_CONTROLLER_RIGHT_STICK_RXRY_FALLBACK_V116
+        // Some Android devices expose the right stick as Z/RZ, others as RX/RY.
+        // Prefer an axis only when Android reports it as signed (-1..+1), so
+        // trigger-style 0..1 axes cannot accidentally rotate the camera.
+        float primary = getSignedControllerAxis(event, device, primaryAxis);
+        float fallback = getSignedControllerAxis(event, device, fallbackAxis);
+        return Math.abs(fallback) > Math.abs(primary) ? fallback : primary;
+    }
+
+    private static float getSignedControllerAxis(MotionEvent event, InputDevice device, int axis) {
+        if (device == null) return 0.0f;
+        InputDevice.MotionRange range = device.getMotionRange(axis, event.getSource());
+        if (range == null) {
+            range = device.getMotionRange(axis);
+        }
+        if (range == null) return 0.0f;
+        if (!(range.getMin() < 0.0f && range.getMax() > 0.0f)) return 0.0f;
+        return event.getAxisValue(axis);
     }
 
     @Override

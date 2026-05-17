@@ -240,6 +240,25 @@ private:
 		IdxDataPtr = IdxData;
 	}
 
+	inline void PreparePoly( DWORD MaxVerts, DWORD FloatsPerVert )
+	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
+		// Mali follows GLES2 strictly and is much less forgiving when a batched
+		// polygon writes past the client-side vertex/index staging buffers.  Flush
+		// before writing a new polygon instead of detecting the overflow only later
+		// in FlushTriangles(); this avoids stray diagonal triangles from stale data.
+		if( MaxVerts < 3 || FloatsPerVert == 0 )
+			return;
+		const DWORD NeededFloats = MaxVerts * FloatsPerVert;
+		const DWORD NeededIndices = 3 * ( MaxVerts - 2 );
+		if( VtxDataPtr + NeededFloats > VtxDataEnd
+		 || IdxDataPtr + NeededIndices > IdxDataEnd
+		 || (DWORD)IdxCount + MaxVerts > 65530 )
+			FlushTriangles();
+#endif
+	}
+
 	inline void BeginPoly()
 	{
 		VtxPolyVerts = 0;

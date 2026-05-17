@@ -54,6 +54,8 @@ static INT GAndroidNativeControllerQueueCount = 0;
 static UBOOL GAndroidNativeButtonPressed[IK_MAX];
 static UBOOL GAndroidNativeAxisDirPressed[SDL_CONTROLLER_AXIS_MAX][2];
 static UBOOL GAndroidNativeHatPressed[2][2];
+static FLOAT GAndroidNativeRightStickFiltered[2] = { 0.0f, 0.0f }; // ANDROID_NATIVE_CONTROLLER_ANALOG_SMOOTH_V116
+static UBOOL GAndroidNativeRightStickActive[2] = { 0, 0 }; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 static UBOOL GAndroidNativeControllerWasInNormalMenu = 0; // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
 static UBOOL GAndroidNativeControllerWasInKeyMenuing = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 static UBOOL GAndroidNativeKeyMenuingAxisArmed = 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
@@ -117,6 +119,10 @@ static void UE1AndroidNativeControllerResetState()
 	appMemset( GAndroidNativeButtonPressed, 0, sizeof(GAndroidNativeButtonPressed) );
 	appMemset( GAndroidNativeAxisDirPressed, 0, sizeof(GAndroidNativeAxisDirPressed) );
 	appMemset( GAndroidNativeHatPressed, 0, sizeof(GAndroidNativeHatPressed) );
+	GAndroidNativeRightStickFiltered[0] = 0.0f; // ANDROID_NATIVE_CONTROLLER_ANALOG_SMOOTH_V116
+	GAndroidNativeRightStickFiltered[1] = 0.0f; // ANDROID_NATIVE_CONTROLLER_ANALOG_SMOOTH_V116
+	GAndroidNativeRightStickActive[0] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
+	GAndroidNativeRightStickActive[1] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
@@ -238,10 +244,81 @@ static UBOOL UE1AndroidNativeBindingIsAnalogAxisAliasV96( const char* Binding )
 		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "LookDown" );
 }
 
+static UBOOL UE1AndroidNativeBindingIsRightStickLookAliasV119( const char* Binding )
+{
+	// ANDROID_RIGHT_STICK_ANALOG_ONLY_V119
+	// Keep the right stick analogue for looking/turning only.  The left stick may
+	// again use the classic LJoyUp/LJoyDown/LJoyLeft/LJoyRight digital movement
+	// path from 1.4.0, which restores full run speed.
+	return UE1AndroidNativeBindingStartsWithAliasV96( Binding, "TurnLeft" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "TurnRight" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "LookUp" )
+		|| UE1AndroidNativeBindingStartsWithAliasV96( Binding, "LookDown" );
+}
+
 static SWORD UE1AndroidNativeFloatToAxis( FLOAT Value, FLOAT Deadzone, FLOAT Curve )
 {
 	const FLOAT Filtered = UE1AndroidNativeApplyDeadzoneCurve( Value, Deadzone, Curve, 1 );
 	return (SWORD)Clamp( (INT)( Filtered * 32767.0f ), -32767, 32767 );
+}
+
+static FLOAT UE1AndroidNativeSmoothRightStickAxisV116( INT Axis, FLOAT Target )
+{
+	// ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
+	// Native Android already applies the configured right-stick deadzone and
+	// renormalizes the remaining travel.  The visible jitter happens just outside
+	// that edge, where tiny alternating MotionEvent values repeatedly wake the
+	// mouselook path.  Use a very small post-deadzone hysteresis, snap-to-zero, and
+	// a light adaptive low-pass filter only for the right stick.
+	INT Index = -1;
+	if( Axis == SDL_CONTROLLER_AXIS_RIGHTX )
+		Index = 0;
+	else if( Axis == SDL_CONTROLLER_AXIS_RIGHTY )
+		Index = 1;
+	else
+		return Target;
+
+	const FLOAT EngageThreshold = 0.035f;
+	const FLOAT ReleaseThreshold = 0.018f;
+	const FLOAT AbsTarget = Abs(Target);
+
+	if( !GAndroidNativeRightStickActive[Index] )
+	{
+		if( AbsTarget < EngageThreshold )
+		{
+			GAndroidNativeRightStickFiltered[Index] = 0.0f;
+			return 0.0f;
+		}
+		GAndroidNativeRightStickActive[Index] = 1;
+		GAndroidNativeRightStickFiltered[Index] = Target;
+		return Target;
+	}
+
+	if( AbsTarget < ReleaseThreshold )
+	{
+		GAndroidNativeRightStickActive[Index] = 0;
+		GAndroidNativeRightStickFiltered[Index] = 0.0f;
+		return 0.0f;
+	}
+
+	FLOAT& Filtered = GAndroidNativeRightStickFiltered[Index];
+	if( ( Filtered < 0.0f ) != ( Target < 0.0f ) )
+		Filtered = Target;
+	else
+	{
+		const FLOAT Delta = Abs( Target - Filtered );
+		const FLOAT Alpha = Delta > 0.30f ? 0.68f : 0.34f;
+		Filtered += ( Target - Filtered ) * Alpha;
+	}
+
+	if( Abs(Filtered) < ReleaseThreshold )
+	{
+		GAndroidNativeRightStickActive[Index] = 0;
+		Filtered = 0.0f;
+		return 0.0f;
+	}
+
+	return Clamp( Filtered, -1.0f, 1.0f );
 }
 
 static SWORD UE1AndroidNativeTriggerToAxis( FLOAT A, FLOAT B, FLOAT Deadzone )
@@ -2189,6 +2266,17 @@ UBOOL UNSDLViewport::TickInput()
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 	const UBOOL bAndroidNativeController = Client && Client->UseJoystick && Client->AndroidNativeController;
 	GAndroidNativeControllerRuntimeEnabled = bAndroidNativeController ? 1 : 0;
+	// ANDROID_RIGHT_STICK_FRAMEPACED_LOOK_V121
+	// UT99 keeps right-stick looking stable by storing stick state and emitting one
+	// mouse-look delta per TickInput(), not by tying the delta to Android MotionEvent
+	// timing or the current render-frame DeltaTime.  Unreal's older right-stick path
+	// multiplied mouse-look by DeltaTime; tiny frame-time variations showed up as
+	// visible world jitter while rotating.  These locals collect the already
+	// deadzoned/smoothed right-stick state and emit it once near the end of TickInput.
+	FLOAT AndroidFramePacedRightLookX = 0.0f;
+	FLOAT AndroidFramePacedRightLookY = 0.0f;
+	UBOOL bAndroidFramePacedRightLookX = 0;
+	UBOOL bAndroidFramePacedRightLookY = 0;
 	const UBOOL bAndroidNativeNormalMenu = bAndroidNativeController && Console &&
 		((UObject*)Console)->GetMainFrame() &&
 		((UObject*)Console)->GetMainFrame()->StateNode &&
@@ -2660,10 +2748,18 @@ UBOOL UNSDLViewport::TickInput()
 					}
 					else
 					{
-						if( Key >= IK_JoyX && Key <= IK_JoyZ )
-							DeadZone = Client->DeadZoneXYZ * 32767.f;
-						else if( Key == IK_JoyR || Key == IK_JoyU || Key == IK_JoyV || Key == IK_MouseX || Key == IK_MouseY )
-							DeadZone = Client->DeadZoneRUV * 32767.f;
+						// ANDROID_NATIVE_CONTROLLER_DEADZONE_RENORM_V116
+						// Native Android axes already pass through the per-stick deadzone and are
+						// renormalized back to 0..1 above. Applying the older UE1 deadzone again
+						// made the first part of the stick travel feel slow and uneven. Keep the
+						// original UE1 deadzone only for non-native/SDL fallback axes.
+						if( !bAndroidNativeController )
+						{
+							if( Key >= IK_JoyX && Key <= IK_JoyZ )
+								DeadZone = Client->DeadZoneXYZ * 32767.f;
+							else if( Key == IK_JoyR || Key == IK_JoyU || Key == IK_JoyV || Key == IK_MouseX || Key == IK_MouseY )
+								DeadZone = Client->DeadZoneRUV * 32767.f;
+						}
 						if( Abs(NewValue) < DeadZone )
 							NewValue = 0;
 					}
@@ -2678,7 +2774,8 @@ UBOOL UNSDLViewport::TickInput()
 								continue;
 							const INT DirValue = Direction < 0 ? -NewValue : NewValue;
 							const char* DirBinding = ( Input && DirKey > 0 && DirKey < IK_MAX && Input->Bindings[DirKey].Length() ) ? *Input->Bindings[DirKey] : NULL;
-							const UBOOL bAnalogAxisAlias = UE1AndroidNativeBindingIsAnalogAxisAliasV96( DirBinding );
+							const UBOOL bAndroidRightStickAnalogOnlyV119 = ( Axis == SDL_CONTROLLER_AXIS_RIGHTX || Axis == SDL_CONTROLLER_AXIS_RIGHTY ); // ANDROID_RIGHT_STICK_ANALOG_ONLY_V119
+							const UBOOL bAnalogAxisAlias = bAndroidRightStickAnalogOnlyV119 && UE1AndroidNativeBindingIsRightStickLookAliasV119( DirBinding );
 							const UBOOL bWasPressed = GAndroidNativeAxisDirPressed[Axis][DirIndex];
 							if( bAnalogAxisAlias )
 							{
@@ -2742,6 +2839,26 @@ UBOOL UNSDLViewport::TickInput()
 			const FLOAT FltValue = Clamp( Value / 32767.f, -1.f, 1.f );
 			FLOAT AxisOutputValue = FltValue;
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			if( bAndroidNativeController && ( i == SDL_CONTROLLER_AXIS_RIGHTX || i == SDL_CONTROLLER_AXIS_RIGHTY ) )
+			{
+				AxisOutputValue = UE1AndroidNativeSmoothRightStickAxisV116( i, AxisOutputValue );
+				// ANDROID_RIGHT_STICK_FRAMEPACED_LOOK_V121
+				// Do not feed native right-stick look through the generic JoyAxis loop below:
+				// that path multiplies by live DeltaTime and can make steady rotation look
+				// like rendering micro-stutter.  Store the state and emit one fixed-frame
+				// MouseX/MouseY delta after all axes have been inspected.
+				if( i == SDL_CONTROLLER_AXIS_RIGHTX )
+				{
+					AndroidFramePacedRightLookX = AxisOutputValue;
+					bAndroidFramePacedRightLookX = 1;
+				}
+				else
+				{
+					AndroidFramePacedRightLookY = AxisOutputValue;
+					bAndroidFramePacedRightLookY = 1;
+				}
+				continue;
+			}
 			if( bAndroidNativeController && i == SDL_CONTROLLER_AXIS_LEFTY )
 			{
 				// ANDROID_NATIVE_CONTROLLER_LEFTY_DIRECTION_SENSITIVITY_V99
@@ -2784,7 +2901,7 @@ UBOOL UNSDLViewport::TickInput()
 					if( DirKey == IK_None )
 						continue;
 					const char* DirBinding = ( Input && DirKey > 0 && DirKey < IK_MAX && Input->Bindings[DirKey].Length() ) ? *Input->Bindings[DirKey] : NULL;
-					if( !UE1AndroidNativeBindingIsAnalogAxisAliasV96( DirBinding ) )
+					if( !UE1AndroidNativeBindingIsRightStickLookAliasV119( DirBinding ) )
 						continue;
 					// ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
 					// v98 uses the left stick through the real JoyX/JoyY analogue axis path.
@@ -2809,6 +2926,30 @@ UBOOL UNSDLViewport::TickInput()
 			CauseInputEvent( Key, IST_Axis, AxisOutputValue * Scale );
 		}
 	}
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	if( bAndroidNativeController && ( bAndroidFramePacedRightLookX || bAndroidFramePacedRightLookY ) )
+	{
+		// ANDROID_RIGHT_STICK_FRAMEPACED_LOOK_V121
+		// Match the stable UT99 approach: axis events update state, TickInput emits
+		// exactly one mouse-look delta.  Use the old 1.4.x speed model at an ideal
+		// 60 Hz frame instead of the current frame's DeltaTime.  PlayerPawn still
+		// applies its normal MouseSensitivity/FOV mouse smoothing afterwards.
+		const FLOAT FixedLookFrame = 1.0f / 60.0f;
+		const FLOAT MouseSensitivity = Actor ? Actor->MouseSensitivity : 3.0f;
+		const FLOAT MouseFactor = Clamp( MouseSensitivity / 4.0f, 0.20f, 3.00f );
+		const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 0.50f;
+		const FLOAT LookScaleX = ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTX] * FixedLookFrame * NativeRightStickScale * MouseFactor;
+		const FLOAT LookScaleY = ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTY] * FixedLookFrame * NativeRightStickScale * MouseFactor;
+
+		const FLOAT DX = AndroidFramePacedRightLookX * LookScaleX;
+		const FLOAT DY = AndroidFramePacedRightLookY * LookScaleY;
+		if( Abs(DX) > 0.0001f )
+			CauseInputEvent( IK_MouseX, IST_Axis, DX );
+		if( Abs(DY) > 0.0001f )
+			CauseInputEvent( IK_MouseY, IST_Axis, DY );
+	}
+#endif
 
 	InputUpdateTime = CurTime;
 

@@ -999,6 +999,14 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 		if( !Poly || Poly->NumPts < 3 )
 			continue;
 
+		DWORD FloatsPerVert = 3 + 2;
+		if( Surface.LightMap )
+			FloatsPerVert += 2;
+		if( Surface.FogMap )
+			FloatsPerVert += 2;
+		if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
+			FloatsPerVert += 2;
+		PreparePoly( Poly->NumPts, FloatsPerVert ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 		BeginPoly();
 		for( INT i = 0; i < Poly->NumPts; i++ )
 		{
@@ -1068,6 +1076,12 @@ void UNOpenGLESRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo
 	SetTexture( 0, Texture, ( RenderPolyFlags & PF_Masked ), 0 );
 	SetShader( CurrentShaderFlags );
 
+	DWORD FloatsPerVert = 3 + 2;
+	if( !IsModulated )
+		FloatsPerVert += 4;
+	if( IsFog )
+		FloatsPerVert += 4;
+	PreparePoly( NumPts, FloatsPerVert ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 	BeginPoly();
 	for( INT i=0; i<NumPts; i++ )
 	{
@@ -1120,6 +1134,7 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
 	SetTexture( 0, Texture, ( RenderPolyFlags & PF_Masked ), 0.f );
 	SetShader( CurrentShaderFlags );
 
+	PreparePoly( 4, 3 + 2 + 4 ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 	BeginPoly();
 		AttribFloat3( RFX2 * Z * (X - Frame->FX2), RFY2 * Z * (Y - Frame->FY2), Z );
 		AttribFloat2( U * TexInfo[0].UMult, V * TexInfo[0].VMult );
@@ -1175,6 +1190,7 @@ void UNOpenGLESRenderDevice::EndFlash( )
 
 	glDisable( GL_DEPTH_TEST );
 
+	PreparePoly( 4, 3 + 4 ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 	BeginPoly();
 		AttribFloat3( RFX2 * -Z, RFY2 * -Z, Z );
 		AttribFloat4( &ColorMod.R );
