@@ -21,7 +21,7 @@
 The goal of this project is to make Epic's original Unreal playable on modern Android devices and on legacy Android hardware such as the **OUYA console**, while keeping the look and feel of the original PC release.
 
 > [!IMPORTANT]
-> Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.
+> **Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.**
 >
 > Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does not support touchscreen controls.
 >
