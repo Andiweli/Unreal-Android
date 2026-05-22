@@ -20,7 +20,7 @@
 **Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
 The goal of this project is to make Epic's original Unreal playable on modern Android devices and on legacy Android hardware such as the **OUYA console**, while keeping the look and feel of the original PC release.
 
-Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.
+*Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.*
 
 > [!IMPORTANT]
 > This project is for preservation, experimentation and personal use only.  
