@@ -8,6 +8,8 @@
   <a href="ROADMAP.md">ROADMAP</a>
   &nbsp;|&nbsp;
   <a href="https://github.com/Andiweli/Unreal-Android/releases">DOWNLOAD</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.2.0">OUYA VERSION</a>
 </p>
 
 ![Platform](https://img.shields.io/badge/platform-Android-green)
