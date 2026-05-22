@@ -3,9 +3,11 @@
 # Unreal Android
 
 <p align="left">
-  <a href="README.md">▣ README</a>
+  <a href="README.md">README</a>
   &nbsp;|&nbsp;
-  <a href="ROADMAP.md">☑ ROADMAP</a>
+  <a href="ROADMAP.md">ROADMAP</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/Andiweli/Unreal-Android/releases">DOWNLOAD</a>
 </p>
 
 ![Platform](https://img.shields.io/badge/platform-Android-green)
