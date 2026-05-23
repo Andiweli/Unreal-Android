@@ -25,6 +25,9 @@ The goal of this project is to make Epic's original Unreal playable on modern An
 > [!IMPORTANT]
 > **Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.**
 >
+> **This app is 32 bit only!** It won't install on your phone? Then it might only accept 64 bit apps. 
+> There are no plans on making this app compatible with 64 bit only CPUs. 
+> 
 > Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does not support touchscreen controls.
 >
 > This project is for preservation, experimentation and personal use only.  
