@@ -170,7 +170,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (isControllerSource(event.getSource()) || isGamepadButton(event.getKeyCode())) {
+        if (isControllerSource(event.getSource()) || isGamepadButton(event.getKeyCode()) || isOuyaMenuKey(event.getKeyCode())) {
             InputDevice device = event.getDevice();
             if (device != null) {
                 try {
@@ -306,6 +306,14 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private boolean isGamepadButton(int keyCode) {
         return keyCode >= KeyEvent.KEYCODE_BUTTON_A && keyCode <= KeyEvent.KEYCODE_BUTTON_MODE
                 || keyCode >= KeyEvent.KEYCODE_DPAD_UP && keyCode <= KeyEvent.KEYCODE_DPAD_CENTER;
+    }
+
+    private boolean isOuyaMenuKey(int keyCode) {
+        // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+        // OUYA and several Android-TV pads report their center/system button as
+        // KEYCODE_MENU without a gamepad source flag. Route it through the native
+        // controller path anyway, matching the proven UT99 controller handling.
+        return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_BUTTON_MODE;
     }
 
     private boolean isTriggerKey(int keyCode) {

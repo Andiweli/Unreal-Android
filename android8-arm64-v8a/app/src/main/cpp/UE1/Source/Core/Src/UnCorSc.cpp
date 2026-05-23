@@ -12,6 +12,13 @@ Revision history:
 
 #include "CorePrivate.h"
 
+#if PLATFORM_64BIT && (defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__))
+#include <android/log.h>
+#define UE1_ANDROID64_PROCESS_EVENT_LOG(...) __android_log_print(ANDROID_LOG_INFO, "UE1Diag64", __VA_ARGS__)
+#else
+#define UE1_ANDROID64_PROCESS_EVENT_LOG(...)
+#endif
+
 /*-----------------------------------------------------------------------------
 	Globals.
 -----------------------------------------------------------------------------*/
@@ -37,6 +44,330 @@ static inline UBOOL UE1AndroidScriptLooksLikeUsablePointer64( const void* Ptr )
 {
 	UPTRINT Value = (UPTRINT)Ptr;
 	return Value >= 0x10000 && ((Value & (sizeof(void*)-1)) == 0);
+}
+
+// UNREAL_ANDROID64_GAMEPLAY_DIAG_V47
+static INT GUE1Android64DiagScriptBudget = 0;
+
+static UBOOL UE1Android64DiagNameContains( const char* Name, const char* Token )
+{
+	return Name && Token && appStrfind((char*)Name,(char*)Token)!=NULL;
+}
+
+static UBOOL UE1Android64DiagInterestingFunction( UFunction* Function )
+{
+	if( !Function )
+		return 0;
+	const char* Name = Function->GetName();
+	return UE1Android64DiagNameContains(Name,"Bump")
+		|| UE1Android64DiagNameContains(Name,"Touch")
+		|| UE1Android64DiagNameContains(Name,"Trigger")
+		|| UE1Android64DiagNameContains(Name,"Timer")
+		|| UE1Android64DiagNameContains(Name,"SeePlayer")
+		|| UE1Android64DiagNameContains(Name,"Enemy")
+		|| UE1Android64DiagNameContains(Name,"AnimEnd")
+		|| UE1Android64DiagNameContains(Name,"BeginState")
+		|| UE1Android64DiagNameContains(Name,"EndState")
+		|| UE1Android64DiagNameContains(Name,"HitWall")
+		|| UE1Android64DiagNameContains(Name,"TakeDamage")
+		|| UE1Android64DiagNameContains(Name,"Pickup")
+		|| UE1Android64DiagNameContains(Name,"Encroach")
+		|| UE1Android64DiagNameContains(Name,"ZoneChange")
+		|| UE1Android64DiagNameContains(Name,"Landed");
+}
+
+static const char* UE1Android64DiagStateName( UObject* Object )
+{
+	if( !Object || !UE1AndroidScriptLooksLikeUsablePointer64(Object) )
+		return "<bad-object>";
+	FMainFrame* Frame = Object->GetMainFrame();
+	if( !Frame || !UE1AndroidScriptLooksLikeUsablePointer64(Frame) )
+		return "<no-frame>";
+	if( !Frame->StateNode || !UE1AndroidScriptLooksLikeUsablePointer64(Frame->StateNode) )
+		return "<bad-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64DiagLatentAction( UObject* Object )
+{
+	if( !Object || !UE1AndroidScriptLooksLikeUsablePointer64(Object) )
+		return -1;
+	FMainFrame* Frame = Object->GetMainFrame();
+	if( !Frame || !UE1AndroidScriptLooksLikeUsablePointer64(Frame) )
+		return -1;
+	return Frame->LatentAction;
+}
+
+static INT UE1Android64DiagCodeOffset( UObject* Object )
+{
+	if( !Object || !UE1AndroidScriptLooksLikeUsablePointer64(Object) )
+		return -1;
+	FMainFrame* Frame = Object->GetMainFrame();
+	if( !Frame || !UE1AndroidScriptLooksLikeUsablePointer64(Frame) || !Frame->Node || !Frame->Code )
+		return -1;
+	if( !UE1AndroidScriptLooksLikeUsablePointer64(Frame->Node) )
+		return -1;
+	return Frame->Code - &Frame->Node->Script(0);
+}
+
+static void UE1Android64DiagScript( const char* Phase, UObject* Object, UFunction* Function=NULL, const char* Extra=NULL )
+{
+	if( GUE1Android64DiagScriptBudget++ >= 256 )
+		return;
+	debugf( NAME_Log, "ANDROID64 DIAG SCRIPT phase=%s obj=%s class=%s state=%s latent=%i code=%i func=%s flags=%08x extra=%s",
+		Phase ? Phase : "?",
+		Object ? Object->GetFullName() : "<null>",
+		Object ? Object->GetClassName() : "<null>",
+		UE1Android64DiagStateName(Object),
+		UE1Android64DiagLatentAction(Object),
+		UE1Android64DiagCodeOffset(Object),
+		Function ? Function->GetFullName() : "<none>",
+		Object ? Object->GetFlags() : 0,
+		Extra ? Extra : "" );
+}
+
+
+// UNREAL_ANDROID64_EXPLOSION_DAMAGE_ORIGIN_PROBE_V82
+static INT GUE1Android64ExplosionProcessBudgetV82 = 0;
+
+static UBOOL UE1Android64ExplosionNameInterestingV82( const char* Name )
+{
+	return UE1Android64DiagNameContains(Name,"TakeDamage")
+		|| UE1Android64DiagNameContains(Name,"Died")
+		|| UE1Android64DiagNameContains(Name,"Destroyed")
+		|| UE1Android64DiagNameContains(Name,"Trigger")
+		|| UE1Android64DiagNameContains(Name,"Timer")
+		|| UE1Android64DiagNameContains(Name,"Touch")
+		|| UE1Android64DiagNameContains(Name,"Bump")
+		|| UE1Android64DiagNameContains(Name,"HitWall")
+		|| UE1Android64DiagNameContains(Name,"Landed")
+		|| UE1Android64DiagNameContains(Name,"Explode")
+		|| UE1Android64DiagNameContains(Name,"Explosion")
+		|| UE1Android64DiagNameContains(Name,"Blow")
+		|| UE1Android64DiagNameContains(Name,"Spawn")
+		|| UE1Android64DiagNameContains(Name,"Barrel")
+		|| UE1Android64DiagNameContains(Name,"Fragment")
+		|| UE1Android64DiagNameContains(Name,"Projectile")
+		|| UE1Android64DiagNameContains(Name,"Sludge")
+		|| UE1Android64DiagNameContains(Name,"Shock")
+		|| UE1Android64DiagNameContains(Name,"Rocket")
+		|| UE1Android64DiagNameContains(Name,"Grenade");
+}
+
+static UBOOL UE1Android64ExplosionProcessInterestingV82( UObject* Object, UFunction* Function )
+{
+	return (Function && UE1Android64ExplosionNameInterestingV82(Function->GetName()))
+		|| (Object && (UE1Android64ExplosionNameInterestingV82(Object->GetName()) || UE1Android64ExplosionNameInterestingV82(Object->GetClassName())));
+}
+
+static void UE1Android64ExplosionProcessLogV82( const char* Phase, UObject* Object, UFunction* Function )
+{
+	if( GUE1Android64ExplosionProcessBudgetV82++ >= 256 )
+		return;
+	FMainFrame* Frame = (Object && UE1AndroidScriptLooksLikeUsablePointer64(Object)) ? Object->GetMainFrame() : NULL;
+	UBOOL FrameOk = Frame && UE1AndroidScriptLooksLikeUsablePointer64(Frame);
+	debugf( NAME_Warning, "ANDROID64 EXPLOSION PROCESS V82 phase=%s obj=%s class=%s func=%s parms=%i props=%i flags=%08x hasStack=%i frame=%p frameOk=%i state=%s latent=%i code=%i budget=%i",
+		Phase ? Phase : "?",
+		Object ? Object->GetFullName() : "<null>",
+		Object ? Object->GetClassName() : "<null>",
+		Function ? Function->GetFullName() : "<none>",
+		Function ? Function->ParmsSize : -1,
+		Function ? Function->GetPropertiesSize() : -1,
+		Object ? Object->GetFlags() : 0,
+		Object ? ((Object->GetFlags() & RF_HasStack) ? 1 : 0) : 0,
+		Frame,
+		(INT)FrameOk,
+		UE1Android64DiagStateName(Object),
+		UE1Android64DiagLatentAction(Object),
+		UE1Android64DiagCodeOffset(Object),
+		GUE1Android64ExplosionProcessBudgetV82 );
+}
+
+
+// UNREAL_ANDROID64_PROCESS_EVENT_FRAME_BOUNDARY_PROBE_V90
+// Diagnostics only: follow Translator/TranslatorEvent/Mover/Dispatcher/Trigger
+// ProcessEvent calls and show whether the object's own script frame changes or
+// vanishes inside the event call.  This does not mutate script state, parms,
+// locals, flags, physics, input, audio or rendering.
+static INT GUE1Android64ProcessEventBoundaryBudgetV90 = 0;
+
+static UBOOL UE1Android64ProcessEventTokenV90( const char* Text, const char* Token )
+{
+	return Text && Token && appStrfind( (char*)Text, (char*)Token ) != NULL;
+}
+
+static UBOOL UE1Android64ProcessEventInterestingV90( UObject* Object, UFunction* Function )
+{
+	const char* ObjName   = Object ? Object->GetName() : NULL;
+	const char* ObjClass  = Object ? Object->GetClassName() : NULL;
+	const char* ObjFull   = Object ? Object->GetFullName() : NULL;
+	const char* FuncName  = Function ? Function->GetName() : NULL;
+	const char* FuncFull  = Function ? Function->GetFullName() : NULL;
+	return UE1Android64ProcessEventTokenV90( ObjName,  "Translator" )
+		|| UE1Android64ProcessEventTokenV90( ObjClass, "Translator" )
+		|| UE1Android64ProcessEventTokenV90( ObjFull,  "Translator" )
+		|| UE1Android64ProcessEventTokenV90( ObjName,  "Mover" )
+		|| UE1Android64ProcessEventTokenV90( ObjClass, "Mover" )
+		|| UE1Android64ProcessEventTokenV90( ObjFull,  "Mover18" )
+		|| UE1Android64ProcessEventTokenV90( ObjClass, "Dispatcher" )
+		|| UE1Android64ProcessEventTokenV90( ObjClass, "Trigger" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "ActivateTranslator" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "Trigger" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "Touch" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "Bump" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "Timer" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "BeginState" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "EndState" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "InterpolateEnd" )
+		|| UE1Android64ProcessEventTokenV90( FuncName, "Encroach" )
+		|| UE1Android64ProcessEventTokenV90( FuncFull, "Translator" )
+		|| UE1Android64ProcessEventTokenV90( FuncFull, "Mover" );
+}
+
+static void UE1Android64ProcessEventBoundaryLogV90( const char* Phase, UObject* Object, UFunction* Function, FMainFrame* FrameBefore )
+{
+	if( GUE1Android64ProcessEventBoundaryBudgetV90 >= 240 )
+		return;
+	if( !UE1Android64ProcessEventInterestingV90( Object, Function ) )
+		return;
+
+	FMainFrame* FrameNow = (Object && UE1AndroidScriptLooksLikeUsablePointer64(Object)) ? Object->GetMainFrame() : NULL;
+	UBOOL bChanged = FrameBefore != FrameNow;
+	UBOOL bLost = FrameBefore != NULL && FrameNow == NULL;
+	INT CodeNow = INDEX_NONE;
+	if( FrameNow && UE1AndroidScriptLooksLikeUsablePointer64(FrameNow) && FrameNow->Node && UE1AndroidScriptLooksLikeUsablePointer64(FrameNow->Node) && FrameNow->Code && FrameNow->Node->Script.Num() > 0 )
+	{
+		BYTE* Base = &FrameNow->Node->Script(0);
+		BYTE* End  = Base + FrameNow->Node->Script.Num();
+		if( FrameNow->Code >= Base && FrameNow->Code < End )
+			CodeNow = (INT)(FrameNow->Code - Base);
+	}
+
+	UE1_ANDROID64_PROCESS_EVENT_LOG(
+		"ANDROID64 PROCESS EVENT V90 phase=%s obj=%s class=%s func=%s frameBefore=%p frameNow=%p changed=%i lost=%i flags=%08x hasStack=%i state=%s latent=%i code=%i parms=%i props=%i ret=%i intrinsic=%i fflags=%08x budget=%i",
+		Phase ? Phase : "?",
+		Object ? Object->GetFullName() : "<null>",
+		Object ? Object->GetClassName() : "<null>",
+		Function ? Function->GetFullName() : "<none>",
+		FrameBefore,
+		FrameNow,
+		(INT)bChanged,
+		(INT)bLost,
+		Object ? Object->GetFlags() : 0,
+		Object ? ((Object->GetFlags() & RF_HasStack) ? 1 : 0) : 0,
+		UE1Android64DiagStateName(Object),
+		UE1Android64DiagLatentAction(Object),
+		CodeNow,
+		Function ? Function->ParmsSize : -1,
+		Function ? Function->GetPropertiesSize() : -1,
+		Function ? Function->ReturnValueOffset : -1,
+		Function ? Function->iIntrinsic : -1,
+		Function ? Function->FunctionFlags : 0,
+		++GUE1Android64ProcessEventBoundaryBudgetV90 );
+}
+
+// UNREAL_ANDROID64_MAINFRAME_GOTOSTATE_REPAIR_V48
+static INT GUE1Android64MainFrameRepairCount = 0;
+
+// UNREAL_ANDROID64_GOTOSTATE_MAINFRAME_GUARD_V76
+// Root-cause probe: GotoState is a generic VM/state transition path, not a Skaarj-specific fix.
+// Avoid the arm64 null/invalid MainFrame dereference and log the object/context that lost its state frame.
+static INT GUE1Android64GotoStateGuardBudgetV76 = 0;
+
+static void UE1Android64GotoStateGuardLogV76( const char* Phase, UObject* Object, FFrame* StackPtr=NULL, FName RequestedState=NAME_None, FName RequestedLabel=NAME_None )
+{
+	if( GUE1Android64GotoStateGuardBudgetV76++ >= 128 )
+		return;
+	FMainFrame* Frame = (Object && UE1AndroidScriptLooksLikeUsablePointer64(Object)) ? Object->GetMainFrame() : NULL;
+	UBOOL bFrameOk = Frame && UE1AndroidScriptLooksLikeUsablePointer64(Frame);
+	UState* StateNode = bFrameOk ? Frame->StateNode : NULL;
+	UBOOL bStateOk = StateNode && UE1AndroidScriptLooksLikeUsablePointer64(StateNode);
+	const char* StackNodeName = (StackPtr && StackPtr->Node && UE1AndroidScriptLooksLikeUsablePointer64(StackPtr->Node)) ? StackPtr->Node->GetFullName() : "<none>";
+	INT CodeOffset = INDEX_NONE;
+	if( bFrameOk && Frame->Node && UE1AndroidScriptLooksLikeUsablePointer64(Frame->Node) && Frame->Code && Frame->Node->Script.Num() > 0 )
+	{
+		BYTE* Base = &Frame->Node->Script(0);
+		BYTE* End  = Base + Frame->Node->Script.Num();
+		if( Frame->Code >= Base && Frame->Code < End )
+			CodeOffset = (INT)(Frame->Code - Base);
+	}
+	debugf( NAME_Warning, "ANDROID64 GOTOSTATE GUARD V76 phase=%s obj=%s class=%s flags=%08x hasStack=%i frame=%p frameOk=%i stateNode=%p stateOk=%i state=%s latent=%i code=%i reqState=%s reqLabel=%s stackNode=%s stackCode=%p stackLocals=%p",
+		Phase ? Phase : "?",
+		Object ? Object->GetFullName() : "<null>",
+		Object ? Object->GetClassName() : "<null>",
+		Object ? Object->GetFlags() : 0,
+		Object ? ((Object->GetFlags() & RF_HasStack) ? 1 : 0) : 0,
+		Frame,
+		(INT)bFrameOk,
+		StateNode,
+		(INT)bStateOk,
+		bStateOk ? StateNode->GetName() : (StateNode ? "<bad-state>" : "<no-state>"),
+		bFrameOk ? Frame->LatentAction : -1,
+		CodeOffset,
+		*RequestedState,
+		*RequestedLabel,
+		StackNodeName,
+		StackPtr ? StackPtr->Code : NULL,
+		StackPtr ? StackPtr->Locals : NULL );
+}
+
+
+// UNREAL_ANDROID64_STATEFRAME_CODE_ORIGIN_PROBE_V62
+static INT UE1Android64StateFrameProbeBudgetCorV62 = 0;
+
+static INT UE1Android64FindStateLabelOffsetCorV62( UState* State, FName LabelName )
+{
+	for( UState* Source=State; Source && UE1AndroidScriptLooksLikeUsablePointer64(Source); Source=Source->GetSuperState() )
+	{
+		if( Source->LabelTableOffset == MAXWORD || Source->Script.Num() <= 0 || Source->LabelTableOffset >= Source->Script.Num() )
+			continue;
+		BYTE* TableBase = &Source->Script(Source->LabelTableOffset);
+		BYTE* ScriptEnd = &Source->Script(0) + Source->Script.Num();
+		for( FLabelEntry* Label=(FLabelEntry*)TableBase; (BYTE*)(Label+1) <= ScriptEnd; ++Label )
+		{
+			if( Label->Name == NAME_None )
+				break;
+			if( Label->Name == LabelName )
+				return Label->iCode;
+		}
+	}
+	return INDEX_NONE;
+}
+
+static INT UE1Android64FrameCodeOffsetCorV62( FMainFrame* Frame )
+{
+	if( !Frame || !UE1AndroidScriptLooksLikeUsablePointer64(Frame) || !Frame->Node || !UE1AndroidScriptLooksLikeUsablePointer64(Frame->Node) || !Frame->Code || Frame->Node->Script.Num() <= 0 )
+		return INDEX_NONE;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Frame->Code >= Base && Frame->Code < End) ? (INT)(Frame->Code - Base) : INDEX_NONE;
+}
+
+static void UE1Android64StateFrameProbeCorV62( const char* Phase, UObject* Object, UState* StateNode=NULL, const char* Extra=NULL )
+{
+	if( !Object || UE1Android64StateFrameProbeBudgetCorV62++ >= 256 )
+		return;
+	FMainFrame* Frame = Object->GetMainFrame();
+	if( !StateNode && Frame && UE1AndroidScriptLooksLikeUsablePointer64(Frame) )
+		StateNode = Frame->StateNode;
+	UStruct* Node = (Frame && UE1AndroidScriptLooksLikeUsablePointer64(Frame)) ? Frame->Node : NULL;
+	const INT ScriptNum  = (Node && UE1AndroidScriptLooksLikeUsablePointer64(Node)) ? Node->Script.Num() : -1;
+	const INT LabelTable = (StateNode && UE1AndroidScriptLooksLikeUsablePointer64(StateNode)) ? StateNode->LabelTableOffset : -1;
+	const INT BeginCode  = (StateNode && UE1AndroidScriptLooksLikeUsablePointer64(StateNode)) ? UE1Android64FindStateLabelOffsetCorV62( StateNode, NAME_Begin ) : INDEX_NONE;
+	debugf( NAME_Log, "ANDROID64 STATEFRAME PROBE V62 phase=%s obj=%s class=%s frame=%p node=%s state=%s latent=%i code=%i scriptNum=%i labelTable=%i begin=%i flags=%08x extra=%s",
+		Phase ? Phase : "?",
+		Object->GetFullName(),
+		Object->GetClassName(),
+		Frame,
+		(Node && UE1AndroidScriptLooksLikeUsablePointer64(Node)) ? Node->GetName() : "<none>",
+		(StateNode && UE1AndroidScriptLooksLikeUsablePointer64(StateNode)) ? StateNode->GetName() : "<none>",
+		(Frame && UE1AndroidScriptLooksLikeUsablePointer64(Frame)) ? Frame->LatentAction : -1,
+		UE1Android64FrameCodeOffsetCorV62( Frame ),
+		ScriptNum,
+		LabelTable,
+		BeginCode,
+		Object->GetFlags(),
+		Extra ? Extra : "" );
 }
 #endif
 
@@ -84,25 +415,25 @@ EGotoState UObject::GotoState( FName NewState )
 	if( !MainFrame )
 		return GOTOSTATE_NotFound;
 
+#if PLATFORM_64BIT
+	if( !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame) )
+	{
+		UE1Android64GotoStateGuardLogV76( "GotoState.bad-mainframe", this, NULL, NewState, NAME_None );
+		return GOTOSTATE_NotFound;
+	}
+#endif
+
 	MainFrame->LatentAction = 0;
 	UState* StateNode = NULL;
 	FName OldStateName = NAME_None;
-	if( MainFrame->StateNode && MainFrame->StateNode!=Class )
-	{
 #if PLATFORM_64BIT
-		// v31 reset bad StateNode values to Class, which avoided one crash but
-		// could break legitimate event-driven state changes and stall pawns.
-		// For arm64, only avoid dereferencing obviously bad values when reading
-		// the optional previous-state name; let a real GotoState below replace
-		// StateNode normally.
-		if( UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) )
-			OldStateName = MainFrame->StateNode->GetFName();
-		else
-			debugf( NAME_Warning, "ANDROID64 GotoState: previous StateNode ignored object=%s StateNode=%p", GetFullName(), MainFrame->StateNode );
-#else
+	if( MainFrame->StateNode && UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) && MainFrame->StateNode!=Class )
 		OldStateName = MainFrame->StateNode->GetFName();
+	else if( MainFrame->StateNode && !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) )
+		UE1Android64GotoStateGuardLogV76( "GotoState.bad-statenode-default-none", this, NULL, NewState, NAME_None );
+#else
+	OldStateName = MainFrame->StateNode!=Class ? MainFrame->StateNode->GetFName() : NAME_None;
 #endif
-	}
 	if( NewState != NAME_Auto )
 	{
 		// Find regular state.
@@ -178,32 +509,11 @@ UBOOL UObject::GotoLabel( FName FindLabel )
 	guard(UObject::GotoLabel);
 	if( MainFrame )
 	{
-#if PLATFORM_64BIT
-		if( !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame) )
-		{
-			debugf( NAME_Warning, "ANDROID64 GotoLabel: ignored bad MainFrame=%p object=%s", MainFrame, GetFullName() );
-			return 0;
-		}
-		if( MainFrame->StateNode && !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) )
-		{
-			// Do not reset the state here. Returning without side effects lets a
-			// following GotoState repair the state normally and avoids v31 stalls.
-			debugf( NAME_Warning, "ANDROID64 GotoLabel: ignored bad StateNode=%p object=%s", MainFrame->StateNode, GetFullName() );
-			return 0;
-		}
-#endif
 		MainFrame->LatentAction = 0;
 		if( FindLabel != NAME_None )
 		{
 			for( UState* SourceState=MainFrame->StateNode; SourceState; SourceState=SourceState->GetSuperState() )
 			{
-#if PLATFORM_64BIT
-				if( !UE1AndroidScriptLooksLikeUsablePointer64(SourceState) )
-				{
-					debugf( NAME_Warning, "ANDROID64 GotoLabel: stopped at bad SourceState=%p object=%s", SourceState, GetFullName() );
-					break;
-				}
-#endif
 				if( SourceState->LabelTableOffset != MAXWORD )
 				{
 					for( FLabelEntry* Label = (FLabelEntry *)&SourceState->Script(SourceState->LabelTableOffset); Label->Name!=NAME_None; Label++ )
@@ -2653,40 +2963,40 @@ void UObject::execGotoState( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execGotoState);
 
-	// Get parameters.  Keep this narrow: v31 avoided the previous crash by
-	// resetting StateNode to Class, but that can stall event-driven AI states.
-	// Here we only protect the *default parameter read*. If StateNode is bad,
-	// CurrentStateName simply becomes None; a real GotoState below may still
-	// install the requested state and keep gameplay moving.
+	// Get parameters.  On arm64 the crash log shows this opcode can be reached
+	// after an actor has already lost its MainFrame/StateNode.  Do not repair
+	// gameplay here; only avoid the null dereference, log the offending context,
+	// and let the origin probe identify who removed the frame.
 	FName CurrentStateName = NAME_None;
 	UBOOL bCanUseMainFrame = MainFrame != NULL;
-	UBOOL bCanReadCurrentState = bCanUseMainFrame;
 #if PLATFORM_64BIT
 	if( bCanUseMainFrame && !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame) )
 	{
-		debugf( NAME_Warning, "ANDROID64 execGotoState: bad MainFrame while reading defaults object=%s MainFrame=%p", GetFullName(), MainFrame );
+		UE1Android64GotoStateGuardLogV76( "execGotoState.bad-mainframe-before-params", this, &Stack );
 		bCanUseMainFrame = 0;
-		bCanReadCurrentState = 0;
 	}
-	if( bCanReadCurrentState && MainFrame->StateNode && !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) )
+	if( bCanUseMainFrame && MainFrame->StateNode && !UE1AndroidScriptLooksLikeUsablePointer64(MainFrame->StateNode) )
 	{
-		debugf( NAME_Warning, "ANDROID64 execGotoState: bad StateNode ignored while reading defaults object=%s StateNode=%p", GetFullName(), MainFrame->StateNode );
-		bCanReadCurrentState = 0;
+		UE1Android64GotoStateGuardLogV76( "execGotoState.bad-statenode-before-params", this, &Stack );
 	}
-#endif
-	if( bCanReadCurrentState && MainFrame->StateNode && MainFrame->StateNode!=Class )
+	else if( bCanUseMainFrame && MainFrame->StateNode && MainFrame->StateNode!=Class )
+	{
 		CurrentStateName = MainFrame->StateNode->GetFName();
+	}
+#else
+	CurrentStateName = MainFrame->StateNode!=Class ? MainFrame->StateNode->GetFName() : NAME_None;
+#endif
 	P_GET_NAME_OPT( S, CurrentStateName );
 	P_GET_NAME_OPT( L, NAME_None );
 	P_FINISH;
 
+#if PLATFORM_64BIT
 	if( !bCanUseMainFrame )
 	{
-#if PLATFORM_64BIT
-		debugf( NAME_Warning, "ANDROID64 execGotoState: ignored bad MainFrame=%p object=%s", MainFrame, GetFullName() );
-#endif
+		UE1Android64GotoStateGuardLogV76( "execGotoState.skip-no-mainframe-v76", this, &Stack, S, L );
 		return;
 	}
+#endif
 
 	// Go to the state.
 	EGotoState Result = GOTOSTATE_Success;
@@ -3017,13 +3327,36 @@ void UObject::ProcessEvent( UFunction* Function, void* Parms )
 {
 	guard(UObject::ProcessEvent);
 
+#if PLATFORM_64BIT
+	FMainFrame* Android64ProcessEventFrameBeforeV90 = GetMainFrame();
+	UBOOL bAndroid64DiagEvent = UE1Android64DiagInterestingFunction( Function );
+	UBOOL bAndroid64ExplosionProcessV82 = UE1Android64ExplosionProcessInterestingV82( this, Function );
+	UBOOL bAndroid64ProcessEventBoundaryV90 = UE1Android64ProcessEventInterestingV90( this, Function );
+	if( bAndroid64DiagEvent )
+		UE1Android64DiagScript( "ProcessEvent.enter", this, Function );
+	if( bAndroid64ExplosionProcessV82 )
+		UE1Android64ExplosionProcessLogV82( "ProcessEvent.enter", this, Function );
+	if( bAndroid64ProcessEventBoundaryV90 )
+		UE1Android64ProcessEventBoundaryLogV90( "ProcessEvent.enter-v90", this, Function, Android64ProcessEventFrameBeforeV90 );
+#endif
+
 	// Reject.
 	if
 	(	GIsEditor
 	||	!IsProbing( Function->GetFName() )
 	||	IsPendingKill()
 	||	Function->iIntrinsic )
+	{
+#if PLATFORM_64BIT
+		if( bAndroid64DiagEvent )
+			UE1Android64DiagScript( "ProcessEvent.reject", this, Function );
+		if( bAndroid64ExplosionProcessV82 )
+			UE1Android64ExplosionProcessLogV82( "ProcessEvent.reject", this, Function );
+		if( bAndroid64ProcessEventBoundaryV90 )
+			UE1Android64ProcessEventBoundaryLogV90( "ProcessEvent.reject-v90", this, Function, Android64ProcessEventFrameBeforeV90 );
+#endif
 		return;
+	}
 
 	// Checks.
 	debug(Function->ParmsSize==0 || Parms!=NULL);
@@ -3063,6 +3396,14 @@ void UObject::ProcessEvent( UFunction* Function, void* Parms )
 		// Restore locals bin.
 		Mark.Pop();
 	}
+#if PLATFORM_64BIT
+	if( bAndroid64DiagEvent )
+		UE1Android64DiagScript( "ProcessEvent.leave", this, Function );
+	if( bAndroid64ExplosionProcessV82 )
+		UE1Android64ExplosionProcessLogV82( "ProcessEvent.leave", this, Function );
+	if( bAndroid64ProcessEventBoundaryV90 )
+		UE1Android64ProcessEventBoundaryLogV90( "ProcessEvent.leave-v90", this, Function, Android64ProcessEventFrameBeforeV90 );
+#endif
 	if( --GScriptEntryTag == 0 )
 		uunclock(GScriptCycles);
 	unguardf(( "(%s, %s)", GetFullName(), Function->GetFullName() ));

@@ -82,6 +82,11 @@ private:
 
 	// UNSDLViewport private methods.
 	static void InitKeyMap();
+
+public:
+	// UNREAL_ANDROID_CONTROLLER_DIRECT_V122: Android controller helper functions in
+	// NSDLViewport.cpp need the same event path as TickInput without duplicating
+	// UE1 input dispatch internals.
 	UBOOL CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta=0.0 );
 };
 
@@ -109,6 +114,7 @@ class NSDLDRV_API UNSDLClient : public UClient, public FNotifyHook
 	FLOAT DeadZoneRUV;
 	INT AndroidResolutionMode; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83: 0=Native, 1=1280x720, 2=1024x768
 	UBOOL AndroidNativeController; // ANDROID_NATIVE_CONTROLLER_BACKEND_V88: optional Android InputDevice backend
+	UBOOL AndroidNativeDirectInput; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122: UT99-style direct gameplay controller bridge
 	FLOAT AndroidNativeRightStickScale; // ANDROID_NATIVE_CONTROLLER_SENSITIVITY_V88: extra native right-stick speed scale
 	FLOAT AndroidNativeLeftStickDeadzone; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94: left stick native deadzone before UE1 axis
 	FLOAT AndroidNativeRightStickDeadzone; // ANDROID_NATIVE_CONTROLLER_DEADZONE_CURVE_V94: right stick native deadzone before UE1 axis

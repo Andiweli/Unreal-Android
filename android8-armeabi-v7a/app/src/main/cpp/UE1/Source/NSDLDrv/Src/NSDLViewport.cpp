@@ -61,6 +61,19 @@ static UBOOL GAndroidNativeControllerWasInKeyMenuing = 0; // ANDROID_CONTROLLER_
 static UBOOL GAndroidNativeKeyMenuingAxisArmed = 1; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 static FLOAT GAndroidNativeKeyMenuingIgnoreMotionUntil = 0.0f; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
 static UBOOL GAndroidNativeKeyMenuingCaptureDone = 0; // ANDROID_CONTROLLER_KEYMENUING_DEDUP_V93
+static UBOOL GAndroidNativeDirectMoveForward = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidNativeDirectMoveBackward = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidNativeDirectStrafeLeft = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidNativeDirectStrafeRight = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidNativeDirectFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidNativeDirectAltFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static INT GAndroidNativeDirectMoveForwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidNativeDirectMoveBackwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidNativeDirectStrafeLeftKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidNativeDirectStrafeRightKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidNativeDirectFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidNativeDirectAltFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static UBOOL GAndroidNativeDirectResetPending = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 
 static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT Key );
 
@@ -123,6 +136,7 @@ static void UE1AndroidNativeControllerResetState()
 	GAndroidNativeRightStickFiltered[1] = 0.0f; // ANDROID_NATIVE_CONTROLLER_ANALOG_SMOOTH_V116
 	GAndroidNativeRightStickActive[0] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	GAndroidNativeRightStickActive[1] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
+	GAndroidNativeDirectResetPending = 1; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
@@ -172,14 +186,71 @@ static BYTE UE1AndroidNativeKeyCodeToUE1Key( INT KeyCode, UBOOL bIsInUI )
 		case 105: return IK_Joy13; // R2 / TriggerR digital fallback
 		case 106: return IK_Joy8;  // THUMBL / LJoyPush
 		case 107: return IK_Joy9;  // THUMBR / RJoyPush
+		case 82:  return IK_Escape; // KEYCODE_MENU / OUYA center button - UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 		case 108: return IK_Escape; // START keeps current Android menu behaviour
 		case 109: return bIsInUI ? IK_Escape : IK_Joy5; // SELECT / BACK
+		case 110: return IK_Escape; // BUTTON_MODE / Android-TV system button - UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 		case 19:  return bIsInUI ? IK_Up    : IK_JoyPovUp;
 		case 20:  return bIsInUI ? IK_Down  : IK_JoyPovDown;
 		case 21:  return bIsInUI ? IK_Left  : IK_JoyPovLeft;
 		case 22:  return bIsInUI ? IK_Right : IK_JoyPovRight;
 	}
 	return IK_None;
+}
+
+
+static UBOOL UE1AndroidNativeDirectKeyHasBindingV123( UNSDLViewport* Viewport, INT Key )
+{
+	// UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+	// OPTIONS > CUSTOMIZE CONTROLS saves the physical friendly controller key
+	// (LJoyUp/LJoyDown/LJoyLeft/LJoyRight/TriggerL/TriggerR) and clears the old
+	// PC fallback key for the same alias. The Direct bridge must therefore emit
+	// the captured controller key when it is bound, not always W/A/S/D/mouse.
+	return Viewport && Viewport->Input && Key > 0 && Key < IK_MAX && Viewport->Input->Bindings[Key].Length() > 0;
+}
+
+static INT UE1AndroidNativeDirectChooseKeyV123( UNSDLViewport* Viewport, INT FriendlyKey, INT FallbackKey )
+{
+	return UE1AndroidNativeDirectKeyHasBindingV123( Viewport, FriendlyKey ) ? FriendlyKey : FallbackKey;
+}
+
+static void UE1AndroidNativeDirectPressMappedV123( UNSDLViewport* Viewport, INT FriendlyKey, INT FallbackKey, UBOOL& OldState, INT& OldKey, UBOOL NewState )
+{
+	// UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+	// Keep the reliable UT99-like digital Direct mode, but respect user remaps.
+	// Example: if the user captures left-stick-up for MoveForward, Unreal stores
+	// UnknownDA/LJoyUp=MoveForward and removes W=MoveForward. Sending W would then
+	// do nothing. Sending LJoyUp keeps full-speed movement and the custom binding.
+	if( !Viewport )
+		return;
+
+	const INT NewKey = UE1AndroidNativeDirectChooseKeyV123( Viewport, FriendlyKey, FallbackKey );
+	const INT ReleaseKey = ( OldKey > 0 && OldKey < IK_MAX ) ? OldKey : NewKey;
+
+	if( OldState && ( !NewState || OldKey != NewKey ) )
+	{
+		if( ReleaseKey > 0 && ReleaseKey < IK_MAX )
+			Viewport->CauseInputEvent( ReleaseKey, IST_Release );
+		OldState = 0;
+		OldKey = IK_None;
+	}
+
+	if( NewState && !OldState && NewKey > 0 && NewKey < IK_MAX )
+	{
+		Viewport->CauseInputEvent( NewKey, IST_Press );
+		OldState = 1;
+		OldKey = NewKey;
+	}
+}
+
+static void UE1AndroidNativeDirectReleaseGameplayV122( UNSDLViewport* Viewport )
+{
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownDA, IK_W,          GAndroidNativeDirectMoveForward,  GAndroidNativeDirectMoveForwardKey,  0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownDF, IK_S,          GAndroidNativeDirectMoveBackward, GAndroidNativeDirectMoveBackwardKey, 0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownD8, IK_A,          GAndroidNativeDirectStrafeLeft,   GAndroidNativeDirectStrafeLeftKey,   0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownD9, IK_D,          GAndroidNativeDirectStrafeRight,  GAndroidNativeDirectStrafeRightKey,  0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13,     IK_LeftMouse,  GAndroidNativeDirectFire,         GAndroidNativeDirectFireKey,         0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12,     IK_RightMouse, GAndroidNativeDirectAltFire,      GAndroidNativeDirectAltFireKey,      0 );
 }
 
 static FLOAT UE1AndroidNativeLinearRampV97( FLOAT T )
@@ -2265,7 +2336,13 @@ UBOOL UNSDLViewport::TickInput()
 #endif
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 	const UBOOL bAndroidNativeController = Client && Client->UseJoystick && Client->AndroidNativeController;
+	const UBOOL bAndroidNativeDirectInput = bAndroidNativeController && Client && Client->AndroidNativeDirectInput; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 	GAndroidNativeControllerRuntimeEnabled = bAndroidNativeController ? 1 : 0;
+	if( GAndroidNativeDirectResetPending )
+	{
+		UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+		GAndroidNativeDirectResetPending = 0;
+	}
 	// ANDROID_RIGHT_STICK_FRAMEPACED_LOOK_V121
 	// UT99 keeps right-stick looking stable by storing stick state and emitting one
 	// mouse-look delta per TickInput(), not by tying the delta to Android MotionEvent
@@ -2287,6 +2364,9 @@ UBOOL UNSDLViewport::TickInput()
 		((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "KeyMenuing";
 	if( bAndroidNativeController )
 	{
+		if( bAndroidNativeDirectInput && ( bAndroidNativeNormalMenu || bAndroidNativeKeyMenuing ) )
+			UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+
 		if( bAndroidNativeNormalMenu && !GAndroidNativeControllerWasInNormalMenu )
 		{
 			// When entering normal menus, discard held native gameplay state.
@@ -2312,11 +2392,14 @@ UBOOL UNSDLViewport::TickInput()
 			GAndroidNativeKeyMenuingCaptureDone = 0;
 			GAndroidNativeKeyMenuingIgnoreMotionUntil = 0.0f;
 		}
+		if( !bAndroidNativeDirectInput )
+			UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 		GAndroidNativeControllerWasInNormalMenu = bAndroidNativeNormalMenu;
 		GAndroidNativeControllerWasInKeyMenuing = bAndroidNativeKeyMenuing;
 	}
 	else
 	{
+		UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 		GAndroidNativeControllerWasInNormalMenu = 0;
 		GAndroidNativeControllerWasInKeyMenuing = 0;
 		GAndroidNativeKeyMenuingAxisArmed = 1;
@@ -2722,7 +2805,7 @@ UBOOL UNSDLViewport::TickInput()
 				if( ( NativeLeftDeadzone > 0.099f && NativeLeftDeadzone < 0.101f ) ||
 					( NativeLeftDeadzone > 0.139f && NativeLeftDeadzone < 0.141f ) )
 					NativeLeftDeadzone = 0.06f;
-				const FLOAT NativeRightDeadzone = Client ? Clamp( Client->AndroidNativeRightStickDeadzone, 0.0f, 0.85f ) : 0.14f;
+				const FLOAT NativeRightDeadzone = Client ? Clamp( Client->AndroidNativeRightStickDeadzone, 0.0f, 0.85f ) : 0.10f;
 				const FLOAT NativeTriggerDeadzone = Client ? Clamp( Client->AndroidNativeTriggerDeadzone, 0.0f, 0.85f ) : 0.12f;
 				const FLOAT NativeAxisCurve = Client ? Clamp( Client->AndroidNativeAxisCurve, 0.50f, 5.00f ) : 1.00f; // ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97
 				NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] = UE1AndroidNativeFloatToAxis( NE.AxisX, NativeLeftDeadzone, NativeAxisCurve );
@@ -2731,6 +2814,38 @@ UBOOL UNSDLViewport::TickInput()
 				NativeAxisValues[SDL_CONTROLLER_AXIS_RIGHTY] = UE1AndroidNativeFloatToAxis( NE.AxisRZ, NativeRightDeadzone, NativeAxisCurve );
 				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] = UE1AndroidNativeTriggerToAxis( NE.AxisLTrigger, NE.AxisBrake, NativeTriggerDeadzone );
 				NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] = UE1AndroidNativeTriggerToAxis( NE.AxisRTrigger, NE.AxisGas, NativeTriggerDeadzone );
+
+				if( bAndroidNativeDirectInput )
+				{
+					// UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+					// Match the robust UT99 approach for gameplay: left stick becomes
+					// normal keyboard movement at a clear threshold, and triggers become
+					// mouse buttons. This bypasses weak JoyAxis scale/config problems and
+					// makes full-speed run/strafe consistent across Retroid, OUYA and pads.
+					const INT MovePressThreshold = (INT)( 0.35f * 32767.0f );
+					const INT MoveReleaseThreshold = (INT)( 0.25f * 32767.0f );
+					const INT TriggerPressThreshold = JoyAxisPressThreshold;
+					const INT TriggerReleaseThreshold = GAndroidNativeAxisReleaseThreshold;
+
+					UE1AndroidNativeDirectPressMappedV123( this, IK_UnknownDA, IK_W, GAndroidNativeDirectMoveForward, GAndroidNativeDirectMoveForwardKey,
+						GAndroidNativeDirectMoveForward ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] <= -MoveReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] <= -MovePressThreshold ) );
+					UE1AndroidNativeDirectPressMappedV123( this, IK_UnknownDF, IK_S, GAndroidNativeDirectMoveBackward, GAndroidNativeDirectMoveBackwardKey,
+						GAndroidNativeDirectMoveBackward ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] >= MoveReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] >= MovePressThreshold ) );
+					UE1AndroidNativeDirectPressMappedV123( this, IK_UnknownD8, IK_A, GAndroidNativeDirectStrafeLeft, GAndroidNativeDirectStrafeLeftKey,
+						GAndroidNativeDirectStrafeLeft ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] <= -MoveReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] <= -MovePressThreshold ) );
+					UE1AndroidNativeDirectPressMappedV123( this, IK_UnknownD9, IK_D, GAndroidNativeDirectStrafeRight, GAndroidNativeDirectStrafeRightKey,
+						GAndroidNativeDirectStrafeRight ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] >= MoveReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] >= MovePressThreshold ) );
+
+					UE1AndroidNativeDirectPressMappedV123( this, IK_Joy13, IK_LeftMouse, GAndroidNativeDirectFire, GAndroidNativeDirectFireKey,
+						GAndroidNativeDirectFire ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] >= TriggerReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] >= TriggerPressThreshold ) );
+					UE1AndroidNativeDirectPressMappedV123( this, IK_Joy12, IK_RightMouse, GAndroidNativeDirectAltFire, GAndroidNativeDirectAltFireKey,
+						GAndroidNativeDirectAltFire ? ( NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] >= TriggerReleaseThreshold ) : ( NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] >= TriggerPressThreshold ) );
+
+					NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTX] = 0;
+					NativeAxisValues[SDL_CONTROLLER_AXIS_LEFTY] = 0;
+					NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERLEFT] = 0;
+					NativeAxisValues[SDL_CONTROLLER_AXIS_TRIGGERRIGHT] = 0;
+				}
 
 				for( INT Axis=0; Axis<SDL_CONTROLLER_AXIS_MAX; ++Axis )
 				{
@@ -2887,7 +3002,7 @@ UBOOL UNSDLViewport::TickInput()
 				// scale the whole curve, not turn tiny stick movement into instant max speed.
 				const FLOAT MouseSensitivity = Actor ? Actor->MouseSensitivity : 3.0f;
 				const FLOAT MouseFactor = Clamp( MouseSensitivity / 4.0f, 0.20f, 3.00f );
-				const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 0.50f;
+				const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 1.00f;
 				Scale *= NativeRightStickScale * MouseFactor;
 			}
 
@@ -2938,12 +3053,16 @@ UBOOL UNSDLViewport::TickInput()
 		const FLOAT FixedLookFrame = 1.0f / 60.0f;
 		const FLOAT MouseSensitivity = Actor ? Actor->MouseSensitivity : 3.0f;
 		const FLOAT MouseFactor = Clamp( MouseSensitivity / 4.0f, 0.20f, 3.00f );
-		const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 0.50f;
-		const FLOAT LookScaleX = ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTX] * FixedLookFrame * NativeRightStickScale * MouseFactor;
-		const FLOAT LookScaleY = ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTY] * FixedLookFrame * NativeRightStickScale * MouseFactor;
+		const FLOAT NativeRightStickScale = Client ? Clamp( Client->AndroidNativeRightStickScale, 0.05f, 2.0f ) : 1.00f;
+		const FLOAT LookScaleX = bAndroidNativeDirectInput
+			? ( 11.5f * NativeRightStickScale * MouseFactor )
+			: ( ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTX] * FixedLookFrame * NativeRightStickScale * MouseFactor );
+		const FLOAT LookScaleY = bAndroidNativeDirectInput
+			? ( 9.0f * NativeRightStickScale * MouseFactor )
+			: ( ( Client ? Client->ScaleRUV : 100.0f ) * JoyAxisDefaultScale[SDL_CONTROLLER_AXIS_RIGHTY] * FixedLookFrame * NativeRightStickScale * MouseFactor );
 
-		const FLOAT DX = AndroidFramePacedRightLookX * LookScaleX;
-		const FLOAT DY = AndroidFramePacedRightLookY * LookScaleY;
+		const FLOAT DX = Clamp( AndroidFramePacedRightLookX * LookScaleX, -180.0f, 180.0f );
+		const FLOAT DY = Clamp( AndroidFramePacedRightLookY * LookScaleY, -140.0f, 140.0f );
 		if( Abs(DX) > 0.0001f )
 			CauseInputEvent( IK_MouseX, IST_Axis, DX );
 		if( Abs(DY) > 0.0001f )

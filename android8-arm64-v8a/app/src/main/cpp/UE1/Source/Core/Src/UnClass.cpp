@@ -2079,6 +2079,84 @@ void UStruct::PostLoad()
 /*-----------------------------------------------------------------------------
 	UFunction.
 -----------------------------------------------------------------------------*/
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_UFUNCTION_PARMSIZE_RELINK_V86A
+// Buildfix for v86: keep the existing arm64 script-offset/native-size helpers
+// in this file and only centralize/log the UFunction parameter-frame relink.
+static INT GUE1Android64UFunctionParmsRelinkBudgetV86A = 0;
+
+static void UE1Android64RelinkUFunctionParmsV86A( UFunction* Function )
+{
+	guard(UE1Android64RelinkUFunctionParmsV86A);
+	if( !Function )
+		return;
+
+	INT NativeParmsSize       = 0;
+	INT NativeReturnOffset    = INDEX_NONE;
+	INT NativeParmCount       = 0;
+	INT NativeObjectParmCount = 0;
+
+	for( TFieldIterator<UProperty> It(Function); It && It.GetStruct()==Function; ++It )
+	{
+		UProperty* Property = *It;
+		if( !Property || !(Property->PropertyFlags & CPF_Parm) )
+			continue;
+
+		NativeParmCount++;
+		if( Property->IsA(UObjectProperty::StaticClass) )
+			NativeObjectParmCount++;
+
+		NativeParmsSize = Max( NativeParmsSize, Property->Offset + Property->GetSize() );
+		if( Property->PropertyFlags & CPF_ReturnParm )
+			NativeReturnOffset = Property->Offset;
+	}
+
+	if( NativeParmsSize > 0 )
+		NativeParmsSize = Align( NativeParmsSize, 4 );
+
+	if( NativeParmsSize > MAXWORD )
+		appErrorf( "arm64 UFunction parameter frame too large: %s size=%i", Function->GetFullName(), NativeParmsSize );
+	if( NativeReturnOffset != INDEX_NONE && NativeReturnOffset > MAXWORD )
+		appErrorf( "arm64 UFunction return offset too large: %s offset=%i", Function->GetFullName(), NativeReturnOffset );
+
+	_WORD OldParmsSize    = Function->ParmsSize;
+	_WORD OldReturnOffset = Function->ReturnValueOffset;
+	UBOOL bChanged        = 0;
+
+	if( NativeParmsSize > 0 && NativeParmsSize != Function->ParmsSize )
+	{
+		Function->ParmsSize = (_WORD)NativeParmsSize;
+		bChanged = 1;
+	}
+
+	if( NativeReturnOffset != INDEX_NONE && NativeReturnOffset != Function->ReturnValueOffset )
+	{
+		Function->ReturnValueOffset = (_WORD)NativeReturnOffset;
+		bChanged = 1;
+	}
+
+	if( bChanged && GUE1Android64UFunctionParmsRelinkBudgetV86A++ < 160 )
+	{
+		debugf
+		(
+			NAME_Log,
+			"ANDROID64 UFUNCTION PARMSIZE RELINK V86A func=%s oldParms=%i newParms=%i oldReturn=%i newReturn=%i props=%i nativeParmCount=%i objectParms=%i flags=%08x budget=%i",
+			Function->GetFullName(),
+			(INT)OldParmsSize,
+			(INT)Function->ParmsSize,
+			(INT)OldReturnOffset,
+			(INT)Function->ReturnValueOffset,
+			Function->GetPropertiesSize(),
+			NativeParmCount,
+			NativeObjectParmCount,
+			Function->FunctionFlags,
+			GUE1Android64UFunctionParmsRelinkBudgetV86A
+		);
+	}
+	unguard;
+}
+#endif
+
 
 UFunction::UFunction( UFunction* InSuperFunction )
 : UStruct( InSuperFunction )
@@ -2099,36 +2177,7 @@ void UFunction::Serialize( FArchive& Ar )
 
 #if PLATFORM_64BIT
 	if( Ar.IsLoading() )
-	{
-		// UE1 packages store UFunction parameter frame sizes for 32-bit.
-		// On arm64, object/class parameters and return values are pointer-sized.
-		// Recompute ParmsSize and ReturnValueOffset from the freshly linked
-		// property offsets so native event wrappers such as GameInfo.Login copy
-		// the full 64-bit SpawnClass/ReturnValue frame instead of the old 32-bit
-		// tail. This fixes corrupted class pointers reaching AActor::execSpawn.
-		INT NativeParmsSize = 0;
-		INT NativeReturnValueOffset = MAXWORD;
-		for( TFieldIterator<UProperty> It(this); It && It.GetStruct()==this; ++It )
-		{
-			UProperty* Property = *It;
-			if( Property->PropertyFlags & CPF_Parm )
-			{
-				NativeParmsSize = Max( NativeParmsSize, Property->Offset + Property->GetSize() );
-				if( Property->PropertyFlags & CPF_ReturnParm )
-					NativeReturnValueOffset = Property->Offset;
-			}
-		}
-		if( NativeParmsSize > MAXWORD )
-			appErrorf( "arm64 UFunction parameter frame too large: %s size=%i", GetFullName(), NativeParmsSize );
-		if( NativeParmsSize > 0 )
-			ParmsSize = (_WORD)NativeParmsSize;
-		if( NativeReturnValueOffset != MAXWORD )
-		{
-			if( NativeReturnValueOffset > MAXWORD )
-				appErrorf( "arm64 UFunction return offset too large: %s offset=%i", GetFullName(), NativeReturnValueOffset );
-			ReturnValueOffset = (_WORD)NativeReturnValueOffset;
-		}
-	}
+		UE1Android64RelinkUFunctionParmsV86A( this );
 #endif
 
 	unguard;

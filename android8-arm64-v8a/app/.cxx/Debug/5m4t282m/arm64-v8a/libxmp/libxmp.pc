@@ -1,0 +1,13 @@
+prefix=C:/Program Files (x86)/UE1Android
+exec_prefix=${prefix}
+libdir=C:/Program Files (x86)/UE1Android/lib
+includedir=C:/Program Files (x86)/UE1Android/include
+
+Name: libxmp
+Description: Xmp module player library
+Version: 4.6.3
+
+Requires:
+Libs: -L${libdir} -lxmp
+Cflags: -I${includedir}
+Libs.private: -lm

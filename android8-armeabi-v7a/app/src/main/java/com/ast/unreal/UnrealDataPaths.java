@@ -318,11 +318,139 @@ final class UnrealDataPaths {
             ensureConfigFile(systemDir, "User.ini", new String[] { "DefUser.ini", "DefaultUser.ini" },
                     "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n[Engine.Input]\n");
             ensureConfigFile(systemDir, "Unreal.ini", new String[] { "Default.ini", "Unreal.ini.default" }, "");
+            ensureAndroidControllerDirectPatch(systemDir);
             Log.i(TAG_CONFIG, "Config root: " + root.getAbsolutePath());
             Log.i(TAG_CONFIG, "User.ini: " + new File(systemDir, "User.ini").getAbsolutePath());
         } catch (Throwable t) {
             Log.e(TAG_CONFIG, "Config bootstrap failed for root=" + root.getAbsolutePath(), t);
         }
+    }
+
+
+    private static void ensureAndroidControllerDirectPatch(File systemDir) {
+        // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+        // Existing installs keep old weak controller values forever because config
+        // files are only copied when missing. Patch them once at boot so the fix is
+        // effective without forcing users to delete their Unreal folder.
+        patchNsdlControllerDefaults(new File(systemDir, "Unreal.ini"));
+        patchNsdlControllerDefaults(new File(systemDir, "Default.ini"));
+        appendControllerInputFallbacks(new File(systemDir, "User.ini"));
+    }
+
+    private static void patchNsdlControllerDefaults(File file) {
+        if (file == null || !file.isFile()) return;
+        try {
+            String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            String patched = text;
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "UseJoystick", "True");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeController", "True");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeDirectInput", "True ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickScale", "1.00 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeLeftStickDeadzone", "0.08 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickDeadzone", "0.10 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeTriggerDeadzone", "0.12 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeAxisCurve", "1.00 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneXYZ", "0.10");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneRUV", "0.10");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleXYZ", "100.0");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleRUV", "100.0");
+            if (!patched.equals(text)) {
+                Files.write(file.toPath(), patched.getBytes(StandardCharsets.UTF_8));
+                Log.i(TAG_CONFIG, "Patched Android controller defaults: " + file.getAbsolutePath());
+            }
+        } catch (IOException ex) {
+            Log.w(TAG_CONFIG, "Could not patch controller defaults in " + file.getAbsolutePath() + ": " + ex);
+        }
+    }
+
+    private static void appendControllerInputFallbacks(File file) {
+        if (file == null) return;
+        try {
+            String text = file.isFile()
+                    ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
+                    : "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n";
+            if (text.contains("UNREAL_ANDROID_CONTROLLER_DIRECT_V122")) return;
+            String block = "\n\n; UNREAL_ANDROID_CONTROLLER_DIRECT_V122\n" +
+                    "; Robust Android controller fallbacks. Direct mode uses W/A/S/D + mouse buttons for gameplay,\n" +
+                    "; while these Joy*/friendly aliases keep Customize Controls and SDL fallback usable.\n" +
+                    "[Engine.Input]\n" +
+                    "LeftMouse=Fire\n" +
+                    "RightMouse=AltFire\n" +
+                    "MouseX=Axis aMouseX Speed=6.0\n" +
+                    "MouseY=Axis aMouseY Speed=6.0\n" +
+                    "W=MoveForward\n" +
+                    "S=MoveBackward\n" +
+                    "A=StrafeLeft\n" +
+                    "D=StrafeRight\n" +
+                    "Space=Jump\n" +
+                    "C=Duck\n" +
+                    "G=Grab\n" +
+                    "Joy1=Jump\n" +
+                    "Joy2=Duck\n" +
+                    "Joy3=Grab\n" +
+                    "Joy4=Walking\n" +
+                    "Joy5=ActivateTranslator\n" +
+                    "Joy8=Duck\n" +
+                    "Joy9=CenterView\n" +
+                    "Joy10=PrevWeapon\n" +
+                    "Joy11=NextWeapon\n" +
+                    "Joy12=AltFire\n" +
+                    "Joy13=Fire\n" +
+                    "Joy14=TurnLeft\n" +
+                    "Joy15=TurnRight\n" +
+                    "Joy16=LookUp\n" +
+                    "JoyX=Axis aStrafe Speed=1\n" +
+                    "JoyY=Axis aBaseY Speed=1\n" +
+                    "JoyU=Axis aTurn Speed=1\n" +
+                    "JoyV=Axis aLookUp Speed=-1\n" +
+                    "JoyPovRight=NextWeapon\n" +
+                    "JoyPovLeft=PrevWeapon\n" +
+                    "JoyPovUp=InventoryPrevious\n" +
+                    "JoyPovDown=InventoryNext\n" +
+                    "UnknownD8=StrafeLeft\n" +
+                    "UnknownD9=StrafeRight\n" +
+                    "UnknownDA=MoveForward\n" +
+                    "UnknownDF=MoveBackward\n" +
+                    "UnknownEA=LookDown\n";
+            Files.write(file.toPath(), (text + block).getBytes(StandardCharsets.UTF_8));
+            Log.i(TAG_CONFIG, "Appended Android controller input fallbacks: " + file.getAbsolutePath());
+        } catch (IOException ex) {
+            Log.w(TAG_CONFIG, "Could not append controller input fallbacks in " + file.getAbsolutePath() + ": " + ex);
+        }
+    }
+
+    private static String setIniValue(String text, String section, String key, String value) {
+        if (text == null) text = "";
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        String sectionHeader = "[" + section + "]";
+        java.util.regex.Pattern sectionPattern = java.util.regex.Pattern.compile("(?im)^\\[" + java.util.regex.Pattern.quote(section) + "\\]\\s*$");
+        java.util.regex.Matcher sectionMatcher = sectionPattern.matcher(normalized);
+        if (!sectionMatcher.find()) {
+            if (normalized.length() > 0 && !normalized.endsWith("\n")) normalized += "\n";
+            return normalized + "\n" + sectionHeader + "\n" + key + "=" + value + "\n";
+        }
+
+        int sectionStart = sectionMatcher.end();
+        java.util.regex.Pattern nextSectionPattern = java.util.regex.Pattern.compile("(?m)^\\[[^\\]]+\\]\\s*$");
+        java.util.regex.Matcher nextSectionMatcher = nextSectionPattern.matcher(normalized);
+        int sectionEnd = normalized.length();
+        while (nextSectionMatcher.find(sectionStart)) {
+            sectionEnd = nextSectionMatcher.start();
+            break;
+        }
+
+        String before = normalized.substring(0, sectionStart);
+        String body = normalized.substring(sectionStart, sectionEnd);
+        String after = normalized.substring(sectionEnd);
+        java.util.regex.Pattern keyPattern = java.util.regex.Pattern.compile("(?im)^" + java.util.regex.Pattern.quote(key) + "\\s*=.*$");
+        java.util.regex.Matcher keyMatcher = keyPattern.matcher(body);
+        if (keyMatcher.find()) {
+            body = keyMatcher.replaceAll(java.util.regex.Matcher.quoteReplacement(key + "=" + value));
+        } else {
+            if (!body.endsWith("\n")) body += "\n";
+            body += key + "=" + value + "\n";
+        }
+        return before + body + after;
     }
 
     private static void ensureConfigFile(File systemDir, String targetName, String[] templateNames, String fallbackText) throws IOException {
@@ -379,6 +507,7 @@ final class UnrealDataPaths {
             copySafTree(context, treeUri, unrealDocId, target);
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
+            ensureAndroidControllerDirectPatch(new File(target, "System"));
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context, "Der Ordner wurde kopiert, aber danach fehlen weiterhin Pflichtdateien in ", "The folder was copied, but required files are still missing in ") + target.getAbsolutePath());
@@ -403,6 +532,7 @@ final class UnrealDataPaths {
             extractZipRoot(context, zipUri, rootPrefix, target);
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
+            ensureAndroidControllerDirectPatch(new File(target, "System"));
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context, "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ", "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());

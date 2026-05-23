@@ -11,6 +11,15 @@
 =============================================================================*/
 
 #include "EnginePrivate.h"
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#include <android/log.h>
+#endif
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...) __android_log_print(ANDROID_LOG_INFO, "UE1Diag64", __VA_ARGS__)
+#else
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...)
+#endif
+
 /*-----------------------------------------------------------------------------
 	APawn object implementation.
 -----------------------------------------------------------------------------*/
@@ -69,6 +78,372 @@ enum EAIFunctions
 	AI_GetNextSkin = 545,
 	AI_UpdateURL = 546
 };
+
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_GAMEPLAY_DIAG_V47
+static INT GUE1Android64DiagAIBudget = 0;
+static INT GUE1Android64DiagAIHeartbeatBudget = 0;
+static INT GUE1Android64AIMainFrameProbeBudget = 0; // UNREAL_ANDROID64_MAINFRAME_LOSS_PROBE_V51
+static INT GUE1Android64AILatentProbeBudgetV60 = 0; // UNREAL_ANDROID64_LATENT_CONTINUATION_PROBE_V60
+static INT GUE1Android64LatentResumeBudgetV61 = 0; // UNREAL_ANDROID64_LATENT_RESUME_SHADOW_V61
+static INT GUE1Android64LatentReachedBudgetV64 = 0; // UNREAL_ANDROID64_LATENT_REACHED_FOCUS_V64
+// UNREAL_ANDROID64_LATENT_RESTORE_DIAG_ONLY_V65
+
+static inline UBOOL UE1Android64DiagBadPtrAI( const void* Ptr )
+{
+	const UPTRINT Value = (UPTRINT)Ptr;
+	return !Ptr || Value < 0x10000 || ((Value & (sizeof(void*)-1)) != 0);
+}
+
+
+	// UNREAL_ANDROID64_SAFE_STATEFRAME_PROBE_GUARD_V75
+	static inline UBOOL UE1Android64PawnHasStateFrameForProbeV75( APawn* Pawn )
+	{
+		if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) )
+			return 0;
+		FMainFrame* Frame = Pawn->GetMainFrame();
+		return Frame && !UE1Android64DiagBadPtrAI(Frame) && Frame->StateNode && !UE1Android64DiagBadPtrAI(Frame->StateNode);
+	}
+	static const char* UE1Android64DiagActorNameAI( AActor* Actor )
+{
+	return (Actor && !UE1Android64DiagBadPtrAI(Actor) && Actor->IsValid()) ? Actor->GetFullName() : "<none>";
+}
+
+static const char* UE1Android64DiagActorClassAI( AActor* Actor )
+{
+	return (Actor && !UE1Android64DiagBadPtrAI(Actor) && Actor->IsValid()) ? Actor->GetClassName() : "<none>";
+}
+
+static const char* UE1Android64DiagPawnStateAI( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) )
+		return "<bad-pawn>";
+	FMainFrame* Frame = Pawn->GetMainFrame();
+	if( !Frame || UE1Android64DiagBadPtrAI(Frame) )
+		return "<no-frame>";
+	if( !Frame->StateNode || UE1Android64DiagBadPtrAI(Frame->StateNode) )
+		return "<bad-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64DiagPawnLatentAI( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) )
+		return -1;
+	FMainFrame* Frame = Pawn->GetMainFrame();
+	return (Frame && !UE1Android64DiagBadPtrAI(Frame)) ? Frame->LatentAction : -1;
+}
+
+static UBOOL UE1Android64DiagIsInterestingPawnAI( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) )
+		return 0;
+	const char* ClassName = Pawn->GetClassName();
+	if( ClassName && (appStrstr(ClassName,"Skaarj") || appStrstr(ClassName,"Player") || appStrstr(ClassName,"Trooper")) )
+		return 1;
+	return Pawn->Enemy && !UE1Android64DiagBadPtrAI(Pawn->Enemy) && Pawn->Enemy->IsValid() && Pawn->Enemy->IsA(APlayerPawn::StaticClass);
+}
+
+static void UE1Android64DiagAI( const char* Phase, APawn* Pawn, AActor* Goal=NULL, const FVector* Vec=NULL, FLOAT Speed=0.f )
+{
+	if( !Pawn || !UE1Android64DiagIsInterestingPawnAI(Pawn) || GUE1Android64DiagAIBudget++ >= 128 )
+		return;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 DIAG AI phase=%s pawn=%s class=%s state=%s latent=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) dest=(%.1f %.1f %.1f) focus=(%.1f %.1f %.1f) moveTarget=%s enemy=%s goal=%s goalClass=%s speed=%.3f desired=%.3f ground=%.3f moveTimer=%.3f sight=%.3f alarm=%s next=%s/%s vec=(%.1f %.1f %.1f) health=%i flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		(INT)Pawn->Physics,
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->Destination.X, Pawn->Destination.Y, Pawn->Destination.Z,
+		Pawn->Focus.X, Pawn->Focus.Y, Pawn->Focus.Z,
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		UE1Android64DiagActorNameAI(Goal),
+		UE1Android64DiagActorClassAI(Goal),
+		Speed,
+		Pawn->DesiredSpeed,
+		Pawn->GroundSpeed,
+		Pawn->MoveTimer,
+		Pawn->SightCounter,
+		*Pawn->AlarmTag,
+		*Pawn->NextState,
+		*Pawn->NextLabel,
+		Vec ? Vec->X : 0.f, Vec ? Vec->Y : 0.f, Vec ? Vec->Z : 0.f,
+		Pawn->Health,
+		Pawn->GetFlags() );
+}
+
+
+static void UE1Android64AIMainFrameProbeV51( const char* Phase, APawn* Pawn, FMainFrame* Before, FMainFrame* After )
+{
+	if( !Pawn || !UE1Android64DiagIsInterestingPawnAI(Pawn) || GUE1Android64AIMainFrameProbeBudget++ >= 96 )
+		return;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 MAINFRAME LOSS PROBE V51 phase=%s pawn=%s class=%s beforeFrame=%p afterFrame=%p state=%s latent=%i physics=%i moveTarget=%s enemy=%s loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) moveTimer=%.3f desired=%.3f flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		Before,
+		After,
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		(INT)Pawn->Physics,
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->MoveTimer,
+		Pawn->DesiredSpeed,
+		Pawn->GetFlags() );
+}
+
+
+static INT UE1Android64AIFrameCodeOffsetV60( FFrame* Frame )
+{
+	if( !Frame || UE1Android64DiagBadPtrAI(Frame) || !Frame->Node || UE1Android64DiagBadPtrAI(Frame->Node) || !Frame->Code || UE1Android64DiagBadPtrAI(Frame->Code) )
+		return -1;
+	return Frame->Code - &Frame->Node->Script(0);
+}
+
+static INT UE1Android64AIFrameOpcodeV60( FFrame* Frame )
+{
+	if( !Frame || UE1Android64DiagBadPtrAI(Frame) || !Frame->Code || UE1Android64DiagBadPtrAI(Frame->Code) )
+		return -1;
+	return (INT)*Frame->Code;
+}
+
+static void UE1Android64AILatentProbeV60( const char* Phase, APawn* Pawn, FFrame* StackFrame, FMainFrame* MainFrameBefore, UBOOL bReached )
+{
+	if( !Pawn || !UE1Android64DiagIsInterestingPawnAI(Pawn) || GUE1Android64AILatentProbeBudgetV60++ >= 160 )
+		return;
+	FMainFrame* MainFrameAfter = Pawn->GetMainFrame();
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 AI LATENT PROBE V60 phase=%s pawn=%s class=%s reached=%i state=%s latent=%i mainBefore=%p mainAfter=%p mainCode=%i mainOpcode=%i stackCode=%i stackOpcode=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) dest=(%.1f %.1f %.1f) moveTarget=%s enemy=%s moveTimer=%.3f desired=%.3f next=%s/%s alarm=%s flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		(INT)bReached,
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		MainFrameBefore,
+		MainFrameAfter,
+		UE1Android64AIFrameCodeOffsetV60(MainFrameAfter),
+		UE1Android64AIFrameOpcodeV60(MainFrameAfter),
+		UE1Android64AIFrameCodeOffsetV60(StackFrame),
+		UE1Android64AIFrameOpcodeV60(StackFrame),
+		(INT)Pawn->Physics,
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->Destination.X, Pawn->Destination.Y, Pawn->Destination.Z,
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		Pawn->MoveTimer,
+		Pawn->DesiredSpeed,
+		*Pawn->NextState,
+		*Pawn->NextLabel,
+		*Pawn->AlarmTag,
+		Pawn->GetFlags() );
+}
+
+
+// UNREAL_ANDROID64_LATENT_RESUME_SHADOW_V61
+// A bytecode pointer is BYTE-aligned by design; do not apply UObject pointer
+// alignment checks to Code.  v60's code=-1 diagnostics were too pessimistic on
+// arm64 and hid whether a latent function still had a valid resume address.
+struct FUE1Android64LatentResumeShadowV61
+{
+	APawn*   Pawn;
+	UStruct* Node;
+	UState*  StateNode;
+	BYTE*    Code;
+	INT      LatentAction;
+	INT      Serial;
+};
+
+static FUE1Android64LatentResumeShadowV61 GUE1Android64LatentResumeShadowsV61[16] =
+{
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 },
+	{ NULL, NULL, NULL, NULL, 0, 0 }, { NULL, NULL, NULL, NULL, 0, 0 }
+};
+static INT GUE1Android64LatentResumeSerialV61 = 0;
+
+static INT UE1Android64BytecodeOffsetV61( UStruct* Node, BYTE* Code )
+{
+	if( !Node || UE1Android64DiagBadPtrAI(Node) || !Code )
+		return -1;
+	const BYTE* Base = &Node->Script(0);
+	const BYTE* End  = Base + Node->Script.Num();
+	return (Code >= Base && Code < End) ? (INT)(Code - Base) : -1;
+}
+
+static INT UE1Android64FrameCodeOffsetV61( FFrame* Frame )
+{
+	if( !Frame || UE1Android64DiagBadPtrAI(Frame) )
+		return -1;
+	return UE1Android64BytecodeOffsetV61( Frame->Node, Frame->Code );
+}
+
+static void UE1Android64LatentResumeLogV61( const char* Phase, APawn* Pawn, FFrame* StackFrame, FMainFrame* MainFrame, FUE1Android64LatentResumeShadowV61* Shadow )
+{
+	if( !Pawn || !UE1Android64DiagIsInterestingPawnAI(Pawn) || GUE1Android64LatentResumeBudgetV61++ >= 96 )
+		return;
+	const INT StackCode = StackFrame ? UE1Android64FrameCodeOffsetV61(StackFrame) : -1;
+	const INT MainCode  = MainFrame ? UE1Android64FrameCodeOffsetV61(MainFrame) : -1;
+	const INT ShadowCode= Shadow ? UE1Android64BytecodeOffsetV61(Shadow->Node, Shadow->Code) : -1;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 LATENT RESUME V61 phase=%s pawn=%s class=%s state=%s latent=%i mainFrame=%p mainNode=%s mainCode=%i stackNode=%s stackCode=%i shadowCode=%i shadowLatent=%i shadowSerial=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) dest=(%.1f %.1f %.1f) moveTarget=%s enemy=%s moveTimer=%.3f next=%s/%s alarm=%s flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		MainFrame,
+		(MainFrame && MainFrame->Node && !UE1Android64DiagBadPtrAI(MainFrame->Node)) ? MainFrame->Node->GetName() : "<none>",
+		MainCode,
+		(StackFrame && StackFrame->Node && !UE1Android64DiagBadPtrAI(StackFrame->Node)) ? StackFrame->Node->GetName() : "<none>",
+		StackCode,
+		ShadowCode,
+		Shadow ? Shadow->LatentAction : -1,
+		Shadow ? Shadow->Serial : -1,
+		(INT)Pawn->Physics,
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->Destination.X, Pawn->Destination.Y, Pawn->Destination.Z,
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		Pawn->MoveTimer,
+		*Pawn->NextState,
+		*Pawn->NextLabel,
+		*Pawn->AlarmTag,
+		Pawn->GetFlags() );
+}
+
+static FUE1Android64LatentResumeShadowV61* UE1Android64FindLatentResumeShadowV61( APawn* Pawn, UBOOL bCreate )
+{
+	FUE1Android64LatentResumeShadowV61* FreeSlot = NULL;
+	for( INT i=0; i<ARRAY_COUNT(GUE1Android64LatentResumeShadowsV61); ++i )
+	{
+		if( GUE1Android64LatentResumeShadowsV61[i].Pawn == Pawn )
+			return &GUE1Android64LatentResumeShadowsV61[i];
+		if( !GUE1Android64LatentResumeShadowsV61[i].Pawn && !FreeSlot )
+			FreeSlot = &GUE1Android64LatentResumeShadowsV61[i];
+	}
+	return bCreate ? (FreeSlot ? FreeSlot : &GUE1Android64LatentResumeShadowsV61[0]) : NULL;
+}
+
+static void UE1Android64StoreLatentResumeV61( APawn* Pawn, FFrame& Stack, INT LatentAction )
+{
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) || !Stack.Code || !Stack.Node )
+		return;
+	if( UE1Android64BytecodeOffsetV61(Stack.Node, Stack.Code) < 0 )
+	{
+		UE1Android64LatentResumeLogV61( "store-rejected", Pawn, &Stack, Pawn->GetMainFrame(), NULL );
+		return;
+	}
+	FUE1Android64LatentResumeShadowV61* Shadow = UE1Android64FindLatentResumeShadowV61( Pawn, 1 );
+	Shadow->Pawn         = Pawn;
+	Shadow->Node         = Stack.Node;
+	Shadow->StateNode    = Pawn->GetMainFrame() ? Pawn->GetMainFrame()->StateNode : NULL;
+	Shadow->Code         = Stack.Code;
+	Shadow->LatentAction = LatentAction;
+	Shadow->Serial       = ++GUE1Android64LatentResumeSerialV61;
+	UE1Android64LatentResumeLogV61( "stored", Pawn, &Stack, Pawn->GetMainFrame(), Shadow );
+}
+
+static void UE1Android64LatentReachedFocusLogV64( const char* Phase, APawn* Pawn, FFrame& Stack )
+{
+	// UNREAL_ANDROID64_LATENT_REACHED_FOCUS_V64
+	// Keep this independent from the broad v60/v61 budgets. The interesting
+	// Vortex2 failure happens exactly when SkaarjWarrior reaches AlarmPoint2 and
+	// AI_PollMoveToward clears LatentAction. Older logs often exhausted the broad
+	// budgets before that point, hiding the continuation state.
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) || !UE1Android64DiagIsInterestingPawnAI(Pawn) )
+		return;
+	if( GUE1Android64LatentReachedBudgetV64++ >= 64 )
+		return;
+	FMainFrame* MainFrame = Pawn->GetMainFrame();
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 LATENT REACHED V64 phase=%s pawn=%s class=%s state=%s latent=%i stackNode=%s stackCode=%i mainFrame=%p mainNode=%s mainCode=%i mainLatent=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) dest=(%.1f %.1f %.1f) moveTarget=%s enemy=%s moveTimer=%.3f next=%s/%s alarm=%s flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		(Stack.Node && !UE1Android64DiagBadPtrAI(Stack.Node)) ? Stack.Node->GetName() : "<none>",
+		UE1Android64FrameCodeOffsetV61(&Stack),
+		MainFrame,
+		(MainFrame && MainFrame->Node && !UE1Android64DiagBadPtrAI(MainFrame->Node)) ? MainFrame->Node->GetName() : "<none>",
+		UE1Android64FrameCodeOffsetV61(MainFrame),
+		(MainFrame && !UE1Android64DiagBadPtrAI(MainFrame)) ? MainFrame->LatentAction : -1,
+		(INT)Pawn->Physics,
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->Destination.X, Pawn->Destination.Y, Pawn->Destination.Z,
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		Pawn->MoveTimer,
+		*Pawn->NextState,
+		*Pawn->NextLabel,
+		*Pawn->AlarmTag,
+		Pawn->GetFlags() );
+}
+
+static void UE1Android64RestoreLatentResumeIfNeededV61( APawn* Pawn, FFrame& Stack, INT LatentAction, const char* Phase )
+{
+	// UNREAL_ANDROID64_LATENT_RESTORE_DIAG_ONLY_V65
+	// v61/v64 proved useful diagnostically, but active restoration of a saved
+	// bytecode resume address is too risky: in savegames/combat it can revive old
+	// latent state after the pawn has changed state or died. Log what would have
+	// happened, but never mutate MainFrame here.
+	if( !Pawn || UE1Android64DiagBadPtrAI(Pawn) )
+		return;
+	FMainFrame* MainFrame = Pawn->GetMainFrame();
+	if( !MainFrame || UE1Android64DiagBadPtrAI(MainFrame) )
+		return;
+	FUE1Android64LatentResumeShadowV61* Shadow = UE1Android64FindLatentResumeShadowV61( Pawn, 0 );
+	if( !Shadow || Shadow->LatentAction != LatentAction || UE1Android64BytecodeOffsetV61(Shadow->Node, Shadow->Code) < 0 )
+	{
+		UE1Android64LatentResumeLogV61( "diag-only-missing-shadow-v65", Pawn, &Stack, MainFrame, Shadow );
+		return;
+	}
+	UE1Android64LatentResumeLogV61( Phase ? "diag-only-would-restore-v65" : "diag-only-would-restore-v65", Pawn, &Stack, MainFrame, Shadow );
+}
+
+static void UE1Android64DiagAIHeartbeat( const char* Phase, APawn* Pawn, AActor* Other=NULL )
+{
+	if( !Pawn || !UE1Android64DiagIsInterestingPawnAI(Pawn) || GUE1Android64DiagAIHeartbeatBudget++ >= 64 )
+		return;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 DIAG AIHEART phase=%s pawn=%s class=%s state=%s latent=%i physics=%i enemy=%s other=%s otherClass=%s moveTarget=%s loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) moveTimer=%.3f sight=%.3f alarm=%s flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		UE1Android64DiagPawnStateAI(Pawn),
+		UE1Android64DiagPawnLatentAI(Pawn),
+		(INT)Pawn->Physics,
+		UE1Android64DiagActorNameAI(Pawn->Enemy),
+		UE1Android64DiagActorNameAI(Other),
+		UE1Android64DiagActorClassAI(Other),
+		UE1Android64DiagActorNameAI(Pawn->MoveTarget),
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->MoveTimer,
+		Pawn->SightCounter,
+		*Pawn->AlarmTag,
+		Pawn->GetFlags() );
+}
+#endif
 
 void APlayerPawn::execUpdateURL( FFrame& Stack, BYTE*& Result )
 {
@@ -875,6 +1250,9 @@ void APawn::execMoveTo( FFrame& Stack, BYTE*& Result )
 	P_GET_FLOAT_OPT(speed, 1.0);
 	P_FINISH;
 
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execMoveTo.before", this, NULL, &dest, speed );
+#endif
 	FVector Move = dest - Location;
 	MoveTarget = NULL;
 	bReducedSpeed = 0;
@@ -886,6 +1264,9 @@ void APawn::execMoveTo( FFrame& Stack, BYTE*& Result )
 	Focus = dest;
 	rotateToward(Focus);
 	moveToward(Destination);
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execMoveTo.after", this, NULL, &Destination, speed );
+#endif
 	unguardSlow;
 }
 AUTOREGISTER_INTRINSIC( APawn, AI_MoveTo, execMoveTo);
@@ -896,9 +1277,15 @@ void APawn::execPollMoveTo( FFrame& Stack, BYTE*& Result )
 	debug(Stack.Object->IsA(APawn::StaticClass));
 	APawn *Pawn = (APawn*)Stack.Object;
 
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execPollMoveTo.before", Pawn, NULL, &Pawn->Destination, 0.f );
+#endif
 	Pawn->rotateToward(Pawn->Focus);
 	if (Pawn->moveToward(Pawn->Destination))
 		Pawn->GetMainFrame()->LatentAction = 0;
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execPollMoveTo.after", Pawn, NULL, &Pawn->Destination, 0.f );
+#endif
 
 	unguardSlow;
 }
@@ -916,8 +1303,14 @@ void APawn::execMoveToward( FFrame& Stack, BYTE*& Result )
 	P_GET_FLOAT_OPT(speed, 1.0);
 	P_FINISH;
 
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execMoveToward.enter", this, goal, NULL, speed );
+#endif
 	if (!goal)
 	{
+#if PLATFORM_64BIT
+		UE1Android64DiagAI( "execMoveToward.noGoal", this, goal, NULL, speed );
+#endif
 		//Stack.ScriptWarn(0,"MoveToward with no goal");
 		return;
 	}
@@ -936,8 +1329,21 @@ void APawn::execMoveToward( FFrame& Stack, BYTE*& Result )
 	Destination = MoveTarget->Location; 
 	Focus = Destination;
 	GetMainFrame()->LatentAction = AI_PollMoveToward;
+#if PLATFORM_64BIT
+	UE1Android64StoreLatentResumeV61( this, Stack, AI_PollMoveToward );
+	UE1Android64AILatentProbeV60( "execMoveToward.latent-start", this, &Stack, GetMainFrame(), 0 );
+#endif
 	rotateToward(Focus);
+#if PLATFORM_64BIT
+	FMainFrame* Android64BeforeInitialMoveTowardFrameV51 = GetMainFrame();
+#endif
 	moveToward(Destination);
+#if PLATFORM_64BIT
+	FMainFrame* Android64AfterInitialMoveTowardFrameV51 = GetMainFrame();
+	if( Android64AfterInitialMoveTowardFrameV51 != Android64BeforeInitialMoveTowardFrameV51 || UE1Android64DiagBadPtrAI(Android64AfterInitialMoveTowardFrameV51) )
+		UE1Android64AIMainFrameProbeV51( "execMoveToward.after-initial-moveToward", this, Android64BeforeInitialMoveTowardFrameV51, Android64AfterInitialMoveTowardFrameV51 );
+	UE1Android64DiagAI( "execMoveToward.after", this, goal, &Destination, speed );
+#endif
 	unguardSlow;
 }
 AUTOREGISTER_INTRINSIC( APawn, AI_MoveToward, execMoveToward);
@@ -948,8 +1354,14 @@ void APawn::execPollMoveToward( FFrame& Stack, BYTE*& Result )
 	debug(Stack.Object->IsA(APawn::StaticClass));
 	APawn *Pawn = (APawn*)Stack.Object;
 
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execPollMoveToward.enter", Pawn, Pawn->MoveTarget, NULL, 0.f );
+#endif
 	if ( !Pawn->MoveTarget )
 	{
+#if PLATFORM_64BIT
+		UE1Android64DiagAI( "execPollMoveToward.noMoveTarget", Pawn, NULL, NULL, 0.f );
+#endif
 		//Stack.ScriptWarn(0,"MoveTarget cleared during movetoward");
 		Pawn->GetMainFrame()->LatentAction = 0;
 		return;
@@ -964,14 +1376,44 @@ void APawn::execPollMoveToward( FFrame& Stack, BYTE*& Result )
 	Pawn->Focus = Pawn->Destination;
 	Pawn->rotateToward(Pawn->Focus);
 	FLOAT oldDesiredSpeed = Pawn->DesiredSpeed;
-	if (Pawn->moveToward(Pawn->Destination))
+#if PLATFORM_64BIT
+	FMainFrame* Android64BeforeMoveTowardFrameV51 = Pawn->GetMainFrame();
+#endif
+	UBOOL bAndroid64MoveTowardReachedV60 = Pawn->moveToward(Pawn->Destination);
+	if (bAndroid64MoveTowardReachedV60)
+	{
+#if PLATFORM_64BIT
+		FMainFrame* Android64AfterMoveTowardFrameV51 = Pawn->GetMainFrame();
+		if( Android64AfterMoveTowardFrameV51 != Android64BeforeMoveTowardFrameV51 || UE1Android64DiagBadPtrAI(Android64AfterMoveTowardFrameV51) )
+			UE1Android64AIMainFrameProbeV51( "execPollMoveToward.after-moveToward-before-clear", Pawn, Android64BeforeMoveTowardFrameV51, Android64AfterMoveTowardFrameV51 );
+		UE1Android64AILatentProbeV60( "execPollMoveToward.reached-before-clear", Pawn, &Stack, Android64BeforeMoveTowardFrameV51, 1 );
+#endif
 		Pawn->GetMainFrame()->LatentAction = 0;
+#if PLATFORM_64BIT
+		UE1Android64LatentReachedFocusLogV64( "after-clear-before-diag-only-v65", Pawn, Stack );
+		UE1Android64RestoreLatentResumeIfNeededV61( Pawn, Stack, AI_PollMoveToward, "diag-only-would-restore-v65" );
+		UE1Android64LatentReachedFocusLogV64( "after-diag-only-v65", Pawn, Stack );
+		UE1Android64AILatentProbeV60( "execPollMoveToward.reached-after-clear", Pawn, &Stack, Android64BeforeMoveTowardFrameV51, 1 );
+#endif
+	}
+#if PLATFORM_64BIT
+	else if( Pawn->MoveTimer < 0.75f )
+	{
+		UE1Android64AILatentProbeV60( "execPollMoveToward.near-target-not-yet", Pawn, &Stack, Android64BeforeMoveTowardFrameV51, 0 );
+	}
+	FMainFrame* Android64AfterMoveTowardBlockFrameV51 = Pawn->GetMainFrame();
+	if( Android64AfterMoveTowardBlockFrameV51 != Android64BeforeMoveTowardFrameV51 || UE1Android64DiagBadPtrAI(Android64AfterMoveTowardBlockFrameV51) )
+		UE1Android64AIMainFrameProbeV51( "execPollMoveToward.after-moveToward", Pawn, Android64BeforeMoveTowardFrameV51, Android64AfterMoveTowardBlockFrameV51 );
+#endif
 	if (Pawn->MoveTarget->IsA(APawn::StaticClass))
 	{
 		Pawn->DesiredSpeed = oldDesiredSpeed; //don't slow down when moving toward a pawn
 		if (!Pawn->bCanSwim && Pawn->MoveTarget->Region.Zone->bWaterZone)
 			Pawn->MoveTimer = -1.0; //give up
 	}
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execPollMoveToward.leave", Pawn, Pawn->MoveTarget, &Pawn->Destination, 0.f );
+#endif
 
 	unguardSlow;
 }
@@ -988,6 +1430,9 @@ void APawn::execStrafeTo( FFrame& Stack, BYTE*& Result )
 	P_GET_VECTOR(FocalPoint);
 	P_FINISH;
 
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execStrafeTo.enter", this, NULL, &Dest, 0.f );
+#endif
 	FVector Move = Dest - Location;
 	MoveTarget = NULL;
 	bReducedSpeed = 0;
@@ -1002,6 +1447,9 @@ void APawn::execStrafeTo( FFrame& Stack, BYTE*& Result )
 	Focus = FocalPoint;
 	rotateToward(Focus);
 	moveToward(Destination);
+#if PLATFORM_64BIT
+	UE1Android64DiagAI( "execStrafeTo.after", this, NULL, &Destination, 0.f );
+#endif
 	unguardSlow;
 }
 AUTOREGISTER_INTRINSIC( APawn, AI_StrafeTo, execStrafeTo);
@@ -1520,19 +1968,58 @@ void APawn::CheckEnemyVisible()
 	guard(APawn::CheckEnemyVisible);
 
 	uclock(XLevel->SeePlayer);
+#if PLATFORM_64BIT
+	UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.enter", this, Enemy );
+	if( !UE1Android64PawnHasStateFrameForProbeV75(this) )
+	{
+		UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.skip-no-frame-v75", this, Enemy );
+		uunclock(XLevel->SeePlayer);
+		return;
+	}
+	if( Enemy && (UE1Android64DiagBadPtrAI(Enemy) || !Enemy->IsValid()) )
+	{
+		UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.skip-bad-enemy-v75", this, Enemy );
+		uunclock(XLevel->SeePlayer);
+		return;
+	}
+#endif
 	if ( Enemy )
 	{
 		check(Enemy->IsValid());
 		if ( !LineOfSightTo(Enemy) )
+		{
+#if PLATFORM_64BIT
+			UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.EnemyNotVisible.before", this, Enemy );
+#endif
 			eventEnemyNotVisible();
+#if PLATFORM_64BIT
+			UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.EnemyNotVisible.after", this, Enemy );
+#endif
+		}
 		if ( Enemy && IsProbing(NAME_HearNoise) && Enemy->bIsPlayer )
 		{
 			if ( (Enemy->noise1other != this) && (GetLevel()->TimeSeconds - Enemy->noise1time <= 0.3)  
 					&& CanHear(Enemy->noise1spot, Enemy->noise1loudness) )
+			{
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.HearNoise1.before", this, Enemy->noise1other );
+#endif
 				eventHearNoise(Enemy->noise1loudness, Enemy->noise1other);
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.HearNoise1.after", this, Enemy->noise1other );
+#endif
+			}
 			if ( Enemy && (Enemy->noise2other != this) && (GetLevel()->TimeSeconds - Enemy->noise2time <= 0.3)  
 					&& CanHear(Enemy->noise2spot, Enemy->noise1loudness) )
+			{
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.HearNoise2.before", this, Enemy->noise2other );
+#endif
 				eventHearNoise(Enemy->noise2loudness, Enemy->noise2other);
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "CheckEnemyVisible.HearNoise2.after", this, Enemy->noise2other );
+#endif
+			}
 		}
 	}
 	uunclock(XLevel->SeePlayer);
@@ -1554,19 +2041,50 @@ void APawn::ShowSelf()
 	{
 		if ( (Pawn != this) && (Pawn->SightCounter < 0.0) )
 		{
+#if PLATFORM_64BIT
+			if( !UE1Android64PawnHasStateFrameForProbeV75(Pawn) )
+			{
+				Pawn = Pawn->nextPawn;
+				continue;
+			}
+#endif
 			//check visibility
 			int bSeePlayer = ( Pawn->IsProbing(NAME_SeePlayer) && Pawn->LineOfSightTo(this, 1) );
 			if ( bSeePlayer )
+			{
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "ShowSelf.SeePlayer.before", Pawn, this );
+#endif
 				Pawn->eventSeePlayer(this);
+#if PLATFORM_64BIT
+				UE1Android64DiagAIHeartbeat( "ShowSelf.SeePlayer.after", Pawn, this );
+#endif
+			}
 			//check hearing
 			if ( Pawn->IsProbing(NAME_HearNoise) )
 			{
 				if ( noise1other && (noise1other != Pawn) && (GetLevel()->TimeSeconds - noise1time <= 0.3) && (!bSeePlayer || (noise1other != this)) 
 						&& Pawn->CanHear(noise1spot, noise1loudness) )
+				{
+#if PLATFORM_64BIT
+					UE1Android64DiagAIHeartbeat( "ShowSelf.HearNoise1.before", Pawn, noise1other );
+#endif
 					Pawn->eventHearNoise(noise1loudness, noise1other);
+#if PLATFORM_64BIT
+					UE1Android64DiagAIHeartbeat( "ShowSelf.HearNoise1.after", Pawn, noise1other );
+#endif
+				}
 				if ( noise2other && (noise2other != Pawn) && (GetLevel()->TimeSeconds - noise2time <= 0.3) && (!bSeePlayer || (noise2other != this)) 
 						&& Pawn->CanHear(noise2spot, noise2loudness) )
+				{
+#if PLATFORM_64BIT
+					UE1Android64DiagAIHeartbeat( "ShowSelf.HearNoise2.before", Pawn, noise2other );
+#endif
 					Pawn->eventHearNoise(noise2loudness, noise2other);
+#if PLATFORM_64BIT
+					UE1Android64DiagAIHeartbeat( "ShowSelf.HearNoise2.after", Pawn, noise2other );
+#endif
+				}
 			}
 		}
 		Pawn = Pawn->nextPawn;

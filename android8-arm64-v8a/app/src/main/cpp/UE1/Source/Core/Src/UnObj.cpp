@@ -8,6 +8,13 @@
 
 #include "CorePrivate.h" 
 
+#if PLATFORM_64BIT && (defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__))
+#include <android/log.h>
+#define UE1_ANDROID64_FRAME_LIFECYCLE_LOG_V87(...) __android_log_print(ANDROID_LOG_INFO, "UE1Diag64", __VA_ARGS__)
+#else
+#define UE1_ANDROID64_FRAME_LIFECYCLE_LOG_V87(...)
+#endif
+
 #if PLATFORM_64BIT
 INT UE1AndroidRemapScriptOffset64( UStruct* Struct, INT LegacyOffset );
 INT UE1AndroidUnmapScriptOffset64( UStruct* Struct, INT NativeOffset );
@@ -38,6 +45,103 @@ TArray<UObject*>	FObjectManager::Root;
 // For development.
 UBOOL GNoGC=0;
 UBOOL GCheckConflicts=0;
+
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_FRAME_LIFECYCLE_PROBE_V81
+// UNREAL_ANDROID64_FRAME_DELETE_ORIGIN_LOGCAT_V87
+// Sparse UObject-level watcher for the local player execution stack.  v80 proved
+// the Tick boundary log can start after MainFrame is already NULL; this catches
+// stack creation/deletion during serialization and InitExecution without touching
+// gameplay behaviour.
+static INT GUE1Android64FrameLifecycleBudgetV81 = 0;
+
+static UBOOL UE1Android64FrameLifecycleTextHasV81( const char* Text, const char* Token )
+{
+	return Text && Token && appStrfind( (char*)Text, (char*)Token ) != NULL;
+}
+
+static UBOOL UE1Android64FrameLifecycleWatchObjectV81( UObject* Object )
+{
+	if( !Object )
+		return 0;
+	const char* FullName  = Object->GetFullName();
+	const char* ClassName = Object->GetClassName();
+	return UE1Android64FrameLifecycleTextHasV81( FullName, "MaleOne" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "FemaleOne" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "SkaarjWarrior" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "Mover" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "Translator" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "Dispatcher" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "SmokeGenerator" )
+		|| UE1Android64FrameLifecycleTextHasV81( FullName, "VRikersGame" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "PlayerPawn" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Male" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Female" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Skaarj" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Mover" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Translator" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "Dispatcher" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "SmokeGenerator" )
+		|| UE1Android64FrameLifecycleTextHasV81( ClassName, "GameInfo" );
+}
+
+static const char* UE1Android64FrameLifecycleArchiveModeV81( FArchive* Ar )
+{
+	if( !Ar )
+		return "none";
+	if( Ar->IsLoading() )
+		return "loading";
+	if( Ar->IsSaving() )
+		return "saving";
+	return "other";
+}
+
+static INT UE1Android64FrameLifecycleCodeOffsetV81( FMainFrame* Frame )
+{
+	if( !Frame || !Frame->Node || !Frame->Code || Frame->Node->Script.Num() <= 0 )
+		return INDEX_NONE;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Frame->Code >= Base && Frame->Code < End) ? (INT)(Frame->Code - Base) : INDEX_NONE;
+}
+
+static void UE1Android64FrameLifecycleLogV81( const char* Phase, UObject* Object, FArchive* Ar, FMainFrame* BeforeFrame, DWORD BeforeFlags )
+{
+	if( !UE1Android64FrameLifecycleWatchObjectV81(Object) )
+		return;
+	FMainFrame* AfterFrame = Object->GetMainFrame();
+	UBOOL bFrameChanged = (BeforeFrame != AfterFrame);
+	UBOOL bHasStackBefore = (BeforeFlags & RF_HasStack) != 0;
+	UBOOL bHasStackAfter  = (Object->GetFlags() & RF_HasStack) != 0;
+	UBOOL bInconsistent = bHasStackAfter && !AfterFrame;
+	if( !bFrameChanged && !bInconsistent && GUE1Android64FrameLifecycleBudgetV81 >= 32 )
+		return;
+	if( GUE1Android64FrameLifecycleBudgetV81++ >= 128 )
+		return;
+
+	UE1_ANDROID64_FRAME_LIFECYCLE_LOG_V87( "ANDROID64 FRAME LIFECYCLE V87 phase=%s obj=%s class=%s archive=%s ver=%i beforeFrame=%p afterFrame=%p changed=%i lost=%i flagsBefore=%08x flagsAfter=%08x hasStackBefore=%i hasStackAfter=%i inconsistent=%i state=%s node=%s latent=%i code=%i budget=%i",
+		Phase ? Phase : "?",
+		Object ? Object->GetFullName() : "<null>",
+		Object ? Object->GetClassName() : "<null>",
+		UE1Android64FrameLifecycleArchiveModeV81(Ar),
+		Ar ? Ar->Ver() : -1,
+		BeforeFrame,
+		AfterFrame,
+		(INT)bFrameChanged,
+		(INT)(BeforeFrame!=NULL && AfterFrame==NULL),
+		(INT)BeforeFlags,
+		Object ? (INT)Object->GetFlags() : 0,
+		(INT)bHasStackBefore,
+		(INT)bHasStackAfter,
+		(INT)bInconsistent,
+		(AfterFrame && AfterFrame->StateNode) ? AfterFrame->StateNode->GetName() : (AfterFrame ? "<no-state>" : "<no-frame>"),
+		(AfterFrame && AfterFrame->Node) ? AfterFrame->Node->GetName() : "<no-node>",
+		AfterFrame ? AfterFrame->LatentAction : -1,
+		UE1Android64FrameLifecycleCodeOffsetV81(AfterFrame),
+		GUE1Android64FrameLifecycleBudgetV81 );
+}
+#endif
 
 /*-----------------------------------------------------------------------------
 	UObject constructors.
@@ -225,6 +329,24 @@ void UObject::Destroy()
 	unguardobj;
 }
 
+
+#if PLATFORM_64BIT
+static inline UBOOL UE1Android64CoreBadPtrV50( const void* Ptr )
+{
+	const UPTRINT Value = (UPTRINT)Ptr;
+	return !Ptr || Value < 0x10000 || ((Value & (sizeof(void*)-1)) != 0);
+}
+
+static INT GUE1Android64CorePreserveV50LogCount = 0;
+static void UE1Android64CorePreserveV50Log( const char* What, const char* ObjectName, const void* Before, const void* After )
+{
+	if( GUE1Android64CorePreserveV50LogCount++ < 96 )
+	{
+		debugf( NAME_Warning, "ANDROID64 CORE PRESERVE V50: %s object=%s before=%p after=%p", What ? What : "?", ObjectName ? ObjectName : "<unknown>", Before, After );
+	}
+}
+#endif
+
 //
 // Set the object's linker.
 //
@@ -235,8 +357,46 @@ void UObject::SetLinker( ULinkerLoad* InLinker, INT InLinkerIndex )
 	// Detach from existing linker.
 	if( Linker )
 	{
+#if PLATFORM_64BIT
+		// UNREAL_ANDROID64_CORE_HEADER_PRESERVE_V50
+		// If an old 32-bit property/layout bug corrupts UObject's private linker
+		// bookkeeping, do not clear an unrelated export slot during destroy.
+		// The object is already being unlinked; detach locally and log the mismatch
+		// instead of crashing in the generic SetLinker assertion path.
+		if( LinkerIndex<0 || LinkerIndex>=Linker->ExportMap.Num() || Linker->ExportMap((INT)LinkerIndex)._Object!=this )
+		{
+			UE1Android64CorePreserveV50Log( "SetLinker mismatch while detaching", GetName(), (void*)Linker, (void*)(UPTRINT)LinkerIndex );
+			// UNREAL_ANDROID64_LINKER_INDEX_PROBE_V77
+			// This is the point where a stale ExportMap._Object slot can be born:
+			// the UObject is being relinked/detached, but its recorded old slot does
+			// not actually point back to this object.  Log the precise old/new linker
+			// bookkeeping without changing the 32-bit path.
+			static INT GAndroid64SetLinkerMismatchV77LogCount = 0;
+			if( GAndroid64SetLinkerMismatchV77LogCount++ < 256 )
+			{
+				UObject* SlotObject = (LinkerIndex>=0 && LinkerIndex<Linker->ExportMap.Num()) ? Linker->ExportMap((INT)LinkerIndex)._Object : NULL;
+				debugf
+				(
+					NAME_Warning,
+					"ANDROID64 LINKER INDEX PROBE V77 phase=SetLinker.old-slot-mismatch object=%s oldLinker=%p oldIndex=%i oldExportNum=%i slotObject=%p newLinker=%p newIndex=%i",
+					GetFullName(),
+					Linker,
+					LinkerIndex,
+					Linker ? Linker->ExportMap.Num() : 0,
+					SlotObject,
+					InLinker,
+					InLinkerIndex
+				);
+			}
+		}
+		else
+		{
+			Linker->ExportMap((INT)LinkerIndex)._Object = NULL;
+		}
+#else
 		check(Linker->ExportMap((INT)LinkerIndex)._Object==this);
 		Linker->ExportMap((INT)LinkerIndex)._Object = NULL;
+#endif
 	}
 
 	// Set new linker.
@@ -483,6 +643,10 @@ void UObject::Serialize( FArchive& Ar )
 		Ar << GObj.TempNum << GObj.TempMax;
 
 	// Execution stack.
+#if PLATFORM_64BIT
+	FMainFrame* Android64FrameBeforeSerializeV81 = MainFrame;
+	DWORD Android64FlagsBeforeSerializeV81 = GetFlags();
+#endif
 	guard(SerializeStack);
 	if( (GetFlags() & RF_HasStack) || Ar.Ver()<47 )//oldver
 	{
@@ -547,16 +711,87 @@ void UObject::Serialize( FArchive& Ar )
 		delete MainFrame;
 		MainFrame = NULL;
 	}
+#if PLATFORM_64BIT
+	UE1Android64FrameLifecycleLogV81( "SerializeStack.leave", this, &Ar, Android64FrameBeforeSerializeV81, Android64FlagsBeforeSerializeV81 );
+#endif
 	unguard;
 
 	// Serialize object properties which are defined in the class.
 	if( Class != UClass::StaticClass )
 	{
 		UObject* ptr = this;
+#if PLATFORM_64BIT
+		// UNREAL_ANDROID64_CORE_HEADER_PRESERVE_V50
+		// The execution stack is serialized immediately above.  If a mismatched
+		// native/script property layout overwrites UObject's private header during
+		// tagged property loading, gameplay actors lose their exact StateFrame and
+		// Tick later sees <no-frame>.  Preserve only the UObject header fields that
+		// SerializeTaggedProperties must never modify.  This keeps the loaded
+		// StateNode/Code/LatentAction instead of recreating a fresh default frame in
+		// AActor::Tick.
+		FMainFrame*  Android64SavedMainFrame   = MainFrame;
+		ULinkerLoad* Android64SavedLinker      = Linker;
+		PTRINT       Android64SavedLinkerIndex = LinkerIndex;
+		UObject*     Android64SavedParent      = Parent;
+		DWORD        Android64SavedFlags       = ObjectFlags;
+		FName        Android64SavedName        = Name;
+		UClass*      Android64SavedClass       = Class;
+		INT          Android64SavedIndex       = Index;
+		UObject*     Android64SavedHashNext    = HashNext;
+		char         Android64SavedObjectName[256];
+		appStrncpy( Android64SavedObjectName, GetFullName(), ARRAY_COUNT(Android64SavedObjectName) );
+		Android64SavedObjectName[ARRAY_COUNT(Android64SavedObjectName)-1] = 0;
+#endif
 		if( Ar.IsLoading() || Ar.IsSaving() )
 			GetClass()->SerializeTaggedProperties( Ar, (BYTE*)ptr, Class );
 		else
 			GetClass()->SerializeBin( Ar, (BYTE*)ptr);
+#if PLATFORM_64BIT
+		if( Ar.IsLoading() )
+		{
+			if( MainFrame != Android64SavedMainFrame && (Android64SavedFlags & RF_HasStack) && !UE1Android64CoreBadPtrV50(Android64SavedMainFrame) )
+			{
+				UE1Android64CorePreserveV50Log( "restored MainFrame after property load", Android64SavedObjectName, Android64SavedMainFrame, MainFrame );
+				MainFrame = Android64SavedMainFrame;
+			}
+			if( Linker != Android64SavedLinker || LinkerIndex != Android64SavedLinkerIndex )
+			{
+				UE1Android64CorePreserveV50Log( "restored Linker after property load", Android64SavedObjectName, Android64SavedLinker, Linker );
+				Linker = Android64SavedLinker;
+				LinkerIndex = Android64SavedLinkerIndex;
+			}
+			if( Class != Android64SavedClass )
+			{
+				UE1Android64CorePreserveV50Log( "restored Class after property load", Android64SavedObjectName, Android64SavedClass, Class );
+				Class = Android64SavedClass;
+			}
+			if( Parent != Android64SavedParent )
+			{
+				UE1Android64CorePreserveV50Log( "restored Parent after property load", Android64SavedObjectName, Android64SavedParent, Parent );
+				Parent = Android64SavedParent;
+			}
+			if( Index != Android64SavedIndex )
+			{
+				UE1Android64CorePreserveV50Log( "restored ObjectIndex after property load", Android64SavedObjectName, (void*)(UPTRINT)Android64SavedIndex, (void*)(UPTRINT)Index );
+				Index = Android64SavedIndex;
+			}
+			if( HashNext != Android64SavedHashNext )
+			{
+				UE1Android64CorePreserveV50Log( "restored HashNext after property load", Android64SavedObjectName, Android64SavedHashNext, HashNext );
+				HashNext = Android64SavedHashNext;
+			}
+			if( ObjectFlags != Android64SavedFlags )
+			{
+				UE1Android64CorePreserveV50Log( "restored ObjectFlags after property load", Android64SavedObjectName, (void*)(UPTRINT)Android64SavedFlags, (void*)(UPTRINT)ObjectFlags );
+				ObjectFlags = Android64SavedFlags;
+			}
+			if( Name != Android64SavedName )
+			{
+				UE1Android64CorePreserveV50Log( "restored Name after property load", Android64SavedObjectName, (void*)(UPTRINT)Android64SavedName.GetIndex(), (void*)(UPTRINT)Name.GetIndex() );
+				Name = Android64SavedName;
+			}
+		}
+#endif
 	}
 
 	// State and group.
@@ -656,8 +891,15 @@ void UObject::InitExecution()
 	guard(UObject::InitExecution);
 	check(GetClass()!=NULL);
 
+	FMainFrame* Android64FrameBeforeInitV81 = MainFrame;
+	DWORD Android64FlagsBeforeInitV81 = GetFlags();
+
 	MainFrame = new FMainFrame( this );
 	SetFlags( RF_HasStack );
+
+#if PLATFORM_64BIT
+	UE1Android64FrameLifecycleLogV81( "InitExecution.leave", this, NULL, Android64FrameBeforeInitV81, Android64FlagsBeforeInitV81 );
+#endif
 
 	unguard;
 }

@@ -12,10 +12,463 @@ Revision history:
 #include "EnginePrivate.h"
 #include "UnRender.h"
 #include "UnNet.h"
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#include <android/log.h>
+#endif
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...) __android_log_print(ANDROID_LOG_INFO, "UE1Diag64", __VA_ARGS__)
+#else
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...)
+#endif
+
 
 /*-----------------------------------------------------------------------------
 	Tim's physics modes.
 -----------------------------------------------------------------------------*/
+
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_GAMEPLAY_DIAG_V47
+// UNREAL_ANDROID64_MAINFRAME_LOSS_PROBE_V51
+// UNREAL_ANDROID64_LATENT_CONTINUATION_PROBE_V60
+
+// UNREAL_ANDROID64_LATENT_RESUME_SHADOW_V61
+static INT GUE1Android64StateDiagBudget = 0;
+static INT GUE1Android64FrameLossBudget = 0;
+static INT GUE1Android64LatentContinuationBudgetV60 = 0;
+static INT GUE1Android64ProcessStateOriginBudgetV76 = 0; // UNREAL_ANDROID64_GOTOSTATE_MAINFRAME_GUARD_V76
+
+static inline UBOOL UE1Android64StateDiagBadPtr( const void* Ptr )
+{
+	const UPTRINT Value = (UPTRINT)Ptr;
+	return !Ptr || Value < 0x10000 || ((Value & (sizeof(void*)-1)) != 0);
+}
+
+static const char* UE1Android64StateDiagFrameState( AActor* Actor )
+{
+	if( !Actor || UE1Android64StateDiagBadPtr(Actor) )
+		return "<bad-actor>";
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame || UE1Android64StateDiagBadPtr(Frame) )
+		return "<no-frame>";
+	if( !Frame->StateNode || UE1Android64StateDiagBadPtr(Frame->StateNode) )
+		return "<bad-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64StateDiagLatent( AActor* Actor )
+{
+	if( !Actor || UE1Android64StateDiagBadPtr(Actor) )
+		return -1;
+	FMainFrame* Frame = Actor->GetMainFrame();
+	return (Frame && !UE1Android64StateDiagBadPtr(Frame)) ? Frame->LatentAction : -1;
+}
+
+static INT UE1Android64StateDiagCodeOffset( AActor* Actor )
+{
+	if( !Actor || UE1Android64StateDiagBadPtr(Actor) )
+		return -1;
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame || UE1Android64StateDiagBadPtr(Frame) || !Frame->Node || !Frame->Code || UE1Android64StateDiagBadPtr(Frame->Node) )
+		return -1;
+	return Frame->Code - &Frame->Node->Script(0);
+}
+
+static UBOOL UE1Android64StateDiagInterestingActor( AActor* Actor )
+{
+	if( !Actor || UE1Android64StateDiagBadPtr(Actor) )
+		return 0;
+
+	// UNREAL_ANDROID64_REAL_PLAYER_PROBE_V58
+	// Keep the old state probe useful, but stop the Unreal intro camera pawn from
+	// consuming the budget.  Focus on the actual player pawn, gameplay Skaarj, and
+	// pawns whose Enemy is a real PlayerPawn.
+	const char* FullName = Actor->GetFullName();
+	if( FullName && appStrstr(FullName,"Unreal.MaleOne") )
+		return 0;
+
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	if( PlayerPawn )
+	{
+		if( PlayerPawn->Player && !UE1Android64StateDiagBadPtr(PlayerPawn->Player) )
+			return 1;
+		if( FullName && (appStrstr(FullName,"Vortex2.") || appStrstr(FullName,"Save")) )
+			return 1;
+	}
+
+	const char* ClassName = Actor->GetClassName();
+	if( ClassName && (appStrstr(ClassName,"Skaarj") || appStrstr(ClassName,"ScriptedPawn")) )
+		return !FullName || appStrstr(FullName,"Vortex2.") || appStrstr(FullName,"Save");
+	if( Actor->bIsPawn )
+	{
+		APawn* Pawn = Cast<APawn>(Actor);
+		return Pawn && Pawn->Enemy && !UE1Android64StateDiagBadPtr(Pawn->Enemy) && Pawn->Enemy->IsValid() && Pawn->Enemy->IsA(APlayerPawn::StaticClass);
+	}
+	return 0;
+}
+
+static void UE1Android64StateDiag( const char* Phase, AActor* Actor, FLOAT DeltaSeconds, const char* Extra=NULL )
+{
+	if( !Actor || !UE1Android64StateDiagInterestingActor(Actor) || GUE1Android64StateDiagBudget++ >= 256 )
+		return;
+	APawn* Pawn = Actor->bIsPawn ? Cast<APawn>(Actor) : NULL;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 DIAG STATE phase=%s actor=%s class=%s state=%s latent=%i code=%i role=%i remote=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) enemy=%s moveTarget=%s dt=%.5f flags=%08x extra=%s",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		UE1Android64StateDiagFrameState(Actor),
+		UE1Android64StateDiagLatent(Actor),
+		UE1Android64StateDiagCodeOffset(Actor),
+		(INT)Actor->Role,
+		(INT)Actor->RemoteRole,
+		(INT)Actor->Physics,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		(Pawn && Pawn->Enemy && !UE1Android64StateDiagBadPtr(Pawn->Enemy) && Pawn->Enemy->IsValid()) ? Pawn->Enemy->GetFullName() : "<none>",
+		(Pawn && Pawn->MoveTarget && !UE1Android64StateDiagBadPtr(Pawn->MoveTarget) && Pawn->MoveTarget->IsValid()) ? Pawn->MoveTarget->GetFullName() : "<none>",
+		DeltaSeconds,
+		Actor->GetFlags(),
+		Extra ? Extra : "" );
+}
+
+static void UE1Android64ProcessStateOriginLogV76( const char* Phase, AActor* Actor, FLOAT DeltaSeconds, FMainFrame* Frame )
+{
+	if( !Actor || !UE1Android64StateDiagInterestingActor(Actor) || GUE1Android64ProcessStateOriginBudgetV76++ >= 128 )
+		return;
+	const char* FrameState = UE1Android64StateDiagFrameState(Actor);
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 PROCESSSTATE ORIGIN V76 phase=%s actor=%s class=%s frame=%p state=%s latent=%i code=%i role=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) flags=%08x dt=%.5f",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		Frame,
+		FrameState,
+		UE1Android64StateDiagLatent(Actor),
+		UE1Android64StateDiagCodeOffset(Actor),
+		(INT)Actor->Role,
+		(INT)Actor->Physics,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		Actor->GetFlags(),
+		DeltaSeconds );
+}
+
+static void UE1Android64FrameLossProbeV51( const char* Phase, AActor* Actor, FMainFrame* Before, FMainFrame* After, UState* BeforeState, BYTE* BeforeCode, INT BeforeLatent )
+{
+	if( !Actor || !UE1Android64StateDiagInterestingActor(Actor) || GUE1Android64FrameLossBudget++ >= 96 )
+		return;
+	const INT BeforeCodeOffset = (Before && !UE1Android64StateDiagBadPtr(Before) && Before->Node && BeforeCode && !UE1Android64StateDiagBadPtr(Before->Node)) ? (BeforeCode - &Before->Node->Script(0)) : -1;
+	const INT AfterCodeOffset  = (After  && !UE1Android64StateDiagBadPtr(After)  && After->Node  && After->Code && !UE1Android64StateDiagBadPtr(After->Node))  ? (After->Code - &After->Node->Script(0)) : -1;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 MAINFRAME LOSS PROBE V51 phase=%s actor=%s class=%s beforeFrame=%p afterFrame=%p beforeState=%s afterState=%s beforeLatent=%i afterLatent=%i beforeCode=%i afterCode=%i flags=%08x physics=%i loc=(%.1f %.1f %.1f)",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		Before,
+		After,
+		BeforeState && !UE1Android64StateDiagBadPtr(BeforeState) ? BeforeState->GetName() : "<none>",
+		UE1Android64StateDiagFrameState(Actor),
+		BeforeLatent,
+		(After && !UE1Android64StateDiagBadPtr(After)) ? After->LatentAction : -1,
+		BeforeCodeOffset,
+		AfterCodeOffset,
+		Actor->GetFlags(),
+		(INT)Actor->Physics,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z );
+}
+
+
+static INT UE1Android64FrameCodeOffsetV60( FFrame* Frame, BYTE* CodeOverride=NULL )
+{
+	if( !Frame || UE1Android64StateDiagBadPtr(Frame) || !Frame->Node || UE1Android64StateDiagBadPtr(Frame->Node) )
+		return -1;
+	BYTE* Code = CodeOverride ? CodeOverride : Frame->Code;
+	// UNREAL_ANDROID64_LATENT_RESUME_SHADOW_V61:
+	// Code is bytecode and may be BYTE-aligned. Do not reject it with UObject
+	// pointer alignment checks.  Instead verify that it points inside Node->Script.
+	if( !Code )
+		return -1;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Code >= Base && Code < End) ? (INT)(Code - Base) : -1;
+}
+
+static INT UE1Android64FrameOpcodeV60( FFrame* Frame )
+{
+	if( !Frame || UE1Android64StateDiagBadPtr(Frame) || !Frame->Node || UE1Android64StateDiagBadPtr(Frame->Node) || !Frame->Code )
+		return -1;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Frame->Code >= Base && Frame->Code < End) ? (INT)*Frame->Code : -1;
+}
+
+static void UE1Android64LatentContinuationProbeV60( const char* Phase, AActor* Actor, FMainFrame* BeforeFrame, FMainFrame* AfterFrame, UState* BeforeState, BYTE* BeforeCode, INT BeforeLatent, FLOAT DeltaSeconds )
+{
+	if( !Actor || !UE1Android64StateDiagInterestingActor(Actor) || GUE1Android64LatentContinuationBudgetV60++ >= 160 )
+		return;
+	APawn* Pawn = Actor->bIsPawn ? Cast<APawn>(Actor) : NULL;
+	const INT BeforeCodeOffset = UE1Android64FrameCodeOffsetV60( BeforeFrame, BeforeCode );
+	const INT AfterCodeOffset  = UE1Android64FrameCodeOffsetV60( AfterFrame, NULL );
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 LATENT CONTINUATION PROBE V60 phase=%s actor=%s class=%s beforeFrame=%p afterFrame=%p beforeState=%s afterState=%s beforeLatent=%i afterLatent=%i beforeCode=%i afterCode=%i afterOpcode=%i dt=%.5f physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) enemy=%s moveTarget=%s flags=%08x",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		BeforeFrame,
+		AfterFrame,
+		BeforeState && !UE1Android64StateDiagBadPtr(BeforeState) ? BeforeState->GetName() : "<none>",
+		UE1Android64StateDiagFrameState(Actor),
+		BeforeLatent,
+		(AfterFrame && !UE1Android64StateDiagBadPtr(AfterFrame)) ? AfterFrame->LatentAction : -1,
+		BeforeCodeOffset,
+		AfterCodeOffset,
+		UE1Android64FrameOpcodeV60( AfterFrame ),
+		DeltaSeconds,
+		(INT)Actor->Physics,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		(Pawn && Pawn->Enemy && !UE1Android64StateDiagBadPtr(Pawn->Enemy) && Pawn->Enemy->IsValid()) ? Pawn->Enemy->GetFullName() : "<none>",
+		(Pawn && Pawn->MoveTarget && !UE1Android64StateDiagBadPtr(Pawn->MoveTarget) && Pawn->MoveTarget->IsValid()) ? Pawn->MoveTarget->GetFullName() : "<none>",
+		Actor->GetFlags() );
+}
+
+
+// UNREAL_ANDROID64_STATEFRAME_CODE_ORIGIN_PROBE_V62
+static INT GUE1Android64StateFrameOriginBudgetV62 = 0;
+
+static INT UE1Android64FindStateLabelOffsetV62( UState* State, FName LabelName )
+{
+	for( UState* Source=State; Source && !UE1Android64StateDiagBadPtr(Source); Source=Source->GetSuperState() )
+	{
+		if( Source->LabelTableOffset == MAXWORD || Source->Script.Num() <= 0 || Source->LabelTableOffset >= Source->Script.Num() )
+			continue;
+		BYTE* TableBase = &Source->Script(Source->LabelTableOffset);
+		BYTE* ScriptEnd = &Source->Script(0) + Source->Script.Num();
+		for( FLabelEntry* Label=(FLabelEntry*)TableBase; (BYTE*)(Label+1) <= ScriptEnd; ++Label )
+		{
+			if( Label->Name == NAME_None )
+				break;
+			if( Label->Name == LabelName )
+				return Label->iCode;
+		}
+	}
+	return INDEX_NONE;
+}
+
+static void UE1Android64StateFrameOriginProbeV62( const char* Phase, AActor* Actor, FLOAT DeltaSeconds )
+{
+	if( !Actor || !UE1Android64StateDiagInterestingActor(Actor) || GUE1Android64StateFrameOriginBudgetV62++ >= 192 )
+		return;
+	FMainFrame* Frame = Actor->GetMainFrame();
+	UState* StateNode = (Frame && !UE1Android64StateDiagBadPtr(Frame)) ? Frame->StateNode : NULL;
+	UStruct* Node = (Frame && !UE1Android64StateDiagBadPtr(Frame)) ? Frame->Node : NULL;
+	const INT ScriptNum  = (Node && !UE1Android64StateDiagBadPtr(Node)) ? Node->Script.Num() : -1;
+	const INT LabelTable = (StateNode && !UE1Android64StateDiagBadPtr(StateNode)) ? StateNode->LabelTableOffset : -1;
+	const INT BeginCode  = (StateNode && !UE1Android64StateDiagBadPtr(StateNode)) ? UE1Android64FindStateLabelOffsetV62( StateNode, NAME_Begin ) : INDEX_NONE;
+	const INT CurrentCode= UE1Android64FrameCodeOffsetV60( Frame, NULL );
+	APawn* Pawn = Actor->bIsPawn ? Cast<APawn>(Actor) : NULL;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 STATEFRAME PROBE V62 phase=%s actor=%s class=%s frame=%p node=%s state=%s latent=%i code=%i opcode=%i scriptNum=%i labelTable=%i begin=%i probe=%08x%08x role=%i remote=%i physics=%i dt=%.5f loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) enemy=%s moveTarget=%s flags=%08x",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		Frame,
+		(Node && !UE1Android64StateDiagBadPtr(Node)) ? Node->GetName() : "<none>",
+		(StateNode && !UE1Android64StateDiagBadPtr(StateNode)) ? StateNode->GetName() : "<none>",
+		(Frame && !UE1Android64StateDiagBadPtr(Frame)) ? Frame->LatentAction : -1,
+		CurrentCode,
+		UE1Android64FrameOpcodeV60( Frame ),
+		ScriptNum,
+		LabelTable,
+		BeginCode,
+		(Frame && !UE1Android64StateDiagBadPtr(Frame)) ? (INT)(Frame->ProbeMask>>32) : 0,
+		(Frame && !UE1Android64StateDiagBadPtr(Frame)) ? (INT)Frame->ProbeMask : 0,
+		(INT)Actor->Role,
+		(INT)Actor->RemoteRole,
+		(INT)Actor->Physics,
+		DeltaSeconds,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		(Pawn && Pawn->Enemy && !UE1Android64StateDiagBadPtr(Pawn->Enemy) && Pawn->Enemy->IsValid()) ? Pawn->Enemy->GetFullName() : "<none>",
+		(Pawn && Pawn->MoveTarget && !UE1Android64StateDiagBadPtr(Pawn->MoveTarget) && Pawn->MoveTarget->IsValid()) ? Pawn->MoveTarget->GetFullName() : "<none>",
+		Actor->GetFlags() );
+}
+
+// UNREAL_ANDROID64_REAL_PLAYER_PROBE_V58
+// v56 replaces the very chatty v55 per-frame path probe with milestone-only
+// logging.  This is still diagnosis only: no physics, target, collision or input
+// state is changed here.  The goal is to prove whether PHYS_Interpolating reaches
+// InterpolateEnd / advances from InterpolationPoint0 to InterpolationPoint1.
+static INT GUE1Android64InterpPathBudgetV56 = 0;
+
+struct FUE1Android64InterpTrackV56
+{
+	AActor* Actor;
+	AActor* Target;
+	INT     LastBucket;
+	INT     LastPhysics;
+	INT     LastInterp;
+	FLOAT   LastAlpha;
+};
+
+static FUE1Android64InterpTrackV56 GUE1Android64InterpTracksV56[8] =
+{
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f },
+	{ NULL, NULL, -1, -1, -1, -1.f }
+};
+
+static const char* UE1Android64InterpActorNameV56( AActor* Actor )
+{
+	return (Actor && !UE1Android64StateDiagBadPtr(Actor) && Actor->IsValid()) ? Actor->GetFullName() : "<none>";
+}
+
+static const char* UE1Android64InterpActorClassV56( AActor* Actor )
+{
+	return (Actor && !UE1Android64StateDiagBadPtr(Actor) && Actor->IsValid()) ? Actor->GetClassName() : "<none>";
+}
+
+static UBOOL UE1Android64InterpInterestingV56( AActor* Actor )
+{
+	if( !Actor || UE1Android64StateDiagBadPtr(Actor) || !Actor->IsValid() )
+		return 0;
+
+	// UNREAL_ANDROID64_REAL_PLAYER_PROBE_V58
+	// Keep interpolation milestones only for actual player candidates now.
+	const char* FullName = Actor->GetFullName();
+	if( FullName && appStrstr(FullName,"Unreal.MaleOne") )
+		return 0;
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	if( PlayerPawn )
+	{
+		if( PlayerPawn->Player && !UE1Android64StateDiagBadPtr(PlayerPawn->Player) )
+			return 1;
+		if( FullName && (appStrstr(FullName,"Vortex2.") || appStrstr(FullName,"Save")) )
+			return 1;
+	}
+	return 0;
+}
+
+static INT UE1Android64InterpAlphaBucketV56( FLOAT Alpha )
+{
+	if( Alpha >= 0.999f ) return 100;
+	if( Alpha >= 0.950f ) return 95;
+	if( Alpha >= 0.900f ) return 90;
+	if( Alpha >= 0.750f ) return 75;
+	if( Alpha >= 0.500f ) return 50;
+	if( Alpha >= 0.250f ) return 25;
+	if( Alpha >= 0.100f ) return 10;
+	return 0;
+}
+
+static FUE1Android64InterpTrackV56* UE1Android64InterpFindTrackV56( AActor* Actor )
+{
+	INT Empty = -1;
+	for( INT i=0; i<ARRAY_COUNT(GUE1Android64InterpTracksV56); i++ )
+	{
+		if( GUE1Android64InterpTracksV56[i].Actor == Actor )
+			return &GUE1Android64InterpTracksV56[i];
+		if( !GUE1Android64InterpTracksV56[i].Actor && Empty < 0 )
+			Empty = i;
+	}
+	if( Empty < 0 )
+		Empty = 0;
+	GUE1Android64InterpTracksV56[Empty].Actor       = Actor;
+	GUE1Android64InterpTracksV56[Empty].Target      = NULL;
+	GUE1Android64InterpTracksV56[Empty].LastBucket  = -1;
+	GUE1Android64InterpTracksV56[Empty].LastPhysics = -1;
+	GUE1Android64InterpTracksV56[Empty].LastInterp  = -1;
+	GUE1Android64InterpTracksV56[Empty].LastAlpha   = -1.f;
+	return &GUE1Android64InterpTracksV56[Empty];
+}
+
+static UBOOL UE1Android64InterpCriticalPhaseV56( const char* Phase )
+{
+	return Phase &&
+	(
+		appStrstr(Phase,"overflow") ||
+		appStrstr(Phase,"no-next") ||
+		appStrstr(Phase,"no-dest") ||
+		appStrstr(Phase,"target-changed")
+	);
+}
+
+static void UE1Android64InterpDiagV56( const char* Phase, AActor* Actor, FLOAT DeltaTime, AInterpolationPoint* Dest, FLOAT OldAlpha, FLOAT DestAlpha, FLOAT RateModifier )
+{
+	if( !UE1Android64InterpInterestingV56(Actor) )
+		return;
+
+	FUE1Android64InterpTrackV56* Track = UE1Android64InterpFindTrackV56( Actor );
+	const INT Bucket        = UE1Android64InterpAlphaBucketV56( Actor->PhysAlpha );
+	const UBOOL IsAfterAlpha = Phase && appStrstr(Phase,"after-alpha");
+	const UBOOL IsEnter      = Phase && appStrstr(Phase,"physPathing.enter");
+	const UBOOL Critical     = UE1Android64InterpCriticalPhaseV56( Phase );
+	const UBOOL TargetChanged  = Track && Track->LastBucket >= 0 && Track->Target != Actor->Target;
+	const UBOOL PhysicsChanged = Track && Track->LastBucket >= 0 && (Track->LastPhysics != (INT)Actor->Physics || Track->LastInterp != (INT)Actor->bInterpolating);
+	const UBOOL BucketChanged  = Track && Track->LastBucket != Bucket;
+	const UBOOL AlphaWentBack  = Track && Track->LastAlpha >= 0.f && Actor->PhysAlpha + 0.02f < Track->LastAlpha;
+
+	UBOOL ShouldLog = Critical || TargetChanged || PhysicsChanged || AlphaWentBack;
+	if( !ShouldLog && IsEnter && Track && Track->LastBucket < 0 )
+		ShouldLog = 1;
+	if( !ShouldLog && IsAfterAlpha && BucketChanged && (Bucket==10 || Bucket==25 || Bucket==50 || Bucket==75 || Bucket==90 || Bucket==95 || Bucket==100) )
+		ShouldLog = 1;
+
+	if( Track )
+	{
+		Track->Target      = Actor->Target;
+		Track->LastBucket  = Bucket;
+		Track->LastPhysics = (INT)Actor->Physics;
+		Track->LastInterp  = (INT)Actor->bInterpolating;
+		Track->LastAlpha   = Actor->PhysAlpha;
+	}
+
+	if( !ShouldLog || GUE1Android64InterpPathBudgetV56++ >= 140 )
+		return;
+
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 INTERP END PROBE V57 phase=%s actor=%s class=%s state=%s latent=%i code=%i physics=%i interp=%i alpha=%.4f oldAlpha=%.4f destAlpha=%.4f bucket=%i rate=%.4f rateMod=%.4f dt=%.5f loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) input=(f=%.3f s=%.3f turn=%.3f look=%.3f) coll=(world=%i actors=%i block=%i) target=%s targetClass=%s dest=%s prev=%s next=%s changed=(target=%i phys=%i alphaBack=%i) flags=%08x",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		UE1Android64StateDiagFrameState(Actor),
+		UE1Android64StateDiagLatent(Actor),
+		UE1Android64StateDiagCodeOffset(Actor),
+		(INT)Actor->Physics,
+		(INT)Actor->bInterpolating,
+		Actor->PhysAlpha,
+		OldAlpha,
+		DestAlpha,
+		Bucket,
+		Actor->PhysRate,
+		RateModifier,
+		DeltaTime,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		PlayerPawn ? PlayerPawn->aForward : 0.f,
+		PlayerPawn ? PlayerPawn->aStrafe : 0.f,
+		PlayerPawn ? PlayerPawn->aTurn : 0.f,
+		PlayerPawn ? PlayerPawn->aLookUp : 0.f,
+		(INT)Actor->bCollideWorld,
+		(INT)Actor->bCollideActors,
+		(INT)Actor->bBlockActors,
+		UE1Android64InterpActorNameV56(Actor->Target),
+		UE1Android64InterpActorClassV56(Actor->Target),
+		UE1Android64InterpActorNameV56(Dest),
+		(Dest && !UE1Android64StateDiagBadPtr(Dest)) ? UE1Android64InterpActorNameV56(Dest->Prev) : "<none>",
+		(Dest && !UE1Android64StateDiagBadPtr(Dest)) ? UE1Android64InterpActorNameV56(Dest->Next) : "<none>",
+		(INT)TargetChanged,
+		(INT)PhysicsChanged,
+		(INT)AlphaWentBack,
+		Actor->GetFlags() );
+}
+#endif
 
 FLOAT Splerp( FLOAT F )
 {
@@ -30,6 +483,9 @@ void AActor::physPathing( FLOAT DeltaTime )
 {
 	guard(AActor::physPathing);
 
+#if PLATFORM_64BIT
+	UE1Android64InterpDiagV56( "physPathing.enter", this, DeltaTime, Cast<AInterpolationPoint>(Target), PhysAlpha, PhysAlpha, 1.0f );
+#endif
 	// Linear interpolate from Target to Target.Next.
 	while( PhysRate!=0.0 && bInterpolating && DeltaTime>0.0 )
 	{
@@ -44,7 +500,13 @@ void AActor::physPathing( FLOAT DeltaTime )
 		// Update alpha.
 		FLOAT OldAlpha  = PhysAlpha;
 		FLOAT DestAlpha = PhysAlpha + PhysRate * RateModifier * DeltaTime;
+#if PLATFORM_64BIT
+		UE1Android64InterpDiagV56( "physPathing.before-alpha", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 		PhysAlpha       = Clamp( DestAlpha, 0.f, 1.f );
+#if PLATFORM_64BIT
+		UE1Android64InterpDiagV56( "physPathing.after-alpha", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 
 		// Move and rotate.
 		if( Dest && Dest->Next )
@@ -74,7 +536,16 @@ void AActor::physPathing( FLOAT DeltaTime )
 			XLevel->MoveActor( this, NewLocation - Location, NewRotation, Hit );
 			if( IsA(APawn::StaticClass) )
 				((APawn*)this)->ViewRotation = Rotation;
+#if PLATFORM_64BIT
+			UE1Android64InterpDiagV56( "physPathing.after-move", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 		}
+#if PLATFORM_64BIT
+		else
+		{
+			UE1Android64InterpDiagV56( Dest ? "physPathing.no-next" : "physPathing.no-dest", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+		}
+#endif
 
 		// If overflowing, notify and go to next place.
 		if( PhysRate>0.0 && DestAlpha>1.0 )
@@ -83,11 +554,33 @@ void AActor::physPathing( FLOAT DeltaTime )
 			DeltaTime *= (DestAlpha - 1.0) / (DestAlpha - OldAlpha);
 			if( Target )
 			{
+#if PLATFORM_64BIT
+				AActor* NotifyTarget = Target;
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.before-target-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				Target->eventInterpolateEnd(this);
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.after-target-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.before-self-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				eventInterpolateEnd(Target);
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.after-self-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+				if( Target != NotifyTarget )
+					UE1Android64InterpDiagV56( "physPathing.overflow-pos.target-changed-by-script", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				if( Dest )
 					Target = Dest->Next;
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.after-target-advance", this, DeltaTime, Cast<AInterpolationPoint>(Target), OldAlpha, DestAlpha, RateModifier );
+#endif
 			}
+#if PLATFORM_64BIT
+			else
+			{
+				UE1Android64InterpDiagV56( "physPathing.overflow-pos.no-target", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+			}
+#endif
 		}
 		else if( PhysRate<0.0 && DestAlpha<0.0 )
 		{
@@ -95,15 +588,30 @@ void AActor::physPathing( FLOAT DeltaTime )
 			DeltaTime *= (0.0 - DestAlpha) / (OldAlpha - DestAlpha);
 			if( Target )
 			{
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-neg.before-target-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				Target->eventInterpolateEnd(this);
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-neg.after-target-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				eventInterpolateEnd(Target);
+#if PLATFORM_64BIT
+				UE1Android64InterpDiagV56( "physPathing.overflow-neg.after-self-event", this, DeltaTime, Dest, OldAlpha, DestAlpha, RateModifier );
+#endif
 				if( Target->IsA(AInterpolationPoint::StaticClass) )
 					Target = Dest->Prev;
 			}
 			eventInterpolateEnd(NULL);
+#if PLATFORM_64BIT
+			UE1Android64InterpDiagV56( "physPathing.overflow-neg.after-null-self-event", this, DeltaTime, Cast<AInterpolationPoint>(Target), OldAlpha, DestAlpha, RateModifier );
+#endif
 		}
 		else DeltaTime=0.0;
 	};
+#if PLATFORM_64BIT
+	UE1Android64InterpDiagV56( "physPathing.leave", this, DeltaTime, Cast<AInterpolationPoint>(Target), PhysAlpha, PhysAlpha, 1.0f );
+#endif
 	unguard;
 }
 
@@ -1559,6 +2067,98 @@ static UBOOL UE1AndroidKnownClassPointer64( UClass* Class, UClass* RequiredParen
 }
 #endif
 
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_EXPLOSION_DAMAGE_ORIGIN_PROBE_V82
+static INT GUE1Android64ExplosionScriptBudgetV82 = 0;
+
+static UBOOL UE1Android64ScriptV82Contains( const char* Text, const char* Token )
+{
+	return Text && Token && appStrfind((char*)Text,(char*)Token)!=NULL;
+}
+
+static UBOOL UE1Android64ScriptV82InterestingName( const char* Name )
+{
+	return UE1Android64ScriptV82Contains(Name,"Explosion")
+		|| UE1Android64ScriptV82Contains(Name,"Explode")
+		|| UE1Android64ScriptV82Contains(Name,"Barrel")
+		|| UE1Android64ScriptV82Contains(Name,"Fragment")
+		|| UE1Android64ScriptV82Contains(Name,"Chunk")
+		|| UE1Android64ScriptV82Contains(Name,"Smoke")
+		|| UE1Android64ScriptV82Contains(Name,"Flame")
+		|| UE1Android64ScriptV82Contains(Name,"Blast")
+		|| UE1Android64ScriptV82Contains(Name,"Flash")
+		|| UE1Android64ScriptV82Contains(Name,"Spark")
+		|| UE1Android64ScriptV82Contains(Name,"Shock")
+		|| UE1Android64ScriptV82Contains(Name,"Sludge")
+		|| UE1Android64ScriptV82Contains(Name,"Projectile")
+		|| UE1Android64ScriptV82Contains(Name,"Rocket")
+		|| UE1Android64ScriptV82Contains(Name,"Grenade")
+		|| UE1Android64ScriptV82Contains(Name,"Flak")
+		|| UE1Android64ScriptV82Contains(Name,"ASMD")
+		|| UE1Android64ScriptV82Contains(Name,"Dispersion");
+}
+
+static const char* UE1Android64ScriptV82StateName( AActor* Actor )
+{
+	if( !Actor )
+		return "<null>";
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame )
+		return "<no-frame>";
+	if( !Frame->StateNode )
+		return "<no-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64ScriptV82CodeOffset( AActor* Actor )
+{
+	if( !Actor )
+		return -1;
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame || !Frame->Node || !Frame->Code || Frame->Node->Script.Num() <= 0 )
+		return -1;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Frame->Code >= Base && Frame->Code < End) ? (INT)(Frame->Code - Base) : -1;
+}
+
+static void UE1Android64ScriptV82Log( const char* Phase, AActor* Context, UClass* SpawnClass=NULL, AActor* Spawned=NULL )
+{
+	if( GUE1Android64ExplosionScriptBudgetV82++ >= 192 )
+		return;
+	FMainFrame* ContextFrame = Context ? Context->GetMainFrame() : NULL;
+	FMainFrame* SpawnedFrame = Spawned ? Spawned->GetMainFrame() : NULL;
+	debugf( NAME_Warning, "ANDROID64 EXPLOSION SCRIPT V82 phase=%s context=%s contextClass=%s contextFrame=%p contextState=%s contextCode=%i contextLatent=%i contextPhys=%i contextLoc=(%.1f %.1f %.1f) contextVel=(%.1f %.1f %.1f) spawnClass=%s spawned=%s spawnedFrame=%p spawnedState=%s spawnedCode=%i spawnedPhys=%i spawnedLoc=(%.1f %.1f %.1f) owner=%s instigator=%s budget=%i",
+		Phase ? Phase : "?",
+		Context ? Context->GetFullName() : "<null>",
+		Context ? Context->GetClassName() : "<null>",
+		ContextFrame,
+		UE1Android64ScriptV82StateName(Context),
+		UE1Android64ScriptV82CodeOffset(Context),
+		ContextFrame ? ContextFrame->LatentAction : -1,
+		Context ? (INT)Context->Physics : -1,
+		Context ? Context->Location.X : 0.f,
+		Context ? Context->Location.Y : 0.f,
+		Context ? Context->Location.Z : 0.f,
+		Context ? Context->Velocity.X : 0.f,
+		Context ? Context->Velocity.Y : 0.f,
+		Context ? Context->Velocity.Z : 0.f,
+		SpawnClass ? SpawnClass->GetName() : "<none>",
+		Spawned ? Spawned->GetFullName() : "<none>",
+		SpawnedFrame,
+		UE1Android64ScriptV82StateName(Spawned),
+		UE1Android64ScriptV82CodeOffset(Spawned),
+		Spawned ? (INT)Spawned->Physics : -1,
+		Spawned ? Spawned->Location.X : 0.f,
+		Spawned ? Spawned->Location.Y : 0.f,
+		Spawned ? Spawned->Location.Z : 0.f,
+		Context && Context->Owner ? Context->Owner->GetFullName() : "<none>",
+		Context && Context->Instigator ? Context->Instigator->GetFullName() : "<none>",
+		GUE1Android64ExplosionScriptBudgetV82 );
+}
+#endif
+
 void AActor::execSpawn( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execSpawn);
@@ -1584,6 +2184,11 @@ void AActor::execSpawn( FFrame& Stack, BYTE*& Result )
 #endif
 
 	// Spawn and return actor.
+#if PLATFORM_64BIT
+	UBOOL bAndroid64ExplosionScriptSpawnV82 = SpawnClass && UE1Android64ScriptV82InterestingName( SpawnClass->GetName() );
+	if( bAndroid64ExplosionScriptSpawnV82 )
+		UE1Android64ScriptV82Log( "execSpawn.before", this, SpawnClass, NULL );
+#endif
 	AActor *Spawned = SpawnClass ? GetLevel()->SpawnActor
 	(
 		SpawnClass,
@@ -1595,6 +2200,10 @@ void AActor::execSpawn( FFrame& Stack, BYTE*& Result )
 	) : NULL;
 	if( Spawned )
 		Spawned->Tag = SpawnName;
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionScriptSpawnV82 || (Spawned && UE1Android64ScriptV82InterestingName(Spawned->GetClassName())) )
+		UE1Android64ScriptV82Log( "execSpawn.after", this, SpawnClass, Spawned );
+#endif
 	*(AActor**)Result = Spawned;
 
 	unguardexecSlow;
@@ -1607,7 +2216,16 @@ void AActor::execDestroy( FFrame& Stack, BYTE*& Result )
 
 	P_FINISH;
 	
+#if PLATFORM_64BIT
+	UBOOL bAndroid64ExplosionScriptDestroyV82 = UE1Android64ScriptV82InterestingName( GetName() ) || UE1Android64ScriptV82InterestingName( GetClassName() );
+	if( bAndroid64ExplosionScriptDestroyV82 )
+		UE1Android64ScriptV82Log( "execDestroy.before", this, NULL, NULL );
+#endif
 	*(DWORD*)Result = GetLevel()->DestroyActor( this );
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionScriptDestroyV82 )
+		UE1Android64ScriptV82Log( "execDestroy.after", this, NULL, NULL );
+#endif
 
 	unguardexecSlow;
 }
@@ -2007,10 +2625,12 @@ AUTOREGISTER_INTRINSIC( AZoneInfo, 308, execZoneActors );
 void AActor::ProcessState( FLOAT DeltaSeconds )
 {
 	guard(AActor::ProcessState);
+	FMainFrame* MainFrame = GetMainFrame();
 	if
-	(	GetMainFrame()
-	&&	GetMainFrame()->Code
-	&&	(Role>=ROLE_Authority || (GetMainFrame()->StateNode->StateFlags & STATE_Simulated))
+	(	MainFrame
+	&&	MainFrame->Code
+	&&	MainFrame->StateNode
+	&&	(Role>=ROLE_Authority || (MainFrame->StateNode->StateFlags & STATE_Simulated))
 	&&	!IsPendingKill() )
 	{
 		if( ++GScriptEntryTag==1 )
@@ -2021,16 +2641,20 @@ void AActor::ProcessState( FLOAT DeltaSeconds )
 		*(FLOAT*)Buffer = DeltaSeconds;
 
 		// If a latent action is in progress, update it.
-		if( GetMainFrame()->LatentAction )
-			(this->*GIntrinsics[GetMainFrame()->LatentAction])( *GetMainFrame(), Addr=Buffer );
+		if( MainFrame->LatentAction )
+			(this->*GIntrinsics[MainFrame->LatentAction])( *MainFrame, Addr=Buffer );
 
 		// Execute code.
 		INT NumStates=0;
-		while( !bDeleteMe && GetMainFrame()->Code && !GetMainFrame()->LatentAction )
+		MainFrame = GetMainFrame();
+		while( !bDeleteMe && MainFrame && MainFrame->Code && MainFrame->StateNode && !MainFrame->LatentAction )
 		{
-			UState* OldStateNode = GetMainFrame()->StateNode;
-			GetMainFrame()->Step( this, Addr=Buffer );
-			if( GetMainFrame()->StateNode != OldStateNode )
+			UState* OldStateNode = MainFrame->StateNode;
+			MainFrame->Step( this, Addr=Buffer );
+			MainFrame = GetMainFrame();
+			if( !MainFrame || !MainFrame->StateNode )
+				break;
+			if( MainFrame->StateNode != OldStateNode )
 			{
 				if( ++NumStates > 4 )
 				{
@@ -2042,6 +2666,25 @@ void AActor::ProcessState( FLOAT DeltaSeconds )
 		if( --GScriptEntryTag==0 )
 			uunclock(GScriptCycles);
 	}
+#if PLATFORM_64BIT
+	else
+	{
+		if( !MainFrame )
+			UE1Android64ProcessStateOriginLogV76( "skip-no-mainframe-v76", this, DeltaSeconds, MainFrame );
+		else if( UE1Android64StateDiagBadPtr(MainFrame) )
+			UE1Android64ProcessStateOriginLogV76( "skip-bad-mainframe-v76", this, DeltaSeconds, MainFrame );
+		else if( !MainFrame->StateNode )
+			UE1Android64ProcessStateOriginLogV76( "skip-no-statenode-v76", this, DeltaSeconds, MainFrame );
+		else if( !MainFrame->Code )
+		{
+			// UNREAL_ANDROID64_PLAYER_MOVE_BLOCK_PROBE_V83
+			// A null Code pointer is normal for many UE1 event-driven states.
+			// The old v76 logger flooded logcat with harmless skip-no-code rows and
+			// hid the real movement/collision boundary we now need to inspect.
+		}
+
+	}
+#endif
 	unguardobj;
 }
 

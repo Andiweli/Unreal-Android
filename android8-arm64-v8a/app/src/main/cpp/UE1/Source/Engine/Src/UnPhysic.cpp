@@ -8,6 +8,192 @@
 =============================================================================*/
 
 #include "EnginePrivate.h"
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#include <android/log.h>
+#endif
+#if PLATFORM_ANDROID && PLATFORM_64BIT
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...) __android_log_print(ANDROID_LOG_INFO, "UE1Diag64", __VA_ARGS__)
+#else
+#define UE1_ANDROID64_GAMEPLAY_DIAG_LOG(...)
+#endif
+
+
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_GAMEPLAY_DIAG_V47
+static INT GUE1Android64PhysDiagBudget = 0;
+
+static inline UBOOL UE1Android64PhysDiagBadPtr( const void* Ptr )
+{
+	const UPTRINT Value = (UPTRINT)Ptr;
+	return !Ptr || Value < 0x10000 || ((Value & (sizeof(void*)-1)) != 0);
+}
+
+static const char* UE1Android64PhysActorName( AActor* Actor )
+{
+	return (Actor && !UE1Android64PhysDiagBadPtr(Actor) && Actor->IsValid()) ? Actor->GetFullName() : "<none>";
+}
+
+static const char* UE1Android64PhysActorClass( AActor* Actor )
+{
+	return (Actor && !UE1Android64PhysDiagBadPtr(Actor) && Actor->IsValid()) ? Actor->GetClassName() : "<none>";
+}
+
+static const char* UE1Android64PhysState( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64PhysDiagBadPtr(Pawn) )
+		return "<bad-pawn>";
+	FMainFrame* Frame = Pawn->GetMainFrame();
+	if( !Frame || UE1Android64PhysDiagBadPtr(Frame) )
+		return "<no-frame>";
+	if( !Frame->StateNode || UE1Android64PhysDiagBadPtr(Frame->StateNode) )
+		return "<bad-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64PhysLatent( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64PhysDiagBadPtr(Pawn) )
+		return -1;
+	FMainFrame* Frame = Pawn->GetMainFrame();
+	return (Frame && !UE1Android64PhysDiagBadPtr(Frame)) ? Frame->LatentAction : -1;
+}
+
+static UBOOL UE1Android64PhysInterestingPawn( APawn* Pawn )
+{
+	if( !Pawn || UE1Android64PhysDiagBadPtr(Pawn) )
+		return 0;
+	const char* ClassName = Pawn->GetClassName();
+	if( ClassName && (appStrstr(ClassName,"Skaarj") || appStrstr(ClassName,"Player") || appStrstr(ClassName,"Trooper")) )
+		return 1;
+	return Pawn->Enemy && !UE1Android64PhysDiagBadPtr(Pawn->Enemy) && Pawn->Enemy->IsValid() && Pawn->Enemy->IsA(APlayerPawn::StaticClass);
+}
+
+static void UE1Android64PhysDiag( const char* Phase, APawn* Pawn, const FVector* Delta=NULL, const FCheckResult* Hit=NULL, FLOAT Remaining=0.f, INT Iterations=0 )
+{
+	// UNREAL_ANDROID64_GAMEPLAY_DIAG_THROTTLE_V49
+	// The v47 PHYS trace was intentionally broad, but it can saturate logcat and
+	// stall the SDL/game thread on device.  Keep only the key edges now that the
+	// first differential showed persistent <no-frame> rather than collision hits.
+	if( Phase && appStrstr(Phase,"loop") )
+		return;
+	if( !Pawn || !UE1Android64PhysInterestingPawn(Pawn) || GUE1Android64PhysDiagBudget++ >= 96 )
+		return;
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 DIAG PHYS phase=%s pawn=%s class=%s state=%s latent=%i physics=%i loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) dest=(%.1f %.1f %.1f) enemy=%s moveTarget=%s base=%s delta=(%.1f %.1f %.1f) hitTime=%.3f hitActor=%s hitClass=%s hitNormal=(%.2f %.2f %.2f) remaining=%.4f iter=%i moveTimer=%.3f desired=%.3f ground=%.3f flags=%08x",
+		Phase ? Phase : "?",
+		Pawn->GetFullName(),
+		Pawn->GetClassName(),
+		UE1Android64PhysState(Pawn),
+		UE1Android64PhysLatent(Pawn),
+		(INT)Pawn->Physics,
+		Pawn->Location.X, Pawn->Location.Y, Pawn->Location.Z,
+		Pawn->Velocity.X, Pawn->Velocity.Y, Pawn->Velocity.Z,
+		Pawn->Acceleration.X, Pawn->Acceleration.Y, Pawn->Acceleration.Z,
+		Pawn->Destination.X, Pawn->Destination.Y, Pawn->Destination.Z,
+		UE1Android64PhysActorName(Pawn->Enemy),
+		UE1Android64PhysActorName(Pawn->MoveTarget),
+		UE1Android64PhysActorName(Pawn->Base),
+		Delta ? Delta->X : 0.f, Delta ? Delta->Y : 0.f, Delta ? Delta->Z : 0.f,
+		Hit ? Hit->Time : 1.f,
+		(Hit && Hit->Actor) ? UE1Android64PhysActorName(Hit->Actor) : "<none>",
+		(Hit && Hit->Actor) ? UE1Android64PhysActorClass(Hit->Actor) : "<none>",
+		Hit ? Hit->Normal.X : 0.f, Hit ? Hit->Normal.Y : 0.f, Hit ? Hit->Normal.Z : 0.f,
+		Remaining,
+		Iterations,
+		Pawn->MoveTimer,
+		Pawn->DesiredSpeed,
+		Pawn->GroundSpeed,
+		Pawn->GetFlags() );
+}
+
+// UNREAL_ANDROID64_REAL_PLAYER_PROBE_V58
+static INT GUE1Android64PlayerSetPhysicsBudgetV54 = 0;
+
+static const char* UE1Android64PhysNameV54( BYTE Physics )
+{
+	switch( Physics )
+	{
+		case PHYS_None:          return "None";
+		case PHYS_Walking:       return "Walking";
+		case PHYS_Falling:       return "Falling";
+		case PHYS_Swimming:      return "Swimming";
+		case PHYS_Flying:        return "Flying";
+		case PHYS_Rotating:      return "Rotating";
+		case PHYS_Projectile:    return "Projectile";
+		case PHYS_Rolling:       return "Rolling";
+		case PHYS_Interpolating: return "Interpolating";
+		case PHYS_MovingBrush:   return "MovingBrush";
+		case PHYS_Spider:        return "Spider";
+		case PHYS_Trailer:       return "Trailer";
+		default:                 return "?";
+	}
+}
+
+static UBOOL UE1Android64PlayerPhysActorV54( AActor* Actor )
+{
+	if( !Actor || UE1Android64PhysDiagBadPtr(Actor) || !Actor->IsValid() )
+		return 0;
+
+	// UNREAL_ANDROID64_REAL_PLAYER_PROBE_V58
+	// v57 was still too broad here and logged Skaarj/Inventory actors in Vortex2.
+	// Log only real PlayerPawn candidates, independent of whether the level used
+	// MaleOne, MaleTwo, or a savegame-specific pawn name.
+	const char* FullName = Actor->GetFullName();
+	if( FullName && appStrstr(FullName,"Unreal.MaleOne") )
+		return 0;
+
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	if( PlayerPawn )
+	{
+		if( PlayerPawn->Player && !UE1Android64PhysDiagBadPtr(PlayerPawn->Player) )
+			return 1;
+		if( FullName && (appStrstr(FullName,"Vortex2.") || appStrstr(FullName,"Save")) )
+			return 1;
+	}
+
+	return 0;
+}
+
+static void UE1Android64PlayerSetPhysicsDiagV54( const char* Phase, AActor* Actor, BYTE OldPhysics, BYTE NewPhysics, AActor* NewFloor )
+{
+	if( !UE1Android64PlayerPhysActorV54(Actor) )
+		return;
+	if( GUE1Android64PlayerSetPhysicsBudgetV54++ >= 500 )
+		return;
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 REALPLAYER PROBE V58 phase=%s actor=%s class=%s oldPhysics=%i/%s newPhysics=%i/%s currentPhysics=%i/%s loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) input=(f=%.3f s=%.3f u=%.3f turn=%.3f look=%.3f) flags=(interp=%i collWorld=%i collAct=%i blockAct=%i frozen=%i menu=%i) phys=(alpha=%.3f rate=%.3f) target=%s base=%s newFloor=%s role=%i remote=%i",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Actor->GetClassName(),
+		(INT)OldPhysics,
+		UE1Android64PhysNameV54(OldPhysics),
+		(INT)NewPhysics,
+		UE1Android64PhysNameV54(NewPhysics),
+		(INT)Actor->Physics,
+		UE1Android64PhysNameV54(Actor->Physics),
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		PlayerPawn ? PlayerPawn->aForward : 0.f,
+		PlayerPawn ? PlayerPawn->aStrafe : 0.f,
+		PlayerPawn ? PlayerPawn->aUp : 0.f,
+		PlayerPawn ? PlayerPawn->aTurn : 0.f,
+		PlayerPawn ? PlayerPawn->aLookUp : 0.f,
+		(INT)Actor->bInterpolating,
+		(INT)Actor->bCollideWorld,
+		(INT)Actor->bCollideActors,
+		(INT)Actor->bBlockActors,
+		PlayerPawn ? (INT)PlayerPawn->bFrozen : 0,
+		PlayerPawn ? (INT)PlayerPawn->bShowMenu : 0,
+		Actor->PhysAlpha,
+		Actor->PhysRate,
+		UE1Android64PhysActorName(Actor->Target),
+		UE1Android64PhysActorName(Actor->Base),
+		UE1Android64PhysActorName(NewFloor),
+		(INT)Actor->Role,
+		(INT)Actor->RemoteRole );
+}
+#endif
 
 void AActor::execMoveSmooth( FFrame& Stack, BYTE*& Result )
 {
@@ -30,7 +216,13 @@ void AActor::execSetPhysics( FFrame& Stack, BYTE*& Result )
 	P_GET_BYTE(NewPhysics);
 	P_FINISH;
 
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "execSetPhysics.before", this, Physics, NewPhysics, NULL );
+#endif
 	setPhysics(NewPhysics);
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "execSetPhysics.after", this, NewPhysics, Physics, NULL );
+#endif
 
 	unguardSlow;
 }
@@ -44,8 +236,14 @@ void APlayerPawn::execAutonomousPhysics( FFrame& Stack, BYTE*& Result )
 	P_FINISH;
 
 	// Perform physics.
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "execAutonomousPhysics.enter", this, Physics, Physics, Base );
+#endif
 	if( Physics!=PHYS_None )
 		performPhysics( DeltaSeconds * GetLevel()->GetLevelInfo()->TimeDilation );
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "execAutonomousPhysics.leave", this, Physics, Physics, Base );
+#endif
 
 	unguardSlow;
 }
@@ -59,6 +257,11 @@ int AActor::moveSmooth(FVector Delta)
 
 	FCheckResult Hit(1.0);
 	int didHit = GetLevel()->MoveActor( this, Delta, Rotation, Hit );
+#if PLATFORM_64BIT
+	if( Hit.Time < 1.0 && UE1Android64PlayerPhysActorV54(this) )
+		UE1_ANDROID64_GAMEPLAY_DIAG_LOG("ANDROID64 REALPLAYER PROBE V58 phase=moveSmooth.hit actor=%s class=%s physics=%i/%s delta=(%.1f %.1f %.1f) hitTime=%.3f hitActor=%s hitClass=%s hitNormal=(%.2f %.2f %.2f) loc=(%.1f %.1f %.1f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f)",
+			GetFullName(), GetClassName(), (INT)Physics, UE1Android64PhysNameV54(Physics), Delta.X, Delta.Y, Delta.Z, Hit.Time, UE1Android64PhysActorName(Hit.Actor), UE1Android64PhysActorClass(Hit.Actor), Hit.Normal.X, Hit.Normal.Y, Hit.Normal.Z, Location.X, Location.Y, Location.Z, Velocity.X, Velocity.Y, Velocity.Z, Acceleration.X, Acceleration.Y, Acceleration.Z );
+#endif
 	if (Hit.Time < 1.0)
 	{
 		FVector Adjusted = (Delta - Hit.Normal * (Delta | Hit.Normal)) * (1.0 - Hit.Time);
@@ -96,9 +299,21 @@ void AActor::setPhysics(BYTE NewPhysics, AActor *NewFloor)
 {
 	guard(AActor::setPhysics);
 
+	const BYTE OldPhysics = Physics;
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "setPhysics.enter", this, OldPhysics, NewPhysics, NewFloor );
+#endif
 	if (Physics == NewPhysics)
+	{
+#if PLATFORM_64BIT
+		UE1Android64PlayerSetPhysicsDiagV54( "setPhysics.same", this, OldPhysics, NewPhysics, NewFloor );
+#endif
 		return;
+	}
 	Physics = NewPhysics;
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "setPhysics.assigned", this, OldPhysics, NewPhysics, NewFloor );
+#endif
 
 	if ((Physics == PHYS_Walking) || (Physics == PHYS_None) || (Physics == PHYS_Rolling) 
 			|| (Physics == PHYS_Rotating) || (Physics == PHYS_Spider) )
@@ -119,6 +334,9 @@ void AActor::setPhysics(BYTE NewPhysics, AActor *NewFloor)
 		Velocity = FVector(0,0,0);
 		Acceleration = FVector(0,0,0);
 	}
+#if PLATFORM_64BIT
+	UE1Android64PlayerSetPhysicsDiagV54( "setPhysics.leave", this, OldPhysics, Physics, NewFloor );
+#endif
 	unguard;
 }
 
@@ -163,6 +381,9 @@ void APawn::performPhysics(FLOAT DeltaSeconds)
 {
 	guard(APawn::performPhysics);
 
+#if PLATFORM_64BIT
+	UE1Android64PhysDiag( "performPhysics.enter", this, NULL, NULL, DeltaSeconds, 0 );
+#endif
 	FVector OldVelocity = Velocity;
 
 	// change position
@@ -189,6 +410,9 @@ void APawn::performPhysics(FLOAT DeltaSeconds)
 
 	MoveTimer -= DeltaSeconds;
 	AvgPhysicsTime = 0.8 * AvgPhysicsTime + 0.2 * DeltaSeconds;
+#if PLATFORM_64BIT
+	UE1Android64PhysDiag( "performPhysics.leave", this, NULL, NULL, DeltaSeconds, 0 );
+#endif
 
 	unguard;
 }
@@ -414,6 +638,9 @@ void APawn::physWalking(FLOAT deltaTime, INT Iterations)
 {
 	guard(APawn::physWalking);
 
+#if PLATFORM_64BIT
+	UE1Android64PhysDiag( "physWalking.enter", this, NULL, NULL, deltaTime, Iterations );
+#endif
 	//bound acceleration
 	//goal - support +-Z gravity, but not other vectors
 	Velocity.Z = 0;
@@ -452,6 +679,9 @@ void APawn::physWalking(FLOAT deltaTime, INT Iterations)
 	while ( (remainingTime > 0.0) && (Iterations < 8) )
 	{
 		Iterations++;
+#if PLATFORM_64BIT
+		UE1Android64PhysDiag( "physWalking.loop", this, NULL, NULL, remainingTime, Iterations );
+#endif
 		if ( (remainingTime > 0.05) && (IsA(APlayerPawn::StaticClass) ||
 			(DesiredMove.SizeSquared() * remainingTime * remainingTime > 400.f)) )
 				timeTick = Min(0.05f, remainingTime * 0.5f);
@@ -810,6 +1040,9 @@ void APawn::physWalking(FLOAT deltaTime, INT Iterations)
 	if (!bJustTeleported)
 		Velocity = (Location - OldLocation) / deltaTime;
 	Velocity.Z = 0.0;
+#if PLATFORM_64BIT
+	UE1Android64PhysDiag( "physWalking.leave", this, NULL, NULL, remainingTime, Iterations );
+#endif
  	unguard;
 }
 

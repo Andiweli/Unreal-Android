@@ -213,7 +213,7 @@ BYTE CORE_API GRegisterIntrinsic( int iIntrinsic, void* Func );
 #define P_GET_NAME(var)             FName         var;   {FName *Ptr=&var;     Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_NAME_OPT(var,def)     FName     var=def;   {FName *Ptr=&var;     Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_NAME_REF(var)         FName a##var=NAME_None,*var=&a##var;      {Stack.Step( Stack.Object, *(BYTE**)&var );          }
-#define P_GET_ACTOR(var)            AActor   *var=NULL;   {AActor **Ptr=&var;   Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
+#define P_GET_ACTOR(var)            AActor       *var;   {AActor **Ptr=&var;   Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_ACTOR_OPT(var,def)    AActor   *var=def;   {AActor **Ptr=&var;   Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_ACTOR_REF(var)        AActor *a##var=NULL,**var=&a##var;        {Stack.Step( Stack.Object, *(BYTE**)&var );          }
 #define P_GET_VECTOR(var)           FVector       var;   {FVector *Ptr=&var;   Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
@@ -222,7 +222,7 @@ BYTE CORE_API GRegisterIntrinsic( int iIntrinsic, void* Func );
 #define P_GET_ROTATOR(var)          FRotator      var;   {FRotator *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_ROTATOR_OPT(var,def)  FRotator  var=def;   {FRotator *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_ROTATOR_REF(var)      FRotator  a##var(0,0,0),*var=&a##var;     {Stack.Step( Stack.Object, *(BYTE**)&var );          }
-#define P_GET_OBJECT(cls,var)       cls      *var=NULL;   {cls**Ptr=&var;       Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
+#define P_GET_OBJECT(cls,var)       cls          *var;   {cls**Ptr=&var;       Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_OBJECT_OPT(var,def)   UObject*var=def;     {UObject**Ptr=&var;   Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_OBJECT_REF(var)       UObject*a##var=NULL,**var=&a##var;        {Stack.Step( Stack.Object, *(BYTE**)&var );          }
 #define P_GET_STRING(var)           CHAR var##T[MAX_STRING_CONST_SIZE], *var=var##T; {Stack.Step( Stack.Object,*(BYTE**)&var);     }
@@ -278,6 +278,7 @@ inline INT FFrame::ReadInt()
 	Code += sizeof(INT);
 	return Result;
 }
+// UNREAL_ANDROID64_STATEFRAME_LATENT_INIT_BUILD_FIX_V88A
 inline PTRINT FFrame::ReadPtr()
 {
 #if PLATFORM_64BIT
@@ -313,9 +314,10 @@ CORE_API void GInitRunaway();
 -----------------------------------------------------------------------------*/
 
 inline FMainFrame::FMainFrame( UObject* InObject )
-:	FFrame	( InObject )
-,	StateNode	( InObject->GetClass() )
-,	ProbeMask	( ~(QWORD)0 )
+:    FFrame    ( InObject )
+,    StateNode    ( InObject->GetClass() )
+,    ProbeMask    ( ~(QWORD)0 )
+,    LatentAction( 0 ) // UNREAL_ANDROID64_STATEFRAME_LATENT_INIT_V88
 {}
 inline const char* FMainFrame::Describe()
 {

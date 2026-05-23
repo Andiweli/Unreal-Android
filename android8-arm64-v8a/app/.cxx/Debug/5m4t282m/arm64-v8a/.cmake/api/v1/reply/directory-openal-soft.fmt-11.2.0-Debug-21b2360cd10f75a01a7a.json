@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "openal-soft/fmt-11.2.0",
+		"source" : "thirdparty/openal-soft/fmt-11.2.0"
+	}
+}

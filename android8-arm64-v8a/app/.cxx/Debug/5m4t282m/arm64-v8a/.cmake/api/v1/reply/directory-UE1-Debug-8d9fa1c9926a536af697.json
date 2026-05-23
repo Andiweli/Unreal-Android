@@ -1,0 +1,52 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"UE1/Source/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1209,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/Debug",
+			"paths" : 
+			[
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/Core/libCore.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/Engine/libEngine.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/Render/libRender.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/IpDrv/libIpDrv.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/Fire/libFire.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/build/intermediates/cxx/Debug/5m4t282m/obj/arm64-v8a/libUnreal.so",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/NSDLDrv/libNSDLDrv.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/NOpenGLESDrv/libNOpenGLESDrv.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/SoundDrv/libSoundDrv.a",
+				"E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a/UE1/NOpenALDrv/libNOpenALDrv.a"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "UE1",
+		"source" : "UE1/Source"
+	}
+}

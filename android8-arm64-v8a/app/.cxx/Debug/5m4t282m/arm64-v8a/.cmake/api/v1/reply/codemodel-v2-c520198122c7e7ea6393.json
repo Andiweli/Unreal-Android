@@ -1,0 +1,690 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						4,
+						5,
+						7
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.6.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						18
+					]
+				},
+				{
+					"build" : "libxmp",
+					"childIndexes" : 
+					[
+						2,
+						3
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-libxmp-Debug-bbf079e36101ad97c4b4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.4"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "thirdparty/libxmp",
+					"targetIndexes" : 
+					[
+						20
+					]
+				},
+				{
+					"build" : "libxmp/examples",
+					"jsonFile" : "directory-libxmp.examples-Debug-edab23591bb211abd27d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.4"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 1,
+					"source" : "thirdparty/libxmp/examples"
+				},
+				{
+					"build" : "libxmp/docs",
+					"jsonFile" : "directory-libxmp.docs-Debug-5610ae61d24de57aa35e.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.4"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 1,
+					"source" : "thirdparty/libxmp/docs"
+				},
+				{
+					"build" : "SDL2",
+					"jsonFile" : "directory-SDL2-Debug-4d3a7bfbe4d474180903.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.4"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "thirdparty/SDL2",
+					"targetIndexes" : 
+					[
+						9,
+						10,
+						17,
+						19
+					]
+				},
+				{
+					"build" : "openal-soft",
+					"childIndexes" : 
+					[
+						6
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-openal-soft-Debug-755e8d62082ed57fc697.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "thirdparty/openal-soft",
+					"targetIndexes" : 
+					[
+						7,
+						13,
+						14,
+						16
+					]
+				},
+				{
+					"build" : "openal-soft/fmt-11.2.0",
+					"jsonFile" : "directory-openal-soft.fmt-11.2.0-Debug-21b2360cd10f75a01a7a.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.8"
+					},
+					"parentIndex" : 5,
+					"projectIndex" : 4,
+					"source" : "thirdparty/openal-soft/fmt-11.2.0",
+					"targetIndexes" : 
+					[
+						15
+					]
+				},
+				{
+					"build" : "UE1",
+					"childIndexes" : 
+					[
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-UE1-Debug-8d9fa1c9926a536af697.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 5,
+					"source" : "UE1/Source"
+				},
+				{
+					"build" : "UE1/Core",
+					"jsonFile" : "directory-UE1.Core-Debug-2ae609ec7c6cd191c724.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 6,
+					"source" : "UE1/Source/Core",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "UE1/Engine",
+					"jsonFile" : "directory-UE1.Engine-Debug-2e3e2a804ba731d5e325.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 7,
+					"source" : "UE1/Source/Engine",
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"build" : "UE1/Render",
+					"jsonFile" : "directory-UE1.Render-Debug-5844f3380cd88db66bf3.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 8,
+					"source" : "UE1/Source/Render",
+					"targetIndexes" : 
+					[
+						8
+					]
+				},
+				{
+					"build" : "UE1/IpDrv",
+					"jsonFile" : "directory-UE1.IpDrv-Debug-84bdaa0f023c43a8c260.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 9,
+					"source" : "UE1/Source/IpDrv",
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"build" : "UE1/Fire",
+					"jsonFile" : "directory-UE1.Fire-Debug-0551156cc289882ddf4c.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 10,
+					"source" : "UE1/Source/Fire",
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"build" : "UE1/NSDLDrv",
+					"jsonFile" : "directory-UE1.NSDLDrv-Debug-71d4fea4713e8c1e363b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 11,
+					"source" : "UE1/Source/NSDLDrv",
+					"targetIndexes" : 
+					[
+						6
+					]
+				},
+				{
+					"build" : "UE1/NOpenGLESDrv",
+					"jsonFile" : "directory-UE1.NOpenGLESDrv-Debug-48ec7b9b35f519105cde.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 12,
+					"source" : "UE1/Source/NOpenGLESDrv",
+					"targetIndexes" : 
+					[
+						5
+					]
+				},
+				{
+					"build" : "UE1/SoundDrv",
+					"jsonFile" : "directory-UE1.SoundDrv-Debug-c62c3b27ba4a4257110a.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 13,
+					"source" : "UE1/Source/SoundDrv",
+					"targetIndexes" : 
+					[
+						11
+					]
+				},
+				{
+					"build" : "UE1/NOpenALDrv",
+					"jsonFile" : "directory-UE1.NOpenALDrv-Debug-d10c84855a78e4967e7f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 14,
+					"source" : "UE1/Source/NOpenALDrv",
+					"targetIndexes" : 
+					[
+						4
+					]
+				},
+				{
+					"build" : "UE1/Unreal",
+					"jsonFile" : "directory-UE1.Unreal-Debug-c6f32f0ca8fb64d69cf7.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 7,
+					"projectIndex" : 15,
+					"source" : "UE1/Source/Unreal",
+					"targetIndexes" : 
+					[
+						12
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "UE1Android",
+					"targetIndexes" : 
+					[
+						18
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1,
+						2,
+						3
+					],
+					"name" : "libxmp",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						20
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						4
+					],
+					"name" : "SDL2",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						9,
+						10,
+						17,
+						19
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						4
+					],
+					"directoryIndexes" : 
+					[
+						5
+					],
+					"name" : "OpenAL",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						7,
+						13,
+						14,
+						16
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						6
+					],
+					"name" : "ALSOFT_FMT",
+					"parentIndex" : 3,
+					"targetIndexes" : 
+					[
+						15
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15
+					],
+					"directoryIndexes" : 
+					[
+						7
+					],
+					"name" : "UE1",
+					"parentIndex" : 0
+				},
+				{
+					"directoryIndexes" : 
+					[
+						8
+					],
+					"name" : "Core",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						9
+					],
+					"name" : "Engine",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						10
+					],
+					"name" : "Render",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						8
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						11
+					],
+					"name" : "IpDrv",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						12
+					],
+					"name" : "Fire",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						13
+					],
+					"name" : "NSDLDrv",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						6
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						14
+					],
+					"name" : "NOpenGLESDrv",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						5
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						15
+					],
+					"name" : "SoundDrv",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						11
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						16
+					],
+					"name" : "NOpenALDrv",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						4
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						17
+					],
+					"name" : "Unreal",
+					"parentIndex" : 5,
+					"targetIndexes" : 
+					[
+						12
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 8,
+					"id" : "Core::@03e86f89b683083c769e",
+					"jsonFile" : "target-Core-Debug-abc982a2967b398936b7.json",
+					"name" : "Core",
+					"projectIndex" : 6
+				},
+				{
+					"directoryIndex" : 9,
+					"id" : "Engine::@734b07a0fa6b65654422",
+					"jsonFile" : "target-Engine-Debug-4b78cbbab3a634362062.json",
+					"name" : "Engine",
+					"projectIndex" : 7
+				},
+				{
+					"directoryIndex" : 12,
+					"id" : "Fire::@86ac534cf6259577b6fc",
+					"jsonFile" : "target-Fire-Debug-80701f22cc53c08d88f3.json",
+					"name" : "Fire",
+					"projectIndex" : 10
+				},
+				{
+					"directoryIndex" : 11,
+					"id" : "IpDrv::@7ca99cc7386e6cd4f131",
+					"jsonFile" : "target-IpDrv-Debug-e65917681cae0474776b.json",
+					"name" : "IpDrv",
+					"projectIndex" : 9
+				},
+				{
+					"directoryIndex" : 16,
+					"id" : "NOpenALDrv::@298bc2fd1d32891b909e",
+					"jsonFile" : "target-NOpenALDrv-Debug-0b2ff0bf00825320e559.json",
+					"name" : "NOpenALDrv",
+					"projectIndex" : 14
+				},
+				{
+					"directoryIndex" : 14,
+					"id" : "NOpenGLESDrv::@559cd8f8c7457c3a52bc",
+					"jsonFile" : "target-NOpenGLESDrv-Debug-444855a728f54b2d78e4.json",
+					"name" : "NOpenGLESDrv",
+					"projectIndex" : 12
+				},
+				{
+					"directoryIndex" : 13,
+					"id" : "NSDLDrv::@2b1b12ebcdf162c3131b",
+					"jsonFile" : "target-NSDLDrv-Debug-b14d68b030bad2713f18.json",
+					"name" : "NSDLDrv",
+					"projectIndex" : 11
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "OpenAL::@9037191f12c8ede7fbae",
+					"jsonFile" : "target-OpenAL-Debug-6b02b968fb867689a593.json",
+					"name" : "OpenAL",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 10,
+					"id" : "Render::@3f3f8c3c7ca4caad3326",
+					"jsonFile" : "target-Render-Debug-6473ce79007bff69b2b1.json",
+					"name" : "Render",
+					"projectIndex" : 8
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "SDL2::@64fabd2bc978e414570d",
+					"jsonFile" : "target-SDL2-Debug-b4879f8ea40da1c03b61.json",
+					"name" : "SDL2",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "SDL2main::@64fabd2bc978e414570d",
+					"jsonFile" : "target-SDL2main-Debug-f73a32aae126c83ab47a.json",
+					"name" : "SDL2main",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 15,
+					"id" : "SoundDrv::@1cc4b3db7db9e046dcd8",
+					"jsonFile" : "target-SoundDrv-Debug-9b5e3f2dfb2466346bb1.json",
+					"name" : "SoundDrv",
+					"projectIndex" : 13
+				},
+				{
+					"directoryIndex" : 17,
+					"id" : "Unreal::@3d176d2d35515c8ac738",
+					"jsonFile" : "target-Unreal-Debug-01159545d7da8d6e5569.json",
+					"name" : "Unreal",
+					"projectIndex" : 15
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "alsoft.common::@9037191f12c8ede7fbae",
+					"jsonFile" : "target-alsoft.common-Debug-88dd6697f8fb7b2b6fa2.json",
+					"name" : "alsoft.common",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "alsoft.excommon::@9037191f12c8ede7fbae",
+					"jsonFile" : "target-alsoft.excommon-Debug-0a572ff6f62b3180ed12.json",
+					"name" : "alsoft.excommon",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 6,
+					"id" : "alsoft.fmt::@d28cda8b9b94acf5ba6b",
+					"jsonFile" : "target-alsoft.fmt-Debug-d34e4c8e28a911006b56.json",
+					"name" : "alsoft.fmt",
+					"projectIndex" : 4
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "clang-tidy-check::@9037191f12c8ede7fbae",
+					"jsonFile" : "target-clang-tidy-check-Debug-d0272fcab52258a896e0.json",
+					"name" : "clang-tidy-check",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "sdl_headers_copy::@64fabd2bc978e414570d",
+					"jsonFile" : "target-sdl_headers_copy-Debug-33ac1c4f780f738d86d0.json",
+					"name" : "sdl_headers_copy",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ue1_xmp_stub::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ue1_xmp_stub-Debug-f9778dd061f855a5acfe.json",
+					"name" : "ue1_xmp_stub",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "uninstall::@64fabd2bc978e414570d",
+					"jsonFile" : "target-uninstall-Debug-2218012852968a89f9f7.json",
+					"name" : "uninstall",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "xmp_static::@d3d09a9b787f4d5b6893",
+					"jsonFile" : "target-xmp_static-Debug-861912556f51bc8071ec.json",
+					"name" : "xmp_static",
+					"projectIndex" : 1
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "E:/Development/Android/UE1/com.ast.unreal/app/.cxx/Debug/5m4t282m/arm64-v8a",
+		"source" : "E:/Development/Android/UE1/com.ast.unreal/app/src/main/cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

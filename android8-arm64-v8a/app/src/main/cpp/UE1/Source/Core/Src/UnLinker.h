@@ -431,6 +431,54 @@ class ULinkerLoad : public ULinker, public FArchiveFileLoad
 	INT FileSize;
 	CHAR Status[256];
 
+#if PLATFORM_64BIT
+	// UNREAL_ANDROID64_LINKER_INDEX_PROBE_V77
+	// A stale ExportMap._Object pointer is more dangerous on arm64 than the
+	// original fatal assertion: returning it from CreateExport can remap an
+	// arbitrary object reference to the wrong actor/light/trigger.  Keep the
+	// original 32-bit semantics for healthy objects, but on arm64 drop stale
+	// export slots and log the exact owner/index mismatch so the real source of
+	// linker/index corruption stays visible.
+	void Android64LinkerIndexProbeV77( const char* Phase, INT ExportIndex, FObjectExport& Export, UObject* Object )
+	{
+		static INT LogCount = 0;
+		if( LogCount++ >= 256 )
+			return;
+
+		UBOOL bObjectValid = Object ? Object->IsValid() : 0;
+		ULinkerLoad* ObjectLinker = bObjectValid ? Object->GetLinker() : NULL;
+		INT ObjectIndex = bObjectValid ? Object->GetLinkerIndex() : INDEX_NONE;
+		const char* RootName = LinkerRoot ? LinkerRoot->GetName() : "<no-root>";
+		const char* ObjectName = bObjectValid ? Object->GetFullName() : "<invalid-or-null>";
+
+		debugf
+		(
+			NAME_Warning,
+			"ANDROID64 LINKER INDEX PROBE V77 phase=%s root=%s export=%i exportClass=%s exportName=%s exportObject=%p object=%s objectValid=%i objectLinker=%p thisLinker=%p objectIndex=%i expectedIndex=%i flags=%08x requestingExit=%i critical=%i",
+			Phase ? Phase : "?",
+			RootName,
+			ExportIndex,
+			*Export.ClassName,
+			*Export.ObjectName,
+			Object,
+			ObjectName,
+			bObjectValid,
+			ObjectLinker,
+			this,
+			ObjectIndex,
+			ExportIndex,
+			Export.ObjectFlags,
+			GIsRequestingExit,
+			GIsCriticalError
+		);
+	}
+
+	UBOOL Android64ExportObjectCurrentV77( INT ExportIndex, UObject* Object )
+	{
+		return Object && Object->IsValid() && Object->GetLinker()==this && Object->GetLinkerIndex()==ExportIndex;
+	}
+#endif
+
 	// Constructor; all errors here throw exceptions which are fully recoverable.
 	ULinkerLoad( UObject* InParent, const char* InFilename, DWORD InLoadFlags )
 	:	ULinker( InParent, InFilename )
@@ -828,9 +876,19 @@ private:
 		FObjectExport& Export = ExportMap( Index );
 		if( Export._Object )
 		{
+#if PLATFORM_64BIT
+			// UNREAL_ANDROID64_LINKER_INDEX_PROBE_V77
+			// Never return a stale export pointer.  This is the likely root of
+			// wrong Actor/Light/Trigger references after map-load/GC churn.
+			if( Android64ExportObjectCurrentV77( Index, Export._Object ) )
+				return Export._Object;
+			Android64LinkerIndexProbeV77( "CreateExport.drop-stale-object", Index, Export, Export._Object );
+			Export._Object = NULL;
+#else
 			return Export._Object;
+#endif
 		}
-		else if
+		if
 		(	(Export.ObjectFlags & ContextFlags)
 		&&	(Ver()>=57 || appStricmp(*Export.ClassName,"Camera")) )
 		{
@@ -999,33 +1057,19 @@ private:
 			if( E._Object )
 			{
 #if PLATFORM_64BIT
-				UBOOL bDetachObject = 1;
-				if( !E._Object->IsValid() )
+				// UNREAL_ANDROID64_LINKER_INDEX_PROBE_V77
+				// Destroy must not detach an object through a stale export slot.
+				// If the object still belongs to this exact export, detach normally.
+				// Otherwise clear only this ExportMap entry and keep the object's
+				// current linker/index untouched; its owning slot/linker will handle it.
+				if( Android64ExportObjectCurrentV77( i, E._Object ) )
 				{
-					if( GIsRequestingExit )
-					{
-						debugf( NAME_Warning, "ANDROID64 LinkerDestroy exit: ignored invalid object %s %s.%s", *E.ClassName, LinkerRoot->GetName(), *E.ObjectName );
-						bDetachObject = 0;
-					}
-					else appErrorf( "Linker object %s %s.%s is invalid", *E.ClassName, LinkerRoot->GetName(), *E.ObjectName );
-				}
-				else if( E._Object->GetLinker()!=this || E._Object->GetLinkerIndex()!=i )
-				{
-					if( GIsRequestingExit )
-					{
-						debugf( NAME_Warning, "ANDROID64 LinkerDestroy exit: detached stale export %s %s.%s linker=%p idx=%i expected=%i", *E.ClassName, LinkerRoot->GetName(), *E.ObjectName, E._Object->GetLinker(), E._Object->GetLinkerIndex(), i );
-						bDetachObject = 0;
-					}
-					else
-					{
-						if( E._Object->GetLinker()!=this )
-							appErrorf( "Linker object %s %s.%s mislinked", *E.ClassName, LinkerRoot->GetName(), *E.ObjectName );
-						if( E._Object->GetLinkerIndex()!=i )
-							appErrorf( "Linker object %s %s.%s misindexed", *E.ClassName, LinkerRoot->GetName(), *E.ObjectName );
-					}
-				}
-				if( bDetachObject )
 					ExportMap(i)._Object->SetLinker( NULL, INDEX_NONE );
+				}
+				else
+				{
+					Android64LinkerIndexProbeV77( "Destroy.drop-stale-export", i, E, E._Object );
+				}
 				ExportMap(i)._Object = NULL;
 #else
 				if( !E._Object->IsValid() )

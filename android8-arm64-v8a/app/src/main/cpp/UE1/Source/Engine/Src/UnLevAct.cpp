@@ -9,6 +9,205 @@ Revision history:
 #include "EnginePrivate.h"
 #include "UnNet.h"
 
+
+#if PLATFORM_64BIT
+// UNREAL_ANDROID64_EXPLOSION_DAMAGE_ORIGIN_PROBE_V82
+// Narrow root-cause probe for explosion/damage/spawn/destroy chains that may precede
+// the local player's StateFrame loss.  This is diagnostics only: no gameplay changes.
+static INT GUE1Android64ExplosionOriginBudgetV82 = 0;
+
+static UBOOL UE1Android64V82StrContains( const char* Text, const char* Token )
+{
+	return Text && Token && appStrfind((char*)Text,(char*)Token)!=NULL;
+}
+
+static UBOOL UE1Android64V82InterestingName( const char* Name )
+{
+	return UE1Android64V82StrContains(Name,"Explosion")
+		|| UE1Android64V82StrContains(Name,"Explode")
+		|| UE1Android64V82StrContains(Name,"Barrel")
+		|| UE1Android64V82StrContains(Name,"Fragment")
+		|| UE1Android64V82StrContains(Name,"Chunk")
+		|| UE1Android64V82StrContains(Name,"Smoke")
+		|| UE1Android64V82StrContains(Name,"Flame")
+		|| UE1Android64V82StrContains(Name,"Blast")
+		|| UE1Android64V82StrContains(Name,"Flash")
+		|| UE1Android64V82StrContains(Name,"Spark")
+		|| UE1Android64V82StrContains(Name,"Shock")
+		|| UE1Android64V82StrContains(Name,"Sludge")
+		|| UE1Android64V82StrContains(Name,"Projectile")
+		|| UE1Android64V82StrContains(Name,"Rocket")
+		|| UE1Android64V82StrContains(Name,"Grenade")
+		|| UE1Android64V82StrContains(Name,"Flak")
+		|| UE1Android64V82StrContains(Name,"ASMD")
+		|| UE1Android64V82StrContains(Name,"Dispersion");
+}
+
+static UBOOL UE1Android64V82InterestingActor( AActor* Actor )
+{
+	return Actor && ( UE1Android64V82InterestingName(Actor->GetName()) || UE1Android64V82InterestingName(Actor->GetClassName()) );
+}
+
+static const char* UE1Android64V82StateName( AActor* Actor )
+{
+	if( !Actor )
+		return "<null>";
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame )
+		return "<no-frame>";
+	if( !Frame->StateNode )
+		return "<no-state>";
+	return Frame->StateNode->GetName();
+}
+
+static INT UE1Android64V82CodeOffset( AActor* Actor )
+{
+	if( !Actor )
+		return -1;
+	FMainFrame* Frame = Actor->GetMainFrame();
+	if( !Frame || !Frame->Node || !Frame->Code || Frame->Node->Script.Num() <= 0 )
+		return -1;
+	BYTE* Base = &Frame->Node->Script(0);
+	BYTE* End  = Base + Frame->Node->Script.Num();
+	return (Frame->Code >= Base && Frame->Code < End) ? (INT)(Frame->Code - Base) : -1;
+}
+
+static AActor* UE1Android64V82FindLocalPlayer( ULevel* Level )
+{
+	if( !Level )
+		return NULL;
+	for( INT i=0; i<Level->Num(); i++ )
+	{
+		AActor* Actor = Level->Actors(i);
+		if( Actor && Actor->IsA(APlayerPawn::StaticClass) )
+			return Actor;
+	}
+	return NULL;
+}
+
+static void UE1Android64V82LogLevelContext( ULevel* Level, const char* Phase, AActor* Focus, UClass* SpawnClass, const FVector& FocusLocation, AActor* Owner, APawn* Instigator )
+{
+	if( GUE1Android64ExplosionOriginBudgetV82++ >= 256 )
+		return;
+	AActor* Player = UE1Android64V82FindLocalPlayer( Level );
+	FMainFrame* PlayerFrame = Player ? Player->GetMainFrame() : NULL;
+	FMainFrame* FocusFrame  = Focus  ? Focus->GetMainFrame()  : NULL;
+	debugf( NAME_Warning, "ANDROID64 EXPLOSION ORIGIN V82 phase=%s focus=%s focusClass=%s spawnClass=%s owner=%s instigator=%s focusFrame=%p focusState=%s focusCode=%i focusDel=%i focusPhys=%i focusLoc=(%.1f %.1f %.1f) player=%s playerFrame=%p playerState=%s playerCode=%i playerLatent=%i playerPhys=%i playerLoc=(%.1f %.1f %.1f) playerVel=(%.1f %.1f %.1f) playerAcc=(%.1f %.1f %.1f) playerHealth=%i budget=%i",
+		Phase ? Phase : "?",
+		Focus ? Focus->GetFullName() : "<none>",
+		Focus ? Focus->GetClassName() : "<none>",
+		SpawnClass ? SpawnClass->GetName() : "<none>",
+		Owner ? Owner->GetFullName() : "<none>",
+		Instigator ? Instigator->GetFullName() : "<none>",
+		FocusFrame,
+		UE1Android64V82StateName(Focus),
+		UE1Android64V82CodeOffset(Focus),
+		Focus ? (INT)Focus->bDeleteMe : -1,
+		Focus ? (INT)Focus->Physics : -1,
+		Focus ? Focus->Location.X : FocusLocation.X,
+		Focus ? Focus->Location.Y : FocusLocation.Y,
+		Focus ? Focus->Location.Z : FocusLocation.Z,
+		Player ? Player->GetFullName() : "<none>",
+		PlayerFrame,
+		UE1Android64V82StateName(Player),
+		UE1Android64V82CodeOffset(Player),
+		PlayerFrame ? PlayerFrame->LatentAction : -1,
+		Player ? (INT)Player->Physics : -1,
+		Player ? Player->Location.X : 0.f,
+		Player ? Player->Location.Y : 0.f,
+		Player ? Player->Location.Z : 0.f,
+		Player ? Player->Velocity.X : 0.f,
+		Player ? Player->Velocity.Y : 0.f,
+		Player ? Player->Velocity.Z : 0.f,
+		Player ? Player->Acceleration.X : 0.f,
+		Player ? Player->Acceleration.Y : 0.f,
+		Player ? Player->Acceleration.Z : 0.f,
+		Player && Player->IsA(APawn::StaticClass) ? ((APawn*)Player)->Health : -1,
+		GUE1Android64ExplosionOriginBudgetV82 );
+}
+
+// UNREAL_ANDROID64_PLAYER_MOVE_BLOCK_PROBE_V83
+// Diagnostics only: the latest logs show no explosion correlation.  The local player
+// can still have high velocity/acceleration while visible movement feels blocked and
+// footstep audio continues.  Trace the exact MoveActor collision boundary for the
+// local PlayerPawn without mutating movement, collision, base, velocity or input.
+static INT GUE1Android64PlayerMoveBlockBudgetV83 = 0;
+
+static UBOOL UE1Android64V83IsLocalPlayer( AActor* Actor )
+{
+	APlayerPawn* PlayerPawn = Actor ? Cast<APlayerPawn>(Actor) : NULL;
+	return PlayerPawn && PlayerPawn->Player;
+}
+
+static FLOAT UE1Android64V83SizeSq( const FVector& V )
+{
+	return V.X*V.X + V.Y*V.Y + V.Z*V.Z;
+}
+
+static void UE1Android64V83LogPlayerMove
+(
+	const char* Phase,
+	AActor* Actor,
+	const FVector& OldLocation,
+	const FVector& Delta,
+	const FVector& FinalDelta,
+	const FCheckResult& Hit,
+	UBOOL bTest,
+	UBOOL bNoFail
+)
+{
+	if( !UE1Android64V83IsLocalPlayer(Actor) || GUE1Android64PlayerMoveBlockBudgetV83 >= 320 )
+		return;
+
+	const FLOAT DeltaSq      = UE1Android64V83SizeSq(Delta);
+	const FLOAT FinalDeltaSq = UE1Android64V83SizeSq(FinalDelta);
+	const FLOAT VelSq        = UE1Android64V83SizeSq(Actor->Velocity);
+	const FLOAT AccSq        = UE1Android64V83SizeSq(Actor->Acceleration);
+	const UBOOL bBlocked     = (Hit.Time < 0.999f) || (DeltaSq > 4.0f && FinalDeltaSq < 0.25f);
+	const UBOOL bStaleMove   = (VelSq > 40000.0f && FinalDeltaSq < 0.25f);
+	const UBOOL bInteresting = bBlocked || bStaleMove || (Hit.Actor && Hit.Actor!=Actor->XLevel->GetLevelInfo()) || (DeltaSq > 10000.0f && FinalDeltaSq < DeltaSq*0.15f);
+	if( !bInteresting )
+		return;
+
+	GUE1Android64PlayerMoveBlockBudgetV83++;
+	APlayerPawn* PlayerPawn = Cast<APlayerPawn>(Actor);
+	FMainFrame* Frame = Actor->GetMainFrame();
+	debugf( NAME_Warning,
+		"ANDROID64 PLAYER MOVE BLOCK V83 phase=%s actor=%s frame=%p state=%s code=%i latent=%i physics=%i oldLoc=(%.1f %.1f %.1f) loc=(%.1f %.1f %.1f) delta=(%.2f %.2f %.2f) final=(%.2f %.2f %.2f) hitTime=%.4f hitActor=%s hitClass=%s hitLoc=(%.1f %.1f %.1f) hitNorm=(%.2f %.2f %.2f) vel=(%.1f %.1f %.1f) acc=(%.1f %.1f %.1f) input=(f=%.3f s=%.3f turn=%.3f look=%.3f) base=%s flags=(test=%i noFail=%i collWorld=%i collAct=%i blockAct=%i blockPlayers=%i) budget=%i",
+		Phase ? Phase : "?",
+		Actor->GetFullName(),
+		Frame,
+		UE1Android64V82StateName(Actor),
+		UE1Android64V82CodeOffset(Actor),
+		Frame ? Frame->LatentAction : -1,
+		(INT)Actor->Physics,
+		OldLocation.X, OldLocation.Y, OldLocation.Z,
+		Actor->Location.X, Actor->Location.Y, Actor->Location.Z,
+		Delta.X, Delta.Y, Delta.Z,
+		FinalDelta.X, FinalDelta.Y, FinalDelta.Z,
+		Hit.Time,
+		Hit.Actor ? Hit.Actor->GetFullName() : "<none>",
+		Hit.Actor ? Hit.Actor->GetClassName() : "<none>",
+		Hit.Location.X, Hit.Location.Y, Hit.Location.Z,
+		Hit.Normal.X, Hit.Normal.Y, Hit.Normal.Z,
+		Actor->Velocity.X, Actor->Velocity.Y, Actor->Velocity.Z,
+		Actor->Acceleration.X, Actor->Acceleration.Y, Actor->Acceleration.Z,
+		PlayerPawn ? PlayerPawn->aForward : 0.f,
+		PlayerPawn ? PlayerPawn->aStrafe : 0.f,
+		PlayerPawn ? PlayerPawn->aTurn : 0.f,
+		PlayerPawn ? PlayerPawn->aLookUp : 0.f,
+		Actor->Base ? Actor->Base->GetFullName() : "<none>",
+		(INT)bTest,
+		(INT)bNoFail,
+		(INT)Actor->bCollideWorld,
+		(INT)Actor->bCollideActors,
+		(INT)Actor->bBlockActors,
+		(INT)Actor->bBlockPlayers,
+		GUE1Android64PlayerMoveBlockBudgetV83 );
+}
+
+#endif
+
 /*-----------------------------------------------------------------------------
 	Level actor management.
 -----------------------------------------------------------------------------*/
@@ -31,6 +230,12 @@ AActor* ULevel::SpawnActor
 )
 {
 	guard(ULevel::SpawnActor);
+
+#if PLATFORM_64BIT
+	UBOOL bAndroid64ExplosionSpawnProbeV82 = Class && UE1Android64V82InterestingName( Class->GetName() );
+	if( bAndroid64ExplosionSpawnProbeV82 )
+		UE1Android64V82LogLevelContext( this, "SpawnActor.enter", NULL, Class, Location, Owner, Instigator );
+#endif
 
 	// Make sure this class is spawnable.
 	if( !Class )
@@ -113,6 +318,10 @@ AActor* ULevel::SpawnActor
 
 	// Send messages.
 	Actor->InitExecution();
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionSpawnProbeV82 )
+		UE1Android64V82LogLevelContext( this, "SpawnActor.after-InitExecution", Actor, Class, Actor->Location, Owner, Instigator );
+#endif
 	Actor->Spawned();
 	Actor->eventSpawned();
 	Actor->eventPreBeginPlay();
@@ -125,6 +334,10 @@ AActor* ULevel::SpawnActor
 
 	// Send PostBeginPlay.
 	Actor->eventPostBeginPlay();
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionSpawnProbeV82 || UE1Android64V82InterestingActor(Actor) )
+		UE1Android64V82LogLevelContext( this, "SpawnActor.after-PostBeginPlay", Actor, Class, Actor->Location, Owner, Instigator );
+#endif
 
 	// Check for encroachment.
 	if( !bNoCollisionFail && CheckEncroachment( Actor, Actor->Location, Actor->Rotation, 0 ) )
@@ -143,6 +356,10 @@ AActor* ULevel::SpawnActor
 		Actor->FindBase();
 
 	// Success: Return the actor.
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionSpawnProbeV82 || UE1Android64V82InterestingActor(Actor) )
+		UE1Android64V82LogLevelContext( this, "SpawnActor.return", Actor, Class, Actor->Location, Owner, Instigator );
+#endif
 	if( InTick )
 		NewlySpawned = new(GDynMem)FActorLink(Actor,NewlySpawned);
 
@@ -183,6 +400,11 @@ UBOOL ULevel::DestroyActor( AActor* ThisActor, UBOOL bNetForce )
 {
 	guard(ULevel::DestroyActor);
 	check(ThisActor);
+#if PLATFORM_64BIT
+	UBOOL bAndroid64ExplosionDestroyProbeV82 = UE1Android64V82InterestingActor( ThisActor );
+	if( bAndroid64ExplosionDestroyProbeV82 )
+		UE1Android64V82LogLevelContext( this, "DestroyActor.enter", ThisActor, NULL, ThisActor->Location, ThisActor->Owner, ThisActor->Instigator );
+#endif
 	check(ThisActor->IsValid());
 	//debugf( NAME_Log, "Destroy %s", ThisActor->GetClassName() );
 
@@ -247,7 +469,15 @@ UBOOL ULevel::DestroyActor( AActor* ThisActor, UBOOL bNetForce )
 
 	// Tell this actor it's about to be destroyed.
 	guard(ProcessDestroyed);
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionDestroyProbeV82 )
+		UE1Android64V82LogLevelContext( this, "DestroyActor.before-eventDestroyed", ThisActor, NULL, ThisActor->Location, ThisActor->Owner, ThisActor->Instigator );
+#endif
 	ThisActor->eventDestroyed();
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionDestroyProbeV82 )
+		UE1Android64V82LogLevelContext( this, "DestroyActor.after-eventDestroyed", ThisActor, NULL, ThisActor->Location, ThisActor->Owner, ThisActor->Instigator );
+#endif
 	if( ThisActor->bDeleteMe )
 		return 1;
 	unguard;
@@ -317,9 +547,17 @@ UBOOL ULevel::DestroyActor( AActor* ThisActor, UBOOL bNetForce )
 
 	// Do object destroy.
 	guard(ShutupSound);
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionDestroyProbeV82 )
+		UE1Android64V82LogLevelContext( this, "DestroyActor.before-ConditionalDestroy", ThisActor, NULL, ThisActor->Location, ThisActor->Owner, ThisActor->Instigator );
+#endif
 	if( Engine->Audio )
 		Engine->Audio->NoteDestroy( ThisActor );
 	ThisActor->ConditionalDestroy();
+#if PLATFORM_64BIT
+	if( bAndroid64ExplosionDestroyProbeV82 )
+		UE1Android64V82LogLevelContext( this, "DestroyActor.after-ConditionalDestroy", ThisActor, NULL, ThisActor->Location, ThisActor->Owner, ThisActor->Instigator );
+#endif
 	unguard;
 
 	// Cleanup.
@@ -841,6 +1079,10 @@ UBOOL ULevel::MoveActor
 	if( (Actor->bStatic || !Actor->bMovable) && !GIsEditor )
 		return 0;
 
+#if PLATFORM_64BIT
+	FVector Android64OldLocationV83 = Actor->Location;
+#endif
+
 	// Skip if no vector.
 	if( Delta.IsNearlyZero() )
 	{
@@ -932,6 +1174,10 @@ UBOOL ULevel::MoveActor
 		}
 	}
 
+#if PLATFORM_64BIT
+	UE1Android64V83LogPlayerMove( "post-attenuate-v83", Actor, Android64OldLocationV83, Delta, FinalDelta, Hit, bTest, bNoFail );
+#endif
+
 	// Move the based actors (before encroachment checking).
 	if( Actor->StandingCount && !bTest )
 	{
@@ -972,6 +1218,9 @@ UBOOL ULevel::MoveActor
 		Hash->RemoveActor( Actor );
 	Actor->Location += FinalDelta;
 	Actor->Rotation  = NewRotation;
+#if PLATFORM_64BIT
+	UE1Android64V83LogPlayerMove( "after-location-v83", Actor, Android64OldLocationV83, Delta, FinalDelta, Hit, bTest, bNoFail );
+#endif
 	if( Actor->bCollideActors && Hash )
 		Hash->AddActor( Actor );
 

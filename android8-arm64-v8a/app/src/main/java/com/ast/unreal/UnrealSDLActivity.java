@@ -1,10 +1,15 @@
 package com.ast.unreal;
 
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
+import android.hardware.input.InputManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -14,8 +19,60 @@ import java.io.File;
 
 import org.libsdl.app.SDLActivity;
 
-public class UnrealSDLActivity extends SDLActivity {
+public class UnrealSDLActivity extends SDLActivity implements InputManager.InputDeviceListener {
+    private static final String TAG = "UE1Controller";
+
     private File selectedRoot;
+    private InputManager inputManager;
+
+    // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
+    private static native boolean nativeAndroidControllerIsEnabled();
+
+    private static native boolean nativeAndroidControllerKey(
+            int deviceId,
+            int vendorId,
+            int productId,
+            int keyCode,
+            int scanCode,
+            int action,
+            int repeatCount,
+            int source,
+            String deviceName);
+
+    private static native boolean nativeAndroidControllerMotion(
+            int deviceId,
+            int vendorId,
+            int productId,
+            int source,
+            String deviceName,
+            float axisX,
+            float axisY,
+            float axisZ,
+            float axisRZ,
+            float axisLTrigger,
+            float axisRTrigger,
+            float axisBrake,
+            float axisGas,
+            float axisHatX,
+            float axisHatY);
+
+    private static native void nativeAndroidControllerDeviceChanged(
+            int deviceId,
+            int vendorId,
+            int productId,
+            int source,
+            String deviceName,
+            int eventType);
+
+    private static native void nativeAndroidControllerReset(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
+
+    private void resetAndroidNativeControllerState() {
+        try {
+            nativeAndroidControllerReset();
+        } catch (UnsatisfiedLinkError ignored) {
+            // Library may not be ready during early Activity startup. SDL remains fallback.
+        }
+    }
 
     private File selectedRootFromIntentOrScan() {
         if (selectedRoot != null) return selectedRoot;
@@ -67,13 +124,36 @@ public class UnrealSDLActivity extends SDLActivity {
         selectedRoot = selectedRootFromIntentOrScan();
         UnrealDataPaths.ensureWritableConfigFiles(this, selectedRoot); // UNREAL_ANDROID_CONFIG_BOOTSTRAP_REV31_PATH_FALLBACK_MORE_ROOTS
         super.onCreate(savedInstanceState);
+
+        inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        if (inputManager != null) {
+            inputManager.registerInputDeviceListener(this, new Handler(Looper.getMainLooper()));
+            logConnectedControllerDevices();
+        }
+
         hideSystemUi();
         scheduleImmersiveRefresh();
     }
 
     @Override
+    protected void onDestroy() {
+        if (inputManager != null) {
+            inputManager.unregisterInputDeviceListener(this);
+            inputManager = null;
+        }
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
+        super.onPause();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+        resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
         hideSystemUi();
         scheduleImmersiveRefresh();
     }
@@ -82,9 +162,148 @@ public class UnrealSDLActivity extends SDLActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
+            resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
             hideSystemUi();
             scheduleImmersiveRefresh();
         }
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (isControllerSource(event.getSource()) || isGamepadButton(event.getKeyCode())) {
+            InputDevice device = event.getDevice();
+            if (device != null) {
+                try {
+                    // Android pads frequently report L2/R2 both as analog axes and as digital keys.
+                    // If the native backend is active and analog trigger ranges exist, prefer the
+                    // MotionEvent axis path and suppress the duplicate digital trigger key.
+                    // If the backend is disabled, never consume here; SDL remains the fallback.
+                    // ANDROID_NATIVE_CONTROLLER_TRIGGER_DEDUPE_V87
+                    if (isTriggerKey(event.getKeyCode())
+                            && nativeAndroidControllerIsEnabled()
+                            && hasAnalogTriggerAxis(device, event.getKeyCode())) {
+                        return true;
+                    }
+                    boolean consumed = nativeAndroidControllerKey(
+                            event.getDeviceId(),
+                            device.getVendorId(),
+                            device.getProductId(),
+                            event.getKeyCode(),
+                            event.getScanCode(),
+                            event.getAction(),
+                            event.getRepeatCount(),
+                            event.getSource(),
+                            device.getName());
+                    if (consumed) return true;
+                } catch (UnsatisfiedLinkError ignored) {
+                    // Library not ready: fall back to SDLActivity.
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if ((event.getActionMasked() == MotionEvent.ACTION_MOVE
+                || event.getActionMasked() == MotionEvent.ACTION_HOVER_MOVE)
+                && isControllerSource(event.getSource())) {
+            InputDevice device = event.getDevice();
+            if (device != null) {
+                try {
+                    boolean consumed = nativeAndroidControllerMotion(
+                            event.getDeviceId(),
+                            device.getVendorId(),
+                            device.getProductId(),
+                            event.getSource(),
+                            device.getName(),
+                            event.getAxisValue(MotionEvent.AXIS_X),
+                            event.getAxisValue(MotionEvent.AXIS_Y),
+                            event.getAxisValue(MotionEvent.AXIS_Z),
+                            event.getAxisValue(MotionEvent.AXIS_RZ),
+                            event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
+                            event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
+                            event.getAxisValue(MotionEvent.AXIS_BRAKE),
+                            event.getAxisValue(MotionEvent.AXIS_GAS),
+                            event.getAxisValue(MotionEvent.AXIS_HAT_X),
+                            event.getAxisValue(MotionEvent.AXIS_HAT_Y));
+                    if (consumed) return true;
+                } catch (UnsatisfiedLinkError ignored) {
+                    // Library not ready: fall back to SDLActivity.
+                }
+            }
+        }
+        return super.dispatchGenericMotionEvent(event);
+    }
+
+    @Override
+    public void onInputDeviceAdded(int deviceId) {
+        notifyControllerDevice(deviceId, 1);
+    }
+
+    @Override
+    public void onInputDeviceRemoved(int deviceId) {
+        try {
+            nativeAndroidControllerDeviceChanged(deviceId, 0, 0, 0, "", 2);
+        } catch (UnsatisfiedLinkError ignored) {
+        }
+    }
+
+    @Override
+    public void onInputDeviceChanged(int deviceId) {
+        notifyControllerDevice(deviceId, 3);
+    }
+
+    private void notifyControllerDevice(int deviceId, int eventType) {
+        InputDevice device = InputDevice.getDevice(deviceId);
+        if (device == null) return;
+        if (!isControllerSource(device.getSources())) return;
+        try {
+            nativeAndroidControllerDeviceChanged(
+                    device.getId(),
+                    device.getVendorId(),
+                    device.getProductId(),
+                    device.getSources(),
+                    device.getName(),
+                    eventType);
+        } catch (UnsatisfiedLinkError ignored) {
+        }
+    }
+
+    private void logConnectedControllerDevices() {
+        for (int id : InputDevice.getDeviceIds()) {
+            notifyControllerDevice(id, 0);
+        }
+    }
+
+    private boolean isControllerSource(int source) {
+        return (source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+                || (source & InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD;
+    }
+
+    private boolean isGamepadButton(int keyCode) {
+        return keyCode >= KeyEvent.KEYCODE_BUTTON_A && keyCode <= KeyEvent.KEYCODE_BUTTON_MODE
+                || keyCode >= KeyEvent.KEYCODE_DPAD_UP && keyCode <= KeyEvent.KEYCODE_DPAD_CENTER;
+    }
+
+    private boolean isTriggerKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_BUTTON_L2 || keyCode == KeyEvent.KEYCODE_BUTTON_R2;
+    }
+
+    private boolean hasAnalogTriggerAxis(InputDevice device, int keyCode) {
+        if (device == null) return false;
+        int primaryAxis = keyCode == KeyEvent.KEYCODE_BUTTON_L2
+                ? MotionEvent.AXIS_LTRIGGER
+                : MotionEvent.AXIS_RTRIGGER;
+        int aliasAxis = keyCode == KeyEvent.KEYCODE_BUTTON_L2
+                ? MotionEvent.AXIS_BRAKE
+                : MotionEvent.AXIS_GAS;
+        for (InputDevice.MotionRange range : device.getMotionRanges()) {
+            int axis = range.getAxis();
+            if (axis == primaryAxis || axis == aliasAxis) return true;
+        }
+        return false;
     }
 
     private void scheduleImmersiveRefresh() {
