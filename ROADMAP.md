@@ -25,7 +25,7 @@
 - [x] OUYA controller support
 - [x] Android mouse support
 - [x] Customizable controls
-- [ ] Fix Controller recognition issues
+- [x] Fix Controller recognition issues
 
 ## Future/Uncertain Expansions
 
