@@ -2,6 +2,16 @@
 
 # Unreal Android
 
+<p align="left">
+  <a href="README.md">README</a>
+  &nbsp;|&nbsp;
+  <a href="ROADMAP.md">ROADMAP</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/Andiweli/Unreal-Android/releases">DOWNLOAD</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.2.0">OUYA VERSION</a>
+</p>
+
 ![Platform](https://img.shields.io/badge/platform-Android-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
 ![Renderer](https://img.shields.io/badge/renderer-OpenGL%20ES%202.0-lightgrey)
@@ -12,9 +22,11 @@
 **Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
 The goal of this project is to make Epic's original Unreal playable on modern Android devices and on legacy Android hardware such as the **OUYA console**, while keeping the look and feel of the original PC release.
 
-Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.
-
 > [!IMPORTANT]
+> **Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.**
+>
+> Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does not support touchscreen controls.
+>
 > This project is for preservation, experimentation and personal use only.  
 > Unreal, Unreal Engine and related trademarks are owned by Epic Games.  
 > This project is not affiliated with or endorsed by Epic Games.
