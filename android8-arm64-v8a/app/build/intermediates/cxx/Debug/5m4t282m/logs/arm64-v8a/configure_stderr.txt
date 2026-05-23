@@ -1,2 +1,0 @@
--- Check for working linker: C:/Users/andiw/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld.exe
-C++20 modules not supported with Ninja on CMake 3.22.1-g37088a8-dirty

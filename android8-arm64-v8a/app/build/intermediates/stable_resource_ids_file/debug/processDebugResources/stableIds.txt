@@ -1,5 +1,0 @@
-com.ast.unreal64:style/AppTheme = 0x7f030000
-com.ast.unreal64:style/GameTheme = 0x7f030001
-com.ast.unreal64:mipmap/ic_launcher_round = 0x7f010001
-com.ast.unreal64:string/app_name = 0x7f020000
-com.ast.unreal64:mipmap/ic_launcher = 0x7f010000

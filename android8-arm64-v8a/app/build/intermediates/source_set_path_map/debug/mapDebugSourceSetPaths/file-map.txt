@@ -1,8 +1,0 @@
-com.ast.unreal.app-pngs-0 E:\Development\Android\UE1\com.ast.unreal\app\build\generated\res\pngs\debug
-com.ast.unreal.app-resValues-1 E:\Development\Android\UE1\com.ast.unreal\app\build\generated\res\resValues\debug
-com.ast.unreal.app-updated_navigation_xml-2 E:\Development\Android\UE1\com.ast.unreal\app\build\generated\updated_navigation_xml\debug
-com.ast.unreal.app-packageDebugResources-3 E:\Development\Android\UE1\com.ast.unreal\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.ast.unreal.app-packageDebugResources-4 E:\Development\Android\UE1\com.ast.unreal\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.ast.unreal.app-debug-5 E:\Development\Android\UE1\com.ast.unreal\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.ast.unreal.app-debug-6 E:\Development\Android\UE1\com.ast.unreal\app\src\debug\res
-com.ast.unreal.app-main-7 E:\Development\Android\UE1\com.ast.unreal\app\src\main\res
