@@ -106,14 +106,15 @@ If these folders are missing, the game will not start and the installer screen w
 
 ---
 
-## ◎ Notes
+## ◎ Legal
 
-This Android port is based on [fgsfdsfgs/UE1](https://github.com/fgsfdsfgs/UE1), which provides the Unreal Engine 1 v200 source with modifications for modern systems.
+Unreal, Unreal Engine and related names, assets and trademarks are property of Epic Games.
+Portions of the materials used are trademarks and/or copyrighted works of Epic Games, Inc.
 
-The upstream project is not a dedicated Linux ARM port. It is a shared Unreal Engine 1 v200 code base with several supported build targets, including Windows x86, Linux x86, Linux ARM32 and PSVita ARM32.
+This repository does **not** include commercial game data.  
+You must own a legal copy of Unreal to use this port.
+This material is not official and is not endorsed by Epic.
 
-For this Android version, the general UE1 v200 code base is used as the foundation. The Linux ARM32 and PSVita/GLES2 parts are useful technical references for ARM, SDL2, OpenGL ES and mobile-style platform work, but Android is handled as its own target through Android Studio, Gradle, CMake, NDK and SDL2.
-
-Unreal, Unreal Engine and related trademarks are owned by Epic Games. This project is not affiliated with or endorsed by Epic Games.
+All rights reserved by Epic.
 
 Do not use this project for commercial purposes.
