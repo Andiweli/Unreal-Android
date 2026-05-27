@@ -15,7 +15,7 @@
 ![Android 13](https://img.shields.io/badge/up%20to-Android%2013-green)
 ![ABI](https://img.shields.io/badge/ABI-armeabi--v7a-orange)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
-![Controller](https://img.shields.io/badge/controls-Controller-blueviolet)
+![Controller](https://img.shields.io/badge/controls-Touch/Controller-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/multiplayer-local%20WiFi-blueviolet)
 
 **Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
