@@ -12,11 +12,10 @@
   <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.2.0">OUYA VERSION</a>
 </p>
 
-![Platform](https://img.shields.io/badge/platform-Android-green)
-![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
-![Renderer](https://img.shields.io/badge/renderer-OpenGL%20ES%202.0-lightgrey)
+![Android 13](https://img.shields.io/badge/up%20to-Android%2013-green)
 ![ABI](https://img.shields.io/badge/ABI-armeabi--v7a-orange)
-![Controller](https://img.shields.io/badge/controls-only%20Controller-blueviolet)
+![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
+![Controller](https://img.shields.io/badge/controls-Controller-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/multiplayer-local%20WiFi-blueviolet)
 
 **Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
