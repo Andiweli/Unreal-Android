@@ -18,12 +18,15 @@
 ![Controller](https://img.shields.io/badge/controls-Touch/Controller-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/multiplayer-local%20WiFi-blueviolet)
 
-**Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
-The goal of this project is to make Epic's original Unreal playable on modern Android devices and on legacy Android hardware such as the **OUYA console**, while keeping the look and feel of the original PC release.
+
+> [!NOTE]
+> Unofficial fan port.
+> No game data included.
+> Requires legally obtained Unreal v1.200 game files.
+> This project is not official and is not endorsed by Epic Games.
+
 
 > [!IMPORTANT]
-> **Original Unreal game data is **not included**. You need a valid Unreal installation v200 or the Unreal v205 demo data.**
->
 > **This app is 32 bit only!** It won't install on your phone? Then it might only accept 64 bit apps. 
 > There are no plans on making this app compatible with 64 bit only CPUs. 
 > 
