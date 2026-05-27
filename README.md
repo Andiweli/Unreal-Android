@@ -43,16 +43,15 @@ The goal of this project is to make Epic's original Unreal playable on modern An
 
 ---
  
-## ◈ Features and improvements
+## ◈ Features
 
-This Android version contains multiple porting and gameplay improvements compared to the first experimental Android builds:
-
-- Android 8.0+ support for newer Android devices.
+- Android support for newer Android devices up to Android 13 (no 64 bit devices).
 - OUYA (Android 4.x) legacy support - with a lower internal render resolution for better performance on legacy hardware.
 - Improved Game Data Import – Unreal data can be imported via folder or ZIP selection and automatically installs to the app's data folder.
-- Android 11+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
-- Improved Brightness and Gamma – Separate brightness/gamma logic with improved brightening of dark level areas.
+- Android 8+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
+- Legacy storage behavior friendly for old sideload devices (place game data on your microSD/Unreal folder).
 - Local WiFi multiplayer and botmatches are available.
+- Added touch controls for use without a controller.
 
 > [!NOTE]
 > If you are experiencing problems with your player moving or turning slowly, please go to OPTIONS and Customize Controls.
