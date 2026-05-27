@@ -12,11 +12,10 @@
   <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.2.0">OUYA VERSION</a>
 </p>
 
-![Platform](https://img.shields.io/badge/platform-Android-green)
-![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
-![Renderer](https://img.shields.io/badge/renderer-OpenGL%20ES%202.0-lightgrey)
+![Android 13](https://img.shields.io/badge/up%20to-Android%2013-green)
 ![ABI](https://img.shields.io/badge/ABI-armeabi--v7a-orange)
-![Controller](https://img.shields.io/badge/controls-only%20Controller-blueviolet)
+![Engine](https://img.shields.io/badge/engine-Unreal%20Engine%201-blue)
+![Controller](https://img.shields.io/badge/controls-Controller-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/multiplayer-local%20WiFi-blueviolet)
 
 **Unreal-Android** is an Android port of **Unreal / Unreal v200 (1998)** based on the classic **Unreal Engine 1** source code.  
@@ -28,7 +27,7 @@ The goal of this project is to make Epic's original Unreal playable on modern An
 > **This app is 32 bit only!** It won't install on your phone? Then it might only accept 64 bit apps. 
 > There are no plans on making this app compatible with 64 bit only CPUs. 
 > 
-> Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does not support touchscreen controls.
+> Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does only offer basic touchscreen controls.
 >
 > This project is for preservation, experimentation and personal use only.  
 > Unreal, Unreal Engine and related trademarks are owned by Epic Games.  
