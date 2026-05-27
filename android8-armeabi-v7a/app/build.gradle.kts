@@ -13,6 +13,7 @@ val overlayRevision = "rev27"
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
 val ue1Dir = nativeRoot.dir("UE1")
+val ue1PatchOverlayDir = layout.projectDirectory.dir("src/main/ue1_patch_overlay") // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
 val thirdpartyDir = nativeRoot.dir("thirdparty")
 val sdl2Dir = thirdpartyDir.dir("SDL2")
 val openalDir = thirdpartyDir.dir("openal-soft")
@@ -59,6 +60,16 @@ fun patchTextFile(file: File, action: (String) -> String) {
 fun requirePatched(file: File, marker: String) {
     if (!file.readText().contains(marker)) {
         throw GradleException("Required Android patch marker '$marker' missing in ${file.path}")
+    }
+}
+
+fun applyUE1PatchOverlayV125(root: File) {
+    // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
+    val overlay = ue1PatchOverlayDir.asFile
+    if (!overlay.isDirectory) return
+    copy {
+        from(overlay)
+        into(root)
     }
 }
 
@@ -575,6 +586,14 @@ val prepareSources = tasks.register("prepareSources") {
         extractZipStripRoot(sdlZip, sdl2Dir.asFile)
         extractZipStripRoot(alZip, openalDir.asFile)
         patchUE1Source(ue1Dir.asFile)
+        applyUE1PatchOverlayV125(ue1Dir.asFile) // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_USEJOYSTICK_BRIDGE_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_MENU_TEXT_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrv.cpp"), "UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124")
+        requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h"), "UNREAL_ANDROID_MALI_ENDPOLY_BOUNDS_V124")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_NULLSAFE_STRNCPY_PATCH")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_APPFPRINTF_LOGCAT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnPlat.cpp"), "UNREAL_ANDROID_APPERROR_LOGCAT")
@@ -656,7 +675,7 @@ android {
         minSdk = 23
         targetSdk = 36
         versionCode = 1
-        versionName = "1.5.0"
+        versionName = "1.6.0"
 
         ndk {
             abiFilters += listOf("armeabi-v7a")
