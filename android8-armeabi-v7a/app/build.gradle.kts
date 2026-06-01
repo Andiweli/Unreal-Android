@@ -590,6 +590,8 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_USEJOYSTICK_BRIDGE_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_MENU_TEXT_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrv.cpp"), "UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124")
@@ -675,7 +677,7 @@ android {
         minSdk = 23
         targetSdk = 36
         versionCode = 1
-        versionName = "1.6.0"
+        versionName = "1.6.1"
 
         ndk {
             abiFilters += listOf("armeabi-v7a")

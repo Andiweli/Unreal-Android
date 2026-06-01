@@ -67,12 +67,24 @@ static UBOOL GAndroidNativeDirectStrafeLeft = 0; // UNREAL_ANDROID_CONTROLLER_DI
 static UBOOL GAndroidNativeDirectStrafeRight = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 static UBOOL GAndroidNativeDirectFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 static UBOOL GAndroidNativeDirectAltFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+static UBOOL GAndroidTouchDirectFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static UBOOL GAndroidTouchDirectAltFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static UBOOL GAndroidTouchDirectJumpV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static UBOOL GAndroidTouchDirectCrouchV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static UBOOL GAndroidTouchDirectNextV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
 static INT GAndroidNativeDirectMoveForwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectMoveBackwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectStrafeLeftKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectStrafeRightKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectAltFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
+static INT GAndroidTouchDirectFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static INT GAndroidTouchDirectAltFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static INT GAndroidTouchDirectJumpKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static INT GAndroidTouchDirectCrouchKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static INT GAndroidTouchDirectNextKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+static FString GAndroidTouchDirectNextSavedBindingV139; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
+static UBOOL GAndroidTouchDirectNextHasSavedBindingV139 = 0; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
 static UBOOL GAndroidNativeDirectResetPending = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 static volatile INT GAndroidTouchMenuVisibleV124 = 0; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
 static FLOAT GAndroidTouchLookXV124 = 0.0f; // UNREAL_ANDROID_TOUCH_OVERLAY_V125 / UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
@@ -141,6 +153,18 @@ static void UE1AndroidNativeControllerResetState()
 	GAndroidNativeRightStickActive[0] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	GAndroidNativeRightStickActive[1] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	GAndroidNativeDirectResetPending = 1; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
+	GAndroidTouchDirectFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectAltFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectJumpV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectCrouchV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectNextV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectAltFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectJumpKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectCrouchKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectNextKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	GAndroidTouchDirectNextSavedBindingV139 = ""; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
+	GAndroidTouchDirectNextHasSavedBindingV139 = 0; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
@@ -218,6 +242,64 @@ static INT UE1AndroidNativeDirectChooseKeyV123( UNSDLViewport* Viewport, INT Fri
 	return UE1AndroidNativeDirectKeyHasBindingV123( Viewport, FriendlyKey ) ? FriendlyKey : FallbackKey;
 }
 
+static void UE1AndroidTouchDirectSemanticPressV138( UNSDLViewport* Viewport, INT TempKey, const char* Alias, UBOOL& OldState, UBOOL NewState )
+{
+	// UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
+	// On-screen Jump/Duck are semantic touch UI actions, not physical Joy1/Joy2.
+	// v136 could trigger a remapped Joy1/Joy2 action, and v137 tried to scan the
+	// user's binding table which could steal/break LJoyLeft.  Use a private
+	// temporary input key and feed the intended alias directly for this session.
+	if( !Viewport || !Viewport->Input || !Alias || TempKey <= 0 || TempKey >= IK_MAX )
+		return;
+
+	if( OldState == NewState )
+		return;
+
+	Viewport->Input->Bindings[TempKey] = Alias;
+	Viewport->CauseInputEvent( TempKey, NewState ? IST_Press : IST_Release );
+	OldState = NewState;
+
+	if( !NewState )
+		Viewport->Input->Bindings[TempKey] = "";
+}
+
+
+static void UE1AndroidTouchDirectSemanticPressPreserveV139( UNSDLViewport* Viewport, INT TempKey, const char* Alias, UBOOL& OldState, UBOOL NewState, FString& SavedBinding, UBOOL& bHasSavedBinding )
+{
+	// UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
+	// The on-screen Next Weapon button is a semantic UI action.  It must always
+	// execute NextWeapon and must not reuse Joy11/RJoy/shoulder bindings, because
+	// users may have remapped those physical buttons to Fire or something else.
+	// Use a temporary binding only for the duration of this touch and restore the
+	// user's original binding afterwards so reinstalls/updates never rewrite it.
+	if( !Viewport || !Viewport->Input || !Alias || TempKey <= 0 || TempKey >= IK_MAX )
+		return;
+
+	if( OldState == NewState )
+		return;
+
+	if( NewState )
+	{
+		SavedBinding = Viewport->Input->Bindings[TempKey];
+		bHasSavedBinding = 1;
+		Viewport->Input->Bindings[TempKey] = Alias;
+		Viewport->CauseInputEvent( TempKey, IST_Press );
+		OldState = 1;
+	}
+	else
+	{
+		Viewport->Input->Bindings[TempKey] = Alias;
+		Viewport->CauseInputEvent( TempKey, IST_Release );
+		if( bHasSavedBinding )
+			Viewport->Input->Bindings[TempKey] = SavedBinding;
+		else
+			Viewport->Input->Bindings[TempKey] = "";
+		SavedBinding = "";
+		bHasSavedBinding = 0;
+		OldState = 0;
+	}
+}
+
 static void UE1AndroidNativeDirectPressMappedV123( UNSDLViewport* Viewport, INT FriendlyKey, INT FallbackKey, UBOOL& OldState, INT& OldKey, UBOOL NewState )
 {
 	// UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
@@ -255,6 +337,53 @@ static void UE1AndroidNativeDirectReleaseGameplayV122( UNSDLViewport* Viewport )
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownD9, IK_D,          GAndroidNativeDirectStrafeRight,  GAndroidNativeDirectStrafeRightKey,  0 );
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13,     IK_LeftMouse,  GAndroidNativeDirectFire,         GAndroidNativeDirectFireKey,         0 );
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12,     IK_RightMouse, GAndroidNativeDirectAltFire,      GAndroidNativeDirectAltFireKey,      0 );
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13,     IK_LeftMouse,       GAndroidTouchDirectFireV136,    GAndroidTouchDirectFireKeyV136,    0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12,     IK_RightMouse,      GAndroidTouchDirectAltFireV136, GAndroidTouchDirectAltFireKeyV136, 0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_UnknownEB,  "Jump", GAndroidTouchDirectJumpV136,   0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
+	UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_Unknown10E, "Duck", GAndroidTouchDirectCrouchV136, 0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
+	UE1AndroidTouchDirectSemanticPressPreserveV139( Viewport, IK_MouseWheelDown, "NextWeapon", GAndroidTouchDirectNextV136, 0, GAndroidTouchDirectNextSavedBindingV139, GAndroidTouchDirectNextHasSavedBindingV139 ); // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
+}
+
+static UBOOL UE1AndroidTouchButtonDirectHandleV136( UNSDLViewport* Viewport, INT KeyCode, UBOOL bPressed, UBOOL bIsInUI, UBOOL bIsKeyMenuing )
+{
+	// UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+	// Java overlay uses artificial KeyCodes for gameplay buttons.  Handling them
+	// here avoids fragile Android KeyEvent/gamepad binding paths and mirrors the
+	// existing direct trigger bridge: use the friendly controller binding when it
+	// exists, otherwise fall back to the classic PC key/mouse binding.
+	if( KeyCode != 910105 && KeyCode != 910104 && KeyCode != 910096 && KeyCode != 910097 && KeyCode != 910103 )
+		return 0;
+
+	if( ( bIsInUI || bIsKeyMenuing ) && bPressed )
+		return 1;
+
+	const char* Label = "unknown";
+	switch( KeyCode )
+	{
+		case 910105:
+			Label = "fire";
+			UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13, IK_LeftMouse, GAndroidTouchDirectFireV136, GAndroidTouchDirectFireKeyV136, bPressed );
+			break;
+		case 910104:
+			Label = "altfire";
+			UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12, IK_RightMouse, GAndroidTouchDirectAltFireV136, GAndroidTouchDirectAltFireKeyV136, bPressed );
+			break;
+		case 910096:
+			Label = "jump";
+			UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_UnknownEB, "Jump", GAndroidTouchDirectJumpV136, bPressed );
+			break;
+		case 910097:
+			Label = "crouch";
+			UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_Unknown10E, "Duck", GAndroidTouchDirectCrouchV136, bPressed );
+			break;
+		case 910103:
+			Label = "next";
+			UE1AndroidTouchDirectSemanticPressPreserveV139( Viewport, IK_MouseWheelDown, "NextWeapon", GAndroidTouchDirectNextV136, bPressed, GAndroidTouchDirectNextSavedBindingV139, GAndroidTouchDirectNextHasSavedBindingV139 );
+			break;
+	}
+
+	__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V139 %s %s", Label, bPressed ? "down" : "up" );
+	return 1;
 }
 
 static FLOAT UE1AndroidNativeLinearRampV97( FLOAT T )
@@ -2753,6 +2882,9 @@ UBOOL UNSDLViewport::TickInput()
 			const FAndroidNativeControllerEvent& NE = NativeEvents[EventIndex];
 			if( NE.Type == 1 )
 			{
+				if( UE1AndroidTouchButtonDirectHandleV136( this, NE.KeyCode, NE.Action == 0, bIsInUI, bIsKeyMenuing ) )
+					continue;
+
 				const BYTE Key = UE1AndroidNativeKeyCodeToUE1Key( NE.KeyCode, bIsInUI );
 				if( Key != IK_None && Key > 0 && Key < IK_MAX )
 				{

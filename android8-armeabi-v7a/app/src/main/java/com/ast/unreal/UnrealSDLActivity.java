@@ -542,9 +542,15 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         private boolean enabled = true;
         private boolean menuVisible = false;
         private float leftBaseX, leftBaseY, rightBaseX, rightBaseY, rightLastX, rightLastY, lx, ly, rx, ry; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131
-        private boolean fire, altFire, jump, crouch, next, menu;
+        private boolean fire, fireButton, altFire, jump, crouch, next, menu; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
+        private int rightFireAssistCount = 0; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
         private boolean dpadUp, dpadDown, dpadLeft, dpadRight, dpadCenter; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-        private enum TouchRole { NONE, LEFT_STICK, RIGHT_LOOK, FIRE, ALTFIRE, JUMP, CROUCH, NEXT, MENU, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, DPAD_CENTER }
+        private static final int TOUCH_DIRECT_FIRE_V136 = 910105;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+        private static final int TOUCH_DIRECT_ALT_FIRE_V136 = 910104; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+        private static final int TOUCH_DIRECT_JUMP_V136 = 910096;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+        private static final int TOUCH_DIRECT_CROUCH_V136 = 910097;   // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+        private static final int TOUCH_DIRECT_NEXT_V136 = 910103;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
+        private enum TouchRole { NONE, LEFT_STICK, RIGHT_LOOK, RIGHT_FIRE_ASSIST, FIRE, ALTFIRE, JUMP, CROUCH, NEXT, MENU, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, DPAD_CENTER }
 
         UnrealTouchOverlayViewV124(UnrealSDLActivity activity) {
             super(activity);
@@ -564,6 +570,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             iconMenu = loadIcon("touch_overlay/menu.png");
             iconDpad = loadIcon("touch_overlay/dpad.png");
             android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 overlay uses stable left-stick + UT99 right-half FPS look + grey smaller DPAD");
+            android.util.Log.i(TAG, "UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V136 repaired: second right-half touch uses native direct Fire while regular overlay buttons keep their own direct paths");
+            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138 consumes all overlay touches while Touch Controls is FALSE");
             postDelayed(redrawRunnable, 66L);
         }
 
@@ -664,15 +672,19 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             if (event == null) return false;
             refreshState();
             if (!enabled) {
+                // UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138
+                // When Touch Controls is OFF, the transparent overlay must still
+                // consume screen touches. Otherwise the SDL SurfaceView below can
+                // receive the same tap as a raw mouse/fire event.
                 releaseAll();
                 roles.clear();
-                return false;
+                return true;
             }
 
             int action = event.getActionMasked();
             int index = event.getActionIndex();
             if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-                TouchRole role = hitRole(event.getX(index), event.getY(index));
+                TouchRole role = resolveTouchRoleV135(event.getX(index), event.getY(index)); // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
                 if (role == TouchRole.NONE) return false;
                 int pointerId = event.getPointerId(index);
                 roles.put(pointerId, role);
@@ -685,7 +697,11 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     rightLastX = rightBaseX;
                     rightLastY = rightBaseY;
                 }
-                updateRole(role, event.getX(index), event.getY(index), true);
+                if (role == TouchRole.RIGHT_FIRE_ASSIST) {
+                    addRightFireAssistV135();
+                } else {
+                    updateRole(role, event.getX(index), event.getY(index), true);
+                }
                 return true;
             }
             if (action == MotionEvent.ACTION_MOVE) {
@@ -693,7 +709,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 for (int i = 0; i < event.getPointerCount(); ++i) {
                     TouchRole role = roles.get(event.getPointerId(i));
                     if (role != null && role != TouchRole.NONE) {
-                        updateRole(role, event.getX(i), event.getY(i), true);
+                        if (role != TouchRole.RIGHT_FIRE_ASSIST) {
+                            updateRole(role, event.getX(i), event.getY(i), true);
+                        }
                         consumed = true;
                     }
                 }
@@ -708,7 +726,11 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 int pointerId = event.getPointerId(index);
                 TouchRole role = roles.get(pointerId);
                 if (role != null && role != TouchRole.NONE) {
-                    updateRole(role, event.getX(index), event.getY(index), false);
+                    if (role == TouchRole.RIGHT_FIRE_ASSIST) {
+                        removeRightFireAssistV135();
+                    } else {
+                        updateRole(role, event.getX(index), event.getY(index), false);
+                    }
                     roles.remove(pointerId);
                     return true;
                 }
@@ -758,6 +780,50 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             // still win above by hit area; the remaining screen is always gameplay
             // stick/look exactly like the working UT99 overlay.
             return x < w * 0.5f ? TouchRole.LEFT_STICK : TouchRole.RIGHT_LOOK;
+        }
+
+        private boolean hasActiveRightLookPointerV135() {
+            for (int i = 0; i < roles.size(); ++i) {
+                if (roles.valueAt(i) == TouchRole.RIGHT_LOOK) return true;
+            }
+            return false;
+        }
+
+        private TouchRole resolveTouchRoleV135(float x, float y) {
+            TouchRole role = hitRole(x, y);
+            // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135:
+            // First free right-half touch stays FPS look/aim. A second free
+            // right-half touch acts as Fire while it is held. Explicit overlay
+            // buttons, DPAD and menu keep their existing roles.
+            if (role == TouchRole.RIGHT_LOOK && x >= getWidth() * 0.5f && hasActiveRightLookPointerV135()) {
+                return TouchRole.RIGHT_FIRE_ASSIST;
+            }
+            return role;
+        }
+
+        private void syncFireV135() {
+            boolean wantFire = fireButton || rightFireAssistCount > 0;
+            if (fire != wantFire) {
+                fire = wantFire;
+                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, wantFire);
+            }
+        }
+
+        private void setFireButtonV135(boolean down) {
+            if (fireButton != down) {
+                fireButton = down;
+                syncFireV135();
+            }
+        }
+
+        private void addRightFireAssistV135() {
+            rightFireAssistCount++;
+            syncFireV135();
+        }
+
+        private void removeRightFireAssistV135() {
+            if (rightFireAssistCount > 0) rightFireAssistCount--;
+            syncFireV135();
         }
 
         private boolean insideCircle(float x, float y, float cx, float cy, float r) {
@@ -832,20 +898,22 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     }
                     sendTouchLookV129(rx, ry);
                     break;
+                case RIGHT_FIRE_ASSIST:
+                    break;
                 case FIRE:
-                    if (fire != down) { fire = down; setButton(KeyEvent.KEYCODE_BUTTON_R2, down); }
+                    setFireButtonV135(down);
                     break;
                 case ALTFIRE:
-                    if (altFire != down) { altFire = down; setButton(KeyEvent.KEYCODE_BUTTON_L2, down); }
+                    if (altFire != down) { altFire = down; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, down); }
                     break;
                 case JUMP:
-                    if (jump != down) { jump = down; setButton(KeyEvent.KEYCODE_BUTTON_A, down); }
+                    if (jump != down) { jump = down; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, down); }
                     break;
                 case CROUCH:
-                    if (crouch != down) { crouch = down; setButton(KeyEvent.KEYCODE_BUTTON_B, down); }
+                    if (crouch != down) { crouch = down; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, down); }
                     break;
                 case NEXT:
-                    if (next != down) { next = down; setButton(KeyEvent.KEYCODE_BUTTON_R1, down); }
+                    if (next != down) { next = down; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, down); }
                     break;
                 case MENU:
                     if (menu != down) { menu = down; setButton(KeyEvent.KEYCODE_MENU, down); }
@@ -867,6 +935,25 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     break;
                 case NONE:
                     break;
+            }
+        }
+
+        private void setDirectTouchButtonV136(int directKeyCode, boolean down) {
+            // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136:
+            // Gameplay overlay buttons and assistive shoot use a native direct path
+            // that selects the current friendly controller binding or a safe PC fallback.
+            try {
+                nativeAndroidControllerKey(
+                        -136,
+                        0,
+                        0,
+                        directKeyCode,
+                        0,
+                        down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                        0,
+                        InputDevice.SOURCE_GAMEPAD,
+                        "UnrealTouchButtonDirectV136");
+            } catch (Throwable ignored) {
             }
         }
 
@@ -917,11 +1004,16 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 rx = ry = 0f;
                 sendTouchLookV129(0f, 0f);
             }
-            if (fire) { fire = false; setButton(KeyEvent.KEYCODE_BUTTON_R2, false); }
-            if (altFire) { altFire = false; setButton(KeyEvent.KEYCODE_BUTTON_L2, false); }
-            if (jump) { jump = false; setButton(KeyEvent.KEYCODE_BUTTON_A, false); }
-            if (crouch) { crouch = false; setButton(KeyEvent.KEYCODE_BUTTON_B, false); }
-            if (next) { next = false; setButton(KeyEvent.KEYCODE_BUTTON_R1, false); }
+            if (fire || fireButton || rightFireAssistCount > 0) {
+                fire = false;
+                fireButton = false;
+                rightFireAssistCount = 0;
+                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, false);
+            }
+            if (altFire) { altFire = false; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, false); }
+            if (jump) { jump = false; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, false); }
+            if (crouch) { crouch = false; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, false); }
+            if (next) { next = false; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, false); }
             if (menu) { menu = false; setButton(KeyEvent.KEYCODE_MENU, false); }
             if (dpadUp) { dpadUp = false; setButton(KeyEvent.KEYCODE_DPAD_UP, false); }
             if (dpadDown) { dpadDown = false; setButton(KeyEvent.KEYCODE_DPAD_DOWN, false); }

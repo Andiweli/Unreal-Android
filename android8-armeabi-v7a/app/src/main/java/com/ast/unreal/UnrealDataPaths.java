@@ -328,10 +328,11 @@ final class UnrealDataPaths {
 
 
     private static void ensureAndroidControllerDirectPatch(File systemDir) {
-        // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
-        // Existing installs keep old weak controller values forever because config
-        // files are only copied when missing. Patch them once at boot so the fix is
-        // effective without forcing users to delete their Unreal folder.
+        // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+        // Keep the Android controller/touch runtime flags available, but do not
+        // re-append or rewrite [Engine.Input] on every app update.  Reinstalling
+        // the APK retains /Android/data, therefore existing user key bindings must
+        // be treated as authoritative.
         patchNsdlControllerDefaults(new File(systemDir, "Unreal.ini"));
         patchNsdlControllerDefaults(new File(systemDir, "Default.ini"));
         appendControllerInputFallbacks(new File(systemDir, "User.ini"));
@@ -344,12 +345,12 @@ final class UnrealDataPaths {
             String patched = text;
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "UseJoystick", "True");
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeController", "True");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeDirectInput", "True ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickScale", "1.00 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeLeftStickDeadzone", "0.08 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickDeadzone", "0.10 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeTriggerDeadzone", "0.12 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeAxisCurve", "1.00 ; UNREAL_ANDROID_CONTROLLER_DIRECT_V122");
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeDirectInput", "True"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickScale", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeLeftStickDeadzone", "0.08"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickDeadzone", "0.10"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeTriggerDeadzone", "0.12"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeAxisCurve", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneXYZ", "0.10");
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneRUV", "0.10");
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleXYZ", "100.0");
@@ -369,8 +370,13 @@ final class UnrealDataPaths {
             String text = file.isFile()
                     ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
                     : "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n";
-            if (text.contains("UNREAL_ANDROID_CONTROLLER_DIRECT_V122")) return;
-            String block = "\n\n; UNREAL_ANDROID_CONTROLLER_DIRECT_V122\n" +
+            if (text.contains("UNREAL_ANDROID_CONTROLLER_DIRECT_V122")
+                    || hasAnyEngineInputBindings(text)
+                    || hasAndroidControllerFallbackBindings(text)) {
+                Log.i(TAG_CONFIG, "Preserved existing input bindings: " + file.getAbsolutePath()); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+                return;
+            }
+            String block = "\n\n; UNREAL_ANDROID_CONTROLLER_DIRECT_V122 UNREAL_ANDROID_CONFIG_PRESERVE_V139\n" +
                     "; Robust Android controller fallbacks. Direct mode uses W/A/S/D + mouse buttons for gameplay,\n" +
                     "; while these Joy*/friendly aliases keep Customize Controls and SDL fallback usable.\n" +
                     "[Engine.Input]\n" +
@@ -417,6 +423,35 @@ final class UnrealDataPaths {
         } catch (IOException ex) {
             Log.w(TAG_CONFIG, "Could not append controller input fallbacks in " + file.getAbsolutePath() + ": " + ex);
         }
+    }
+
+    private static boolean hasAnyEngineInputBindings(String text) {
+        // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+        // A retained install may already contain user-customized controls.  Do not
+        // append a second default [Engine.Input] block because UE1 keeps the last
+        // duplicate key and that would effectively reset the user's bindings.
+        if (text == null) return false;
+        String[] lines = text.replace("\r\n", "\n").replace('\r', '\n').split("\n");
+        boolean inInput = false;
+        for (String raw : lines) {
+            String t = raw.trim();
+            if (t.length() == 0 || t.startsWith(";") || t.startsWith("#")) continue;
+            if (t.startsWith("[") && t.endsWith("]")) {
+                inInput = t.equalsIgnoreCase("[Engine.Input]");
+                continue;
+            }
+            if (inInput && t.indexOf('=') > 0) return true;
+        }
+        return false;
+    }
+
+    private static boolean hasAndroidControllerFallbackBindings(String text) {
+        // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+        if (text == null) return false;
+        return text.contains("UnknownD8=StrafeLeft")
+                || text.contains("UnknownDA=MoveForward")
+                || text.contains("Joy11=NextWeapon")
+                || text.contains("Joy13=Fire");
     }
 
     private static String setIniValue(String text, String section, String key, String value) {
