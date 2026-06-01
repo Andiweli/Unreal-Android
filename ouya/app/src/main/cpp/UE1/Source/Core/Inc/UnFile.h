@@ -99,7 +99,7 @@ CORE_API void ClipboardPaste( class FString& Str );
 #if DO_SLOW_GUARD
 	#define debugfSlow GSystem->Logf
 #else
-	#define debugfSlow //
+	#define debugfSlow(...) do {} while(0)
 #endif
 
 /*-----------------------------------------------------------------------------
@@ -407,18 +407,12 @@ inline void* operator new( size_t Size, const char* Tag )
 	return appMalloc( Size, Tag );
 	unguard;
 }
-inline void* operator new(size_t Size )
-{
-	guard( "operator new" );
-	return appMalloc( Size, "new" );
-	unguard;
-}
-inline void operator delete( void* Ptr )
-{
-	guard( "operator delete" );
-	appFree( Ptr );
-	unguard;
-}
+
+// Global replacement operators must not be defined inline in this header.
+// Keep declarations here and provide one definition in UnFile.cpp to avoid
+// repeated Clang warnings from every translation unit that includes Core.h.
+CORE_API void* operator new( size_t Size );
+CORE_API void operator delete( void* Ptr ) noexcept;
 
 /*-----------------------------------------------------------------------------
 	Fast inline memory copy/fill functions.

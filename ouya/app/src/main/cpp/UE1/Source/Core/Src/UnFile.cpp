@@ -39,7 +39,7 @@
 #define UE1_ANDROID_LOG_TAG "UE1Config"
 #endif
 
-#define UE1_ANDROID_LOGI(...) __android_log_print(ANDROID_LOG_INFO,  UE1_ANDROID_LOG_TAG, __VA_ARGS__)
+#define UE1_ANDROID_LOGI(...) do {} while (0)
 #define UE1_ANDROID_LOGW(...) __android_log_print(ANDROID_LOG_WARN,  UE1_ANDROID_LOG_TAG, __VA_ARGS__)
 #define UE1_ANDROID_LOGE(...) __android_log_print(ANDROID_LOG_ERROR, UE1_ANDROID_LOG_TAG, __VA_ARGS__)
 
@@ -631,6 +631,23 @@ CORE_API void appFree( void* Ptr )
 
 	unguard;
 }
+
+CORE_API void* operator new( size_t Size )
+{
+	guard( "operator new" );
+	return appMalloc( Size, "new" );
+	unguard;
+}
+
+CORE_API void operator delete( void* Ptr ) noexcept
+{
+	guard( "operator delete" );
+	if( Ptr )
+	{
+		appFree( Ptr );
+	}
+	unguard;
+}
 CORE_API void* appRealloc( void* Ptr, INT NewSize, const char* Tag )
 {
 	guard(appRealloc);
@@ -1046,9 +1063,6 @@ CORE_API INT appFprintf( FILE* F, const char* Fmt, ... )
 {
 	char Temp[32768];
 	GET_VARARGS(Temp,Fmt);
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_APPFPRINTF_LOGCAT
-	__android_log_write( ANDROID_LOG_INFO, "UE1Log", Temp );
-#endif
 	return appFwrite( Temp, 1, strlen(Temp), F );
 }
 CORE_API UBOOL appLoadFileToString( FString& Result, const char* Filename )

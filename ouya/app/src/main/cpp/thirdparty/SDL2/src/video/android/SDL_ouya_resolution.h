@@ -208,62 +208,70 @@ static int SDL_OUYA_ReadResolutionFromIni(const char *Path, int *OutW, int *OutH
     return Got;
 }
 
+static int SDL_OUYA_Cached = 0;
+static int SDL_OUYA_CachedW = 960;
+static int SDL_OUYA_CachedH = 540;
+
+static void SDL_OUYA_SetCachedRenderResolution(int W, int H)
+{
+    SDL_OUYA_NormalizeResolution(&W, &H);
+    SDL_OUYA_CachedW = W;
+    SDL_OUYA_CachedH = H;
+    SDL_OUYA_Cached = 1;
+}
+
 static void SDL_OUYA_GetRenderResolution(int *OutW, int *OutH)
 {
-    static int Cached = 0;
-    static int CachedW = 960;
-    static int CachedH = 540;
-
-    if (!Cached) {
+    if (!SDL_OUYA_Cached) {
         const char *EnvRoot;
         const char *EnvRes;
         const char *EnvW;
         const char *EnvH;
         char Path[1024];
 
-        CachedW = 960;
-        CachedH = 540;
+        SDL_OUYA_CachedW = 960;
+        SDL_OUYA_CachedH = 540;
 
-        SDL_OUYA_ReadResolutionFromIni("Unreal.ini", &CachedW, &CachedH);
-        SDL_OUYA_ReadResolutionFromIni("./Unreal.ini", &CachedW, &CachedH);
+        SDL_OUYA_ReadResolutionFromIni("Unreal.ini", &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
+        SDL_OUYA_ReadResolutionFromIni("./Unreal.ini", &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
 
         EnvRoot = getenv("UE1_ANDROID_ROOT");
         if (EnvRoot && EnvRoot[0]) {
             snprintf(Path, sizeof(Path), "%s/System/Unreal.ini", EnvRoot);
             Path[sizeof(Path) - 1] = '\0';
-            SDL_OUYA_ReadResolutionFromIni(Path, &CachedW, &CachedH);
+            SDL_OUYA_ReadResolutionFromIni(Path, &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
         }
 
-        SDL_OUYA_ReadResolutionFromIni("/mnt/usbdrive/Unreal/System/Unreal.ini", &CachedW, &CachedH);
-        SDL_OUYA_ReadResolutionFromIni("/storage/emulated/0/Unreal/System/Unreal.ini", &CachedW, &CachedH);
-        SDL_OUYA_ReadResolutionFromIni("/sdcard/Unreal/System/Unreal.ini", &CachedW, &CachedH);
+        SDL_OUYA_ReadResolutionFromIni("/mnt/usbdrive/Unreal/System/Unreal.ini", &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
+        SDL_OUYA_ReadResolutionFromIni("/storage/emulated/0/Unreal/System/Unreal.ini", &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
+        SDL_OUYA_ReadResolutionFromIni("/sdcard/Unreal/System/Unreal.ini", &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
 
         EnvRes = getenv("UE1_OUYA_RENDER_RES");
         if (!EnvRes || !EnvRes[0]) {
             EnvRes = getenv("OUYA_RENDER_RES");
         }
         if (EnvRes && EnvRes[0]) {
-            SDL_OUYA_ParseResolutionValue(EnvRes, &CachedW, &CachedH);
+            SDL_OUYA_ParseResolutionValue(EnvRes, &SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
         }
 
         EnvW = getenv("UE1_OUYA_RENDER_WIDTH");
         EnvH = getenv("UE1_OUYA_RENDER_HEIGHT");
         if (EnvW && EnvH && EnvW[0] && EnvH[0]) {
-            CachedW = SDL_OUYA_ParsePositiveInt(EnvW);
-            CachedH = SDL_OUYA_ParsePositiveInt(EnvH);
+            SDL_OUYA_CachedW = SDL_OUYA_ParsePositiveInt(EnvW);
+            SDL_OUYA_CachedH = SDL_OUYA_ParsePositiveInt(EnvH);
         }
 
-        SDL_OUYA_NormalizeResolution(&CachedW, &CachedH);
+        SDL_OUYA_NormalizeResolution(&SDL_OUYA_CachedW, &SDL_OUYA_CachedH);
         if (0) {
               SDL_Log("OUYA/API16 COMBO: selected native render resolution");
           } else {
-              SDL_Log("OUYA/API16 COMBO: selected render resolution %dx%d", CachedW, CachedH);
+              SDL_Log("OUYA/API16 COMBO: selected render resolution %dx%d", SDL_OUYA_CachedW, SDL_OUYA_CachedH);
           }
-        Cached = 1;
+        SDL_OUYA_Cached = 1;
     }
 
-    *OutW = CachedW;
-    *OutH = CachedH;
+    *OutW = SDL_OUYA_CachedW;
+    *OutH = SDL_OUYA_CachedH;
 }
 
 #endif /* SDL_OUYA_RESOLUTION_H_ */

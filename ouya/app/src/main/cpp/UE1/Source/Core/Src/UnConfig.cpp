@@ -11,6 +11,18 @@
 #include <stdio.h>
 
 static int GUE1AndroidConfigAutosaveGuard = 0;
+static int GUE1AndroidConfigBatchDepth = 0;
+
+extern "C" void UE1AndroidConfigBeginBatchSave()
+{
+	++GUE1AndroidConfigBatchDepth;
+}
+
+extern "C" void UE1AndroidConfigEndBatchSave()
+{
+	if( GUE1AndroidConfigBatchDepth > 0 )
+		--GUE1AndroidConfigBatchDepth;
+}
 
 static const char* UE1AndroidConfigBaseName( const char* Filename )
 {
@@ -49,7 +61,6 @@ static const char* UE1AndroidRemapConfigFilename( const char* Filename, char* Ou
 	snprintf( Out, OutSize, "%s%s", appAndroidUnrealSystemDir(), UE1AndroidConfigBaseName( Filename ) );
 	Out[OutSize - 1] = 0;
 
-	__android_log_print( ANDROID_LOG_INFO, "UE1Config", "Config %s path: %s -> %s", ForWrite ? "save" : "load", Filename, Out );
 
 	return Out;
 }
@@ -153,7 +164,8 @@ UBOOL FConfigFile::Write( const char* InFilename )
 	UBOOL Ok = appSaveStringToFile( Text, InFilename );
 
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-	__android_log_print( ANDROID_LOG_INFO, "UE1Config", "FConfigFile::Write %s: %s", Ok ? "OK" : "FAILED", InFilename ? InFilename : "(null)" );
+	if( !Ok )
+		__android_log_print( ANDROID_LOG_ERROR, "UE1Config", "FConfigFile::Write FAILED: %s", InFilename ? InFilename : "(null)" );
 #endif
 
 	return Ok;
@@ -256,7 +268,6 @@ void FConfigCache::Exit()
     if( !GUE1AndroidConfigAutosaveGuard )
     {
         GUE1AndroidConfigAutosaveGuard = 1;
-        __android_log_print(ANDROID_LOG_INFO, "UE1Config", "FConfigCache::Exit forcing SaveAllConfigs");
         SaveAllConfigs();
         GUE1AndroidConfigAutosaveGuard = 0;
     }
@@ -320,10 +331,19 @@ UBOOL FConfigCache::SetString( const char* Section, const char *Key, const char*
 	// Save the touched ini immediately so Options/Preferences changes survive even abrupt exits.
 	if( Result && Cfg && !GUE1AndroidConfigAutosaveGuard )
 	{
-		GUE1AndroidConfigAutosaveGuard = 1;
-		__android_log_print( ANDROID_LOG_INFO, "UE1Config", "Autosave touched config: %s", Cfg->Filename );
-		Cfg->Write( Cfg->Filename );
-		GUE1AndroidConfigAutosaveGuard = 0;
+		if( GUE1AndroidConfigBatchDepth > 0 )
+		{
+			// UE1_ANDROID_OUYA_CONFIG_BATCH_SAVE_V5
+			// Resolution changes touch several keys in a row.  Do not write the
+			// same ini file repeatedly while a caller is batching a final
+			// SaveAllConfigs() flush.
+		}
+		else
+		{
+			GUE1AndroidConfigAutosaveGuard = 1;
+			Cfg->Write( Cfg->Filename );
+			GUE1AndroidConfigAutosaveGuard = 0;
+		}
 	}
 #endif
 
@@ -372,11 +392,6 @@ FConfigFile* FConfigCache::FindConfig( const char* InFilename, UBOOL CreateIfNot
 
 UBOOL FConfigCache::SaveAllConfigs()
 {
-#if defined(PLATFORM_ANDROID) || defined(__ANDROID__)
-// Trace every global config save attempt on Android.
-    __android_log_print(ANDROID_LOG_INFO, "UE1Config", "FConfigCache::SaveAllConfigs called");
-#endif
-
 	guard(FConfigCache::SaveAllConfigs);
 	UBOOL Ret = true;
 	for( TIterator<FConfigFile*> It(Configs); It; ++It )

@@ -7,6 +7,16 @@
 =============================================================================*/
 
 #include "CorePrivate.h" 
+#ifndef UE1_OUYA_ENABLE_LOAD_PROFILE
+#define UE1_OUYA_ENABLE_LOAD_PROFILE 0
+#endif
+
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+#include <android/log.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#endif
 
 /*-----------------------------------------------------------------------------
 	Globals.
@@ -33,6 +43,90 @@ TArray<UObject*>	FObjectManager::Root;
 // For development.
 UBOOL GNoGC=0;
 UBOOL GCheckConflicts=0;
+
+// OUYA_LOAD_PROFILE_V2_UNOBJ_BEGIN
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+#include <time.h>
+static DOUBLE UE1OuyaLoadProfileObjSeconds()
+{
+	struct timespec Ts;
+	if( clock_gettime( CLOCK_MONOTONIC, &Ts ) == 0 )
+		return (DOUBLE)Ts.tv_sec + (DOUBLE)Ts.tv_nsec / 1000000000.0;
+	return appSeconds();
+}
+
+static void UE1OuyaLoadProfileObjLog( const char* Fmt, ... )
+{
+	char Buffer[1024];
+	va_list Args;
+	va_start( Args, Fmt );
+	vsnprintf( Buffer, sizeof(Buffer), Fmt, Args );
+	va_end( Args );
+	Buffer[sizeof(Buffer)-1] = 0;
+	__android_log_write( ANDROID_LOG_INFO, "UE1LoadProfile", Buffer );
+}
+
+// OUYA_LOAD_PROFILE_V6_PRELOAD_BREAKDOWN_BEGIN
+// OUYA_LOAD_PROFILE_V7_PRELOAD_TOP_OBJECTS_ACTIVE
+struct FUE1OuyaPreloadStat
+{
+	char Name[96];
+	INT Count;
+	DOUBLE MS;
+};
+
+static void UE1OuyaPreloadStatAdd( FUE1OuyaPreloadStat* Stats, INT& NumStats, INT MaxStats, const char* Name, DOUBLE MS )
+{
+	if( !Name || !Name[0] )
+		Name = "None";
+
+	for( INT i=0; i<NumStats; i++ )
+	{
+		if( strcmp( Stats[i].Name, Name ) == 0 )
+		{
+			Stats[i].Count++;
+			Stats[i].MS += MS;
+			return;
+		}
+	}
+
+	if( NumStats < MaxStats )
+	{
+		strncpy( Stats[NumStats].Name, Name, sizeof(Stats[NumStats].Name)-1 );
+		Stats[NumStats].Name[sizeof(Stats[NumStats].Name)-1] = 0;
+		Stats[NumStats].Count = 1;
+		Stats[NumStats].MS = MS;
+		NumStats++;
+	}
+}
+
+static void UE1OuyaPreloadStatLogTop( const char* Label, FUE1OuyaPreloadStat* Stats, INT NumStats, INT MaxRank )
+{
+	UBOOL Used[96];
+	for( INT i=0; i<96; i++ )
+		Used[i] = 0;
+
+	for( INT Rank=1; Rank<=MaxRank; Rank++ )
+	{
+		INT Best = INDEX_NONE;
+		DOUBLE BestMS = 0.0;
+		for( INT i=0; i<NumStats; i++ )
+		{
+			if( !Used[i] && Stats[i].MS > BestMS )
+			{
+				Best = i;
+				BestMS = Stats[i].MS;
+			}
+		}
+		if( Best == INDEX_NONE || BestMS < 1.0 )
+			break;
+		Used[Best] = 1;
+		UE1OuyaLoadProfileObjLog( "endload preloadTop%s rank=%i name=%s count=%i ms=%.2f", Label, Rank, Stats[Best].Name, Stats[Best].Count, (FLOAT)Stats[Best].MS );
+	}
+}
+// OUYA_LOAD_PROFILE_V6_PRELOAD_BREAKDOWN_END
+#endif
+// OUYA_LOAD_PROFILE_V2_UNOBJ_END
 
 /*-----------------------------------------------------------------------------
 	UObject constructors.
@@ -1826,6 +1920,13 @@ UObject* FObjectManager::LoadPackage( UObject* InParent, const char* Filename, D
 	guard(FObjectManager::LoadPackage);
 	//DWORD Time=0; uclock(Time);
 	UObject* Result;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+	const DOUBLE ProfileStart = UE1OuyaLoadProfileObjSeconds();
+	DOUBLE ProfileLinkerEnd = ProfileStart;
+	DOUBLE ProfileLoadAllEnd = ProfileStart;
+	DOUBLE ProfileEndLoadEnd = ProfileStart;
+	const char* ProfileName = Filename ? Filename : ( InParent ? InParent->GetName() : "(null)" );
+#endif
 
 	// Try to load.
 	BeginLoad();
@@ -1833,17 +1934,55 @@ UObject* FObjectManager::LoadPackage( UObject* InParent, const char* Filename, D
 	{
 		// Create a new linker object which goes off and tries load the file.
 		ULinkerLoad* Linker = GetPackageLinker( InParent, Filename ? Filename : InParent->GetName(), LoadFlags | LOAD_Throw, NULL, NULL );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+		ProfileLinkerEnd = UE1OuyaLoadProfileObjSeconds();
+#endif
 		if( !(LoadFlags & LOAD_Verify) )
 			Linker->LoadAllObjects();
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+		ProfileLoadAllEnd = UE1OuyaLoadProfileObjSeconds();
+		if( Linker && Linker->ProfileStart > 0.0 )
+		{
+			UE1OuyaLoadProfileObjLog( "package fileStats activeMS=%.2f readMS=%.2f seekMS=%.2f reads=%i seeks=%i slowReads=%i slowSeeks=%i kb=%i eofKB=%i avgReadBytes=%i name=%s",
+				Linker->ProfileOpenMS + Linker->ProfileReadMS + Linker->ProfileSeekMS,
+				Linker->ProfileReadMS,
+				Linker->ProfileSeekMS,
+				Linker->ProfileReadCalls,
+				Linker->ProfileSeekCalls,
+				Linker->ProfileSlowReads,
+				Linker->ProfileSlowSeeks,
+				Linker->ProfileReadBytes / 1024,
+				Linker->Eof / 1024,
+				Linker->ProfileReadCalls > 0 ? Linker->ProfileReadBytes / Linker->ProfileReadCalls : 0,
+				ProfileName );
+		}
+#endif
 		Result = Linker->LinkerRoot;
 		EndLoad();
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+		ProfileEndLoadEnd = UE1OuyaLoadProfileObjSeconds();
+#endif
 	}
 	catch( char* Error )
 	{
 		EndLoad();
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+		ProfileEndLoadEnd = UE1OuyaLoadProfileObjSeconds();
+#endif
 		SafeLoadError( LoadFlags, Error, LocalizeError("FailedLoadPackage"), Error );
 		Result = NULL;
 	}
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+	{
+		const DOUBLE ProfileEnd = UE1OuyaLoadProfileObjSeconds();
+		const FLOAT LinkerMS = (FLOAT)((ProfileLinkerEnd - ProfileStart) * 1000.0);
+		const FLOAT LoadAllMS = (FLOAT)((ProfileLoadAllEnd - ProfileLinkerEnd) * 1000.0);
+		const FLOAT EndLoadMS = (FLOAT)((ProfileEndLoadEnd - ProfileLoadAllEnd) * 1000.0);
+		const FLOAT TotalMS = (FLOAT)((ProfileEnd - ProfileStart) * 1000.0);
+		if( TotalMS >= 5.0f )
+			UE1OuyaLoadProfileObjLog( "package load totalMS=%.2f linkerMS=%.2f loadAllMS=%.2f endLoadMS=%.2f ok=%i flags=0x%08x name=%s", TotalMS, LinkerMS, LoadAllMS, EndLoadMS, Result != NULL, LoadFlags, ProfileName );
+	}
+#endif
 	//uunclock(Time); debugf(NAME_Log,"LoadPackage=%f",GSecondsPerCycle*1000*Time);
 	return Result;
 	unguard;
@@ -1874,37 +2013,144 @@ void FObjectManager::EndLoad()
 	check(BeginLoadCount>0);
 	if( --BeginLoadCount == 0 )
 	{
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+		const DOUBLE EndLoadStart = UE1OuyaLoadProfileObjSeconds();
+		FLOAT PreloadMS = 0.0f;
+		FLOAT PostloadMS = 0.0f;
+		FLOAT DissociateMS = 0.0f;
+		INT PreloadObjects = 0;
+		INT PreloadIterations = 0;
+		INT PostloadObjects = 0;
+		const INT LoaderCountAtStart = Loaders.Num();
+		FUE1OuyaPreloadStat PreloadClassStats[96];
+		FUE1OuyaPreloadStat PreloadPackageStats[96];
+		INT PreloadClassStatCount = 0;
+		INT PreloadPackageStatCount = 0;
+		DOUBLE SlowestPreloadMS = 0.0;
+		char SlowestPreloadObject[256];
+		char SlowestPreloadClass[96];
+		char SlowestPreloadPackage[96];
+		DOUBLE TopPreloadMS[8];
+		char TopPreloadObject[8][256];
+		char TopPreloadClass[8][96];
+		char TopPreloadPackage[8][96];
+		SlowestPreloadObject[0] = 0;
+		SlowestPreloadClass[0] = 0;
+		SlowestPreloadPackage[0] = 0;
+		for( INT TopInit=0; TopInit<8; TopInit++ )
+		{
+			TopPreloadMS[TopInit] = 0.0;
+			TopPreloadObject[TopInit][0] = 0;
+			TopPreloadClass[TopInit][0] = 0;
+			TopPreloadPackage[TopInit][0] = 0;
+		}
+		for( INT StatInit=0; StatInit<96; StatInit++ )
+		{
+			PreloadClassStats[StatInit].Name[0] = 0;
+			PreloadClassStats[StatInit].Count = 0;
+			PreloadClassStats[StatInit].MS = 0.0;
+			PreloadPackageStats[StatInit].Name[0] = 0;
+			PreloadPackageStats[StatInit].Count = 0;
+			PreloadPackageStats[StatInit].MS = 0.0;
+		}
+#endif
 		try
 		{
 			// Finish loading everything.
 			guard(LoadObjects);
 			debugfSlow( NAME_DevLoad, "Loading objects..." );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			const DOUBLE PreloadStart = UE1OuyaLoadProfileObjSeconds();
+#endif
 			UBOOL Preloaded;
 			do
 			{
 				Preloaded=0;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+				PreloadIterations++;
+#endif
 				for( FObjectIterator It; It; ++It )
 				{
 					if( It->GetFlags() & RF_NeedLoad )
 					{
 						check(It->GetLinker());
 						Preloaded = 1;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+						const DOUBLE ObjectPreloadStart = UE1OuyaLoadProfileObjSeconds();
+						const char* ObjectClassName = It->GetClass() ? It->GetClass()->GetName() : "None";
+						const char* ObjectPackageName = ( It->GetLinker() && It->GetLinker()->LinkerRoot ) ? It->GetLinker()->LinkerRoot->GetName() : "None";
+#endif
 						It->GetLinker()->Preload( *It );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+						const DOUBLE ObjectPreloadMS = (UE1OuyaLoadProfileObjSeconds() - ObjectPreloadStart) * 1000.0;
+						UE1OuyaPreloadStatAdd( PreloadClassStats, PreloadClassStatCount, 96, ObjectClassName, ObjectPreloadMS );
+						UE1OuyaPreloadStatAdd( PreloadPackageStats, PreloadPackageStatCount, 96, ObjectPackageName, ObjectPreloadMS );
+						if( ObjectPreloadMS > SlowestPreloadMS )
+						{
+							SlowestPreloadMS = ObjectPreloadMS;
+							strncpy( SlowestPreloadClass, ObjectClassName ? ObjectClassName : "None", sizeof(SlowestPreloadClass)-1 );
+							SlowestPreloadClass[sizeof(SlowestPreloadClass)-1] = 0;
+							strncpy( SlowestPreloadPackage, ObjectPackageName ? ObjectPackageName : "None", sizeof(SlowestPreloadPackage)-1 );
+							SlowestPreloadPackage[sizeof(SlowestPreloadPackage)-1] = 0;
+							It->GetFullName( SlowestPreloadObject );
+						}
+						if( ObjectPreloadMS > TopPreloadMS[7] )
+						{
+							INT InsertAt = 7;
+							while( InsertAt > 0 && ObjectPreloadMS > TopPreloadMS[InsertAt-1] )
+								InsertAt--;
+							for( INT MoveTop=7; MoveTop>InsertAt; MoveTop-- )
+							{
+								TopPreloadMS[MoveTop] = TopPreloadMS[MoveTop-1];
+								strncpy( TopPreloadClass[MoveTop], TopPreloadClass[MoveTop-1], sizeof(TopPreloadClass[MoveTop])-1 );
+								TopPreloadClass[MoveTop][sizeof(TopPreloadClass[MoveTop])-1] = 0;
+								strncpy( TopPreloadPackage[MoveTop], TopPreloadPackage[MoveTop-1], sizeof(TopPreloadPackage[MoveTop])-1 );
+								TopPreloadPackage[MoveTop][sizeof(TopPreloadPackage[MoveTop])-1] = 0;
+								strncpy( TopPreloadObject[MoveTop], TopPreloadObject[MoveTop-1], sizeof(TopPreloadObject[MoveTop])-1 );
+								TopPreloadObject[MoveTop][sizeof(TopPreloadObject[MoveTop])-1] = 0;
+							}
+							TopPreloadMS[InsertAt] = ObjectPreloadMS;
+							strncpy( TopPreloadClass[InsertAt], ObjectClassName ? ObjectClassName : "None", sizeof(TopPreloadClass[InsertAt])-1 );
+							TopPreloadClass[InsertAt][sizeof(TopPreloadClass[InsertAt])-1] = 0;
+							strncpy( TopPreloadPackage[InsertAt], ObjectPackageName ? ObjectPackageName : "None", sizeof(TopPreloadPackage[InsertAt])-1 );
+							TopPreloadPackage[InsertAt][sizeof(TopPreloadPackage[InsertAt])-1] = 0;
+							It->GetFullName( TopPreloadObject[InsertAt] );
+						}
+						PreloadObjects++;
+#endif
 					}
 				}
 			} while( Preloaded );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			PreloadMS = (FLOAT)((UE1OuyaLoadProfileObjSeconds() - PreloadStart) * 1000.0);
+#endif
 			unguard;
 
 			// Postload the objects.
 			guard(PostloadObjects);
 			debugfSlow( NAME_DevLoad, "Linking all objects..." );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			const DOUBLE PostloadStart = UE1OuyaLoadProfileObjSeconds();
+#endif
 			for( FObjectIterator It; It; ++It )
+			{
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+				if( It->GetFlags() & RF_NeedPostLoad )
+					PostloadObjects++;
+#endif
 				It->ConditionalPostLoad();
+			}
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			PostloadMS = (FLOAT)((UE1OuyaLoadProfileObjSeconds() - PostloadStart) * 1000.0);
+#endif
 			unguard;
 
 			// Dissociate all linker object imports, since they may be destroyed,
 			// causing their pointers to become invalid.
 			guard(DissociateImports);
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			const DOUBLE DissociateStart = UE1OuyaLoadProfileObjSeconds();
+#endif
 			for( INT i=0; i<Loaders.Num(); i++ )
 			{
 				for( INT j=0; j<GetLoader(i)->ImportMap.Num(); j++ )
@@ -1914,7 +2160,31 @@ void FObjectManager::EndLoad()
 						Import.Object = NULL;
 				}
 			}
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			DissociateMS = (FLOAT)((UE1OuyaLoadProfileObjSeconds() - DissociateStart) * 1000.0);
+#endif
 			unguard;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16) && UE1_OUYA_ENABLE_LOAD_PROFILE
+			{
+				const FLOAT TotalMS = (FLOAT)((UE1OuyaLoadProfileObjSeconds() - EndLoadStart) * 1000.0);
+				if( TotalMS >= 5.0f || PreloadObjects > 0 || PostloadObjects > 0 )
+				{
+					UE1OuyaLoadProfileObjLog( "endload totalMS=%.2f preloadMS=%.2f postloadMS=%.2f dissociateMS=%.2f preloadObjects=%i preloadIterations=%i postloadObjects=%i loaders=%i", TotalMS, PreloadMS, PostloadMS, DissociateMS, PreloadObjects, PreloadIterations, PostloadObjects, LoaderCountAtStart );
+					if( PreloadMS >= 50.0f && PreloadObjects > 0 )
+					{
+						UE1OuyaPreloadStatLogTop( "Class", PreloadClassStats, PreloadClassStatCount, 6 );
+						UE1OuyaPreloadStatLogTop( "Package", PreloadPackageStats, PreloadPackageStatCount, 6 );
+						UE1OuyaLoadProfileObjLog( "endload preloadSlowest ms=%.2f class=%s package=%s object=%s", (FLOAT)SlowestPreloadMS, SlowestPreloadClass[0] ? SlowestPreloadClass : "None", SlowestPreloadPackage[0] ? SlowestPreloadPackage : "None", SlowestPreloadObject[0] ? SlowestPreloadObject : "None" );
+						for( INT TopRank=0; TopRank<8; TopRank++ )
+						{
+							if( TopPreloadMS[TopRank] < 1.0 )
+								break;
+							UE1OuyaLoadProfileObjLog( "endload preloadTopObject rank=%i ms=%.2f class=%s package=%s object=%s", TopRank+1, (FLOAT)TopPreloadMS[TopRank], TopPreloadClass[TopRank][0] ? TopPreloadClass[TopRank] : "None", TopPreloadPackage[TopRank][0] ? TopPreloadPackage[TopRank] : "None", TopPreloadObject[TopRank][0] ? TopPreloadObject[TopRank] : "None" );
+						}
+					}
+				}
+			}
+#endif
 		}
 		catch( const char* Error )
 		{

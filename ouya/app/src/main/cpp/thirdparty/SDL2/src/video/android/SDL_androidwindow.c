@@ -37,6 +37,50 @@
 /* Currently only one window */
 SDL_Window *Android_Window = NULL;
 
+DECLSPEC int SDLCALL SDL_OUYA_ApplyRenderResolutionLive(void *sdl_window, int w, int h)
+{
+    SDL_Window *window = (SDL_Window *)sdl_window;
+    SDL_WindowData *data;
+    int old_w;
+    int old_h;
+    int format;
+    int result;
+
+    if (!window) {
+        window = Android_Window;
+    }
+
+    if (!window) {
+        SDL_Log("OUYA/API16 LIVE: no SDL window for %dx%d", w, h);
+        return 0;
+    }
+
+    SDL_OUYA_NormalizeResolution(&w, &h);
+
+    data = (SDL_WindowData *)window->driverdata;
+    if (!data || !data->native_window) {
+        SDL_Log("OUYA/API16 LIVE: no native window for %dx%d", w, h);
+        return 0;
+    }
+
+    old_w = window->w;
+    old_h = window->h;
+    format = ANativeWindow_getFormat(data->native_window);
+    if (format <= 0) {
+        format = 1;
+    }
+
+    result = ANativeWindow_setBuffersGeometry(data->native_window, w, h, format);
+    SDL_OUYA_SetCachedRenderResolution(w, h);
+
+
+    if (old_w != w || old_h != h) {
+        SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED, w, h);
+    }
+
+    return result == 0;
+}
+
 int Android_CreateWindow(_THIS, SDL_Window *window)
 {
     SDL_WindowData *data;

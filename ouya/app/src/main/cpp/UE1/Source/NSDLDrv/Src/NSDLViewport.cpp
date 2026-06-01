@@ -1317,7 +1317,10 @@ void UNSDLViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX,
 
 		SDL_ShowWindow( hWnd );
 
-#if defined(UNREAL_ANDROID_OUYA)
+#if defined(ANDROID_LEGACY_API16)
+		NSDL_OuyaGetConfiguredResolution( NewX, NewY );
+		debugf( NAME_Log, "OUYA/API16 live viewport startup size: %ix%i", NewX, NewY );
+#elif defined(UNREAL_ANDROID_OUYA)
 		debugf( NAME_Log, "OUYA internal render size: display/window kept fullscreen, UE1 viewport=%ix%i", UNREAL_ANDROID_OUYA_INTERNAL_RENDER_W, UNREAL_ANDROID_OUYA_INTERNAL_RENDER_H );
 		NewX = AndroidOuyaAlignX( UNREAL_ANDROID_OUYA_INTERNAL_RENDER_W );
 		NewY = UNREAL_ANDROID_OUYA_INTERNAL_RENDER_H;
@@ -1541,7 +1544,11 @@ void UNSDLViewport::SetClientSize( INT NewX, INT NewY, UBOOL UpdateProfile )
 #ifndef PLATFORM_ANDROID // UNREAL_ANDROID_NO_SETWINDOWSIZE_800X600
 		SDL_SetWindowSize( hWnd, NewX, NewY );
 #endif
-#if defined(UNREAL_ANDROID_OUYA)
+#if defined(ANDROID_LEGACY_API16)
+		if( !NSDL_OuyaSupportedResolution( NewX, NewY ) )
+			NSDL_OuyaGetConfiguredResolution( NewX, NewY );
+		debugf( NAME_Log, "OUYA/API16 live SetClientSize viewport=%ix%i", NewX, NewY );
+#elif defined(UNREAL_ANDROID_OUYA)
 		NewX = AndroidOuyaAlignX( UNREAL_ANDROID_OUYA_INTERNAL_RENDER_W );
 		NewY = UNREAL_ANDROID_OUYA_INTERNAL_RENDER_H;
 		debugf( NAME_Log, "OUYA internal render size SetClientSize=%ix%i", NewX, NewY );
@@ -1615,7 +1622,12 @@ void UNSDLViewport::MakeFullscreen( INT NewX, INT NewY, UBOOL UpdateProfile )
 
 	// Fullscreen rendering. For now no borderless.
 	Client->FullscreenViewport = this;
-#if defined(UNREAL_ANDROID_OUYA)
+#if defined(ANDROID_LEGACY_API16)
+	if( !NSDL_OuyaSupportedResolution( NewX, NewY ) )
+		NSDL_OuyaGetConfiguredResolution( NewX, NewY );
+	debugf( NAME_Log, "OUYA/API16 live fullscreen viewport=%ix%i", NewX, NewY );
+	SetClientSize( NewX, NewY, false );
+#elif defined(UNREAL_ANDROID_OUYA)
 	NewX = AndroidOuyaAlignX( UNREAL_ANDROID_OUYA_INTERNAL_RENDER_W );
 	NewY = UNREAL_ANDROID_OUYA_INTERNAL_RENDER_H;
 	debugf( NAME_Log, "OUYA fullscreen keeps SDL surface fullscreen and UE1 viewport=%ix%i", NewX, NewY );
@@ -1663,7 +1675,11 @@ void UNSDLViewport::EndFullscreen()
 {
 	guard(UNSDLViewport::EndFullscreen);
 
-#if defined(UNREAL_ANDROID_OUYA)
+#if defined(ANDROID_LEGACY_API16)
+	INT OuyaW = 0, OuyaH = 0;
+	NSDL_OuyaGetConfiguredResolution( OuyaW, OuyaH );
+	SetClientSize( OuyaW, OuyaH, false );
+#elif defined(UNREAL_ANDROID_OUYA)
 	SetClientSize( AndroidOuyaAlignX( UNREAL_ANDROID_OUYA_INTERNAL_RENDER_W ), UNREAL_ANDROID_OUYA_INTERNAL_RENDER_H, false );
 #elif defined(PLATFORM_ANDROID) // UNREAL_ANDROID_FULLSCREEN_END_NOOP
 	// Stay in Activity fullscreen on Android; just resync to current surface.

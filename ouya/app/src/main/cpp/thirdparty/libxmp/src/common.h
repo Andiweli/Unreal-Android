@@ -193,16 +193,18 @@ static void __inline D_(const char *text, ...) {
 #endif
 #endif
 
-#elif defined __ANDROID__
+#elif defined __ANDROID__ || defined(LIBXMP_ANDROID_LOG_QUIET)
 
+/* OUYA/API16 v14: keep libxmp quiet on Android debug builds.
+ * The OUYA debug APK is intentionally built with DEBUG, but libxmp's verbose
+ * module loader trace floods logcat during map/music loads and can add avoidable
+ * stalls on Tegra 3.  Keep the playback code unchanged; only suppress debug
+ * printing. */
 #ifdef DEBUG
-#include <android/log.h>
 #define D_CRIT "  Error: "
 #define D_WARN "Warning: "
 #define D_INFO "   Info: "
-#define D_(...) do { \
-	__android_log_print(ANDROID_LOG_DEBUG, "libxmp", __VA_ARGS__); \
-	} while (0)
+#define D_(...) do {} while (0)
 #else
 #define D_(...) do {} while (0)
 #endif

@@ -73,6 +73,13 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     endif()
 endif()
 
+# OUYA/API16 v14: make bundled libxmp quiet even for Debug APK builds.
+# This is build-system level too, so CMake/Gradle will recompile the static xmp lib
+# after applying this patch instead of reusing a stale object cache.
+if(TARGET xmp_static)
+    target_compile_definitions(xmp_static PRIVATE LIBXMP_ANDROID_LOG_QUIET=1)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     foreach(_ue1_thirdparty_cxx_target IN ITEMS OpenAL alsoft.common)
         if(TARGET ${_ue1_thirdparty_cxx_target})

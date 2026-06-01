@@ -1602,8 +1602,8 @@ void UFireTexture::RedrawSparks()
                 Sparks(NS).ByteC = 255;               // timer - steps --2, to 128
             }
             // move around a bit
-            if (SpeedRand() & 15 == 15) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
-            if (SpeedRand() & 15 == 15) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
             break;
 
         case SPARK_RandomCloud: // Emitting Drop but randomly moves itself eratically.
@@ -1618,8 +1618,8 @@ void UFireTexture::RedrawSparks()
                 Sparks(NS).ByteC =  0;                    // timer=HEAT
             }
             // move around a bit
-            if (SpeedRand() & 15 == 15) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
-            if (SpeedRand() & 15 == 15) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
             break;
 
         case SPARK_Eels: // Spawns some Eels.
@@ -1636,8 +1636,8 @@ void UFireTexture::RedrawSparks()
                 Sparks(NS).ByteC = ThisSpark->ByteC;  // Timer.
             }
             // move around a bit
-            if (SpeedRand() & 15 == 15) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
-            if (SpeedRand() & 15 == 15) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
             break;
 
 		case SPARK_Gametes: // Spawns a spermatozoid.
@@ -1654,8 +1654,8 @@ void UFireTexture::RedrawSparks()
 				Sparks(NS).ByteD = SpeedRand(); // Direction
             }
             // Move around a bit.
-            if (SpeedRand() & 15 == 15) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
-            if (SpeedRand() & 15 == 15) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->X = UMask & (ThisSpark->X+(SpeedRand()&15)-7);
+            if( (SpeedRand() & 15) == 15 ) ThisSpark->Y = VMask & (ThisSpark->Y+(SpeedRand()&15)-7);
             break;
 
         case SPARK_CustomCloud:  // Custom CLOUDS that move at DrawByteA's speed.
@@ -4230,7 +4230,7 @@ void UFireTexture::Serialize( FArchive& Ar )
 				Sparks(t) = Sparks(--ActiveSparkNum);	
 
 		// Deflate the empty tail.
-		if( ActiveSparkNum < Sparks.Num() );
+		if( ActiveSparkNum < Sparks.Num() )
 			Sparks.Remove( ActiveSparkNum, Sparks.Num()-ActiveSparkNum ); 
 	}
 

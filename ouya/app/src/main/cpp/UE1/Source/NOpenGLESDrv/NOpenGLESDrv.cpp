@@ -2,6 +2,10 @@
 #include "glad.h"
 #include "glm/matrix.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#ifndef UE1_OUYA_ENABLE_RENDER_PROFILE
+#define UE1_OUYA_ENABLE_RENDER_PROFILE 0
+#endif
+
 
 #include "NOpenGLESDrvPrivate.h"
 
@@ -465,6 +469,9 @@ void UNOpenGLESRenderDevice::OuyaInvalidateUE1GLState()
 
 void UNOpenGLESRenderDevice::OuyaPerfLogLine( const char* Fmt, ... )
 {
+#if !UE1_OUYA_ENABLE_RENDER_PROFILE
+	return;
+#endif
 	char Buffer[1024];
 	va_list Args;
 	va_start( Args, Fmt );
@@ -501,6 +508,9 @@ void UNOpenGLESRenderDevice::OuyaPerfLogLine( const char* Fmt, ... )
 
 void UNOpenGLESRenderDevice::OuyaBeginPerfFrame()
 {
+#if !UE1_OUYA_ENABLE_RENDER_PROFILE
+	return;
+#endif
 	// Runtime perf/config values are refreshed in UpdateRuntimeConfig() with
 	// throttling, so this hot path only uses cached values.
 	if( !PerfSpikeLog )
@@ -521,6 +531,9 @@ void UNOpenGLESRenderDevice::OuyaBeginPerfFrame()
 
 void UNOpenGLESRenderDevice::OuyaEndPerfFrame()
 {
+#if !UE1_OUYA_ENABLE_RENDER_PROFILE
+	return;
+#endif
 	if( !PerfSpikeLog || OuyaPerfFrameStart <= 0.0 )
 		return;
 
@@ -568,6 +581,9 @@ void UNOpenGLESRenderDevice::OuyaEndPerfFrame()
 
 void UNOpenGLESRenderDevice::OuyaCountTextureUpload( const FTextureInfo& Info )
 {
+#if !UE1_OUYA_ENABLE_RENDER_PROFILE
+	return;
+#endif
 	++OuyaPerfTextureUploads;
 	const INT BaseMip = GetTextureUploadBaseMip( Info );
 	for( INT MipIndex = BaseMip; MipIndex < Info.NumMips; ++MipIndex )
@@ -583,75 +599,101 @@ void UNOpenGLESRenderDevice::OuyaCountTextureUpload( const FTextureInfo& Info )
 void UNOpenGLESRenderDevice::OuyaCachedActiveTexture( INT TMU )
 {
 	glActiveTexture( GL_TEXTURE0 + TMU );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedBindTexture2D( INT TMU, GLuint Texture )
 {
 	glActiveTexture( GL_TEXTURE0 + TMU );
 	glBindTexture( GL_TEXTURE_2D, Texture );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfTextureBinds;
+#endif
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedBindArrayBuffer( GLuint Buffer )
 {
 	glBindBuffer( GL_ARRAY_BUFFER, Buffer );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedUseProgram( GLuint Program )
 {
 	glUseProgram( Program );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedViewport( GLint X, GLint Y, GLsizei W, GLsizei H )
 {
 	glViewport( X, Y, W, H );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedEnable( GLenum Cap )
 {
 	glEnable( Cap );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedDisable( GLenum Cap )
 {
 	glDisable( Cap );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedDepthMask( GLboolean Flag )
 {
 	glDepthMask( Flag );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedBlendFunc( GLenum Src, GLenum Dst )
 {
 	glBlendFunc( Src, Dst );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedColorMask( GLboolean R, GLboolean G, GLboolean B, GLboolean A )
 {
 	glColorMask( R, G, B, A );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedEnableVertexAttribArray( GLuint Index )
 {
 	glEnableVertexAttribArray( Index );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 
 void UNOpenGLESRenderDevice::OuyaCachedDisableVertexAttribArray( GLuint Index )
 {
 	glDisableVertexAttribArray( Index );
+#if UE1_OUYA_ENABLE_RENDER_PROFILE
 	++OuyaPerfStateChanges;
+#endif
 }
 #endif
 
@@ -913,8 +955,8 @@ void UNOpenGLESRenderDevice::UpdateRuntimeConfig()
 	WorldGamma = GetConfiguredWorldGamma();
 	WorldShadowLift = GetConfiguredWorldShadowLift();
 #if defined(UNREAL_ANDROID_OUYA)
-	PerfSpikeLog = OuyaPerfConfigBool( "EnablePerfLog", PerfSpikeLog );
-	PerfSpikeThresholdMS = OuyaPerfConfigFloat( "PerfSpikeMs", PerfSpikeThresholdMS, 5.0f, 500.0f );
+	PerfSpikeLog = false; // OUYA_RELEASE_QUIET_V16: render perf logging disabled in release builds
+	PerfSpikeThresholdMS = 1000.0f;
 	OuyaForceGLFlush = OuyaPerfConfigBool( "ForceGLFlush", OuyaForceGLFlush );
 	SwapInterval = OuyaPerfConfigBool( "VSync", SwapInterval != 0 ) ? 1 : 0;
 #endif

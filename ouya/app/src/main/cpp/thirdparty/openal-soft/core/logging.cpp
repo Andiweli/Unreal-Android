@@ -21,6 +21,13 @@
 
 void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
 {
+#if defined(__ANDROID__)
+    /* OUYA/API16 v14: hard-drop OpenAL TRACE/info logging before formatting.
+     * Warning/Error output remains available; audio behavior is unchanged. */
+    if(level == LogLevel::Trace)
+        return;
+#endif
+
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
      * span.
@@ -71,19 +78,26 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     std::wstring wstr{utf8_to_wstr(str)};
     OutputDebugStringW(wstr.c_str());
 #elif defined(__ANDROID__)
-    auto android_severity = [](LogLevel l) noexcept
+    /* OUYA/API16 v14: OpenAL Soft already respects gLogLevel for FILE output
+     * above, but the Android logcat path printed every TRACE line regardless.
+     * On OUYA this produces hundreds of startup lines.  Respect the same level
+     * here too; playback/mixer behavior is unchanged. */
+    if(gLogLevel >= level)
     {
-        switch(l)
+        auto android_severity = [](LogLevel l) noexcept
         {
-        case LogLevel::Trace: return ANDROID_LOG_DEBUG;
-        case LogLevel::Warning: return ANDROID_LOG_WARN;
-        case LogLevel::Error: return ANDROID_LOG_ERROR;
-        /* Should not happen. */
-        case LogLevel::Disable:
-            break;
-        }
-        return ANDROID_LOG_ERROR;
-    };
-    __android_log_print(android_severity(level), "openal", "%s", str);
+            switch(l)
+            {
+            case LogLevel::Trace: return ANDROID_LOG_DEBUG;
+            case LogLevel::Warning: return ANDROID_LOG_WARN;
+            case LogLevel::Error: return ANDROID_LOG_ERROR;
+            /* Should not happen. */
+            case LogLevel::Disable:
+                break;
+            }
+            return ANDROID_LOG_ERROR;
+        };
+        __android_log_print(android_severity(level), "openal", "%s", str);
+    }
 #endif
 }

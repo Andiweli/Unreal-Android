@@ -423,7 +423,7 @@ UBOOL FGlobalPlatform::Exec( const char* Cmd, FOutputDevice* Out )
 		else if( ParseCommand( &Cmd, "GPF" ) )
 		{
 			Out->Log("Unreal crashing with voluntary GPF");
-			*(int *)NULL = 123;
+			__builtin_trap();
 			return 1;
 		}
 		else if( ParseCommand( &Cmd, "RECURSE" ) )
@@ -848,17 +848,11 @@ CORE_API void appFlushConfigFiles()
 
 	if( !GIsStarted )
 	{
-#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-		__android_log_print( ANDROID_LOG_WARN, "UE1Config", "Config flush skipped: engine not started" );
-#endif
 		return;
 	}
 
 	UBOOL Ok = SaveAllConfigs();
 
-#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-	__android_log_print( ANDROID_LOG_INFO, "UE1Config", "GConfigCache/SaveAllConfigs flush result: %s", Ok ? "OK" : "FAILED" );
-#endif
 
 	debugf( "Config flush result: %s", Ok ? "OK" : "FAILED" );
 
@@ -1946,7 +1940,7 @@ char* appUnixPath( const char* Path )
 	char* UnixPath = Results[Count++ & 15];
 	char* Cur = UnixPath;
 	appStrncpy( UnixPath, Path, 1024 );
-	while( Cur = strchr( Cur, '\\' ) )
+	while( (Cur = strchr( Cur, '\\' )) )
 		*Cur = '/';
 	return UnixPath;
 	unguard;

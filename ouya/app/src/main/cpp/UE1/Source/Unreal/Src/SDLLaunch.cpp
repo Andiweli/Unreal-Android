@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <time.h>
 #endif
 #ifdef PLATFORM_ANDROID
 #include <android/log.h>
@@ -4172,7 +4173,7 @@ UEngine* InitEngine()
 }
 
 
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+#if 0 && defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
 static UBOOL UE1OuyaPerfConfigBool( const char* Key, UBOOL DefaultValue )
 {
 	char Value[64];
@@ -4215,6 +4216,14 @@ static void UE1OuyaPerfLogLine( const char* Fmt, ... )
 	__android_log_write( ANDROID_LOG_INFO, "UE1Perf", Buffer );
 	debugf( NAME_Log, "%s", Buffer );
 }
+
+static DOUBLE UE1OuyaPerfProfileSeconds()
+{
+	struct timespec Ts;
+	if( clock_gettime( CLOCK_MONOTONIC, &Ts ) == 0 )
+		return (DOUBLE)Ts.tv_sec + (DOUBLE)Ts.tv_nsec / 1000000000.0;
+	return appSeconds();
+}
 #endif
 
 //
@@ -4239,43 +4248,43 @@ void MainLoop( UEngine* Engine )
 		}
 #endif
 		// Update the world.
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+#if 0 && defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
 		static DOUBLE PerfWindowStart = 0.0;
 		static FLOAT PerfWindowTickMS = 0.0f;
 		static INT PerfWindowFrames = 0;
 		static DOUBLE PerfConfigLastRefresh = 0.0;
-		static UBOOL bPerfLog = 0;
-		static FLOAT PerfSpikeMS = 40.0f;
+		static UBOOL bPerfLog = 1; // OUYA_LOAD_PROFILE_V2_FORCE_TICK
+		static FLOAT PerfSpikeMS = 100.0f; // OUYA_LOAD_PROFILE_V8_QUIET_TICK_SPIKES
 		static INT CachedFrameLimit = 0;
-		const DOUBLE LoopStartTime = appSeconds();
-		if( PerfConfigLastRefresh <= 0.0 || LoopStartTime - PerfConfigLastRefresh >= 0.5 )
+		const DOUBLE ProfileLoopStartTime = UE1OuyaPerfProfileSeconds();
+		if( PerfConfigLastRefresh <= 0.0 || ProfileLoopStartTime - PerfConfigLastRefresh >= 0.5 )
 		{
-			bPerfLog = UE1OuyaPerfConfigBool( "EnablePerfLog", bPerfLog );
-			PerfSpikeMS = UE1OuyaPerfConfigFloat( "PerfSpikeMs", PerfSpikeMS, 5.0f, 500.0f );
+			bPerfLog = 1; // OUYA_LOAD_PROFILE_V2_FORCE_TICK: profiling build logs tick avg/spikes
+			PerfSpikeMS = UE1OuyaPerfConfigFloat( "PerfSpikeMs", PerfSpikeMS, 100.0f, 500.0f ); // OUYA_LOAD_PROFILE_V8_QUIET_TICK_SPIKES
 			CachedFrameLimit = UE1OuyaPerfConfigInt( "FrameLimit", CachedFrameLimit, 0, 120 );
-			PerfConfigLastRefresh = LoopStartTime;
+			PerfConfigLastRefresh = ProfileLoopStartTime;
 		}
-		DOUBLE NewTime = LoopStartTime;
+		DOUBLE NewTime = appSeconds();
 #else
 		DOUBLE NewTime = appSeconds();
 #endif
 		Engine->Tick( NewTime - OldTime );
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
-		const DOUBLE TickEndTime = appSeconds();
-		const FLOAT TickMS = (FLOAT)( ( TickEndTime - LoopStartTime ) * 1000.0 );
+#if 0 && defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		const DOUBLE ProfileTickEndTime = UE1OuyaPerfProfileSeconds();
+		const FLOAT TickMS = (FLOAT)( ( ProfileTickEndTime - ProfileLoopStartTime ) * 1000.0 );
 		if( bPerfLog )
 		{
 			PerfWindowTickMS += TickMS;
 			PerfWindowFrames++;
 			if( PerfWindowStart <= 0.0 )
-				PerfWindowStart = LoopStartTime;
+				PerfWindowStart = ProfileLoopStartTime;
 			if( TickMS >= PerfSpikeMS )
 				UE1OuyaPerfLogLine( "tick spikeMS=%.2f frameDeltaMS=%.2f", TickMS, (FLOAT)( ( NewTime - OldTime ) * 1000.0 ) );
-			if( TickEndTime - PerfWindowStart >= 5.0 )
+			if( ProfileTickEndTime - PerfWindowStart >= 5.0 )
 			{
 				const FLOAT AvgTick = PerfWindowFrames > 0 ? PerfWindowTickMS / PerfWindowFrames : 0.0f;
 				UE1OuyaPerfLogLine( "tick avg5s frames=%i avgTickMS=%.2f", PerfWindowFrames, AvgTick );
-				PerfWindowStart = TickEndTime;
+				PerfWindowStart = ProfileTickEndTime;
 				PerfWindowTickMS = 0.0f;
 				PerfWindowFrames = 0;
 			}
@@ -4285,7 +4294,7 @@ void MainLoop( UEngine* Engine )
 
 		// Enforce optional maximum tick rate.
 		INT MaxTickRate = Engine->GetMaxTickRate();
-#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+#if 0 && defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
 		if( MaxTickRate <= 0 )
 			MaxTickRate = CachedFrameLimit;
 #endif
@@ -4373,6 +4382,7 @@ int main( int argc, const char** argv )
 			GIsGuarded=1;
 			GSystem = &GTempPlatform;
 #ifdef PLATFORM_ANDROID
+			// OUYA_LOAD_PROFILE_V2_STARTUP
 			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "InitEngine begin" );
 #endif
 			UEngine* Engine = InitEngine();

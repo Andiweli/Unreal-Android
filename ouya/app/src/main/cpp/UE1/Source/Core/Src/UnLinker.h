@@ -241,6 +241,9 @@ struct FFileStatus
 	INT SavedPos;
 };
 
+
+// OUYA_OUYARELEASE_V16_ARCHIVE_PROFILE_REMOVED
+
 //
 // Ansi file loader.
 //
@@ -249,26 +252,56 @@ class FArchiveFileLoad : public FArchive
 public:
 	char Filename[256];
 	INT Pos;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+	enum { UE1_OUYA_ARCHIVE_READ_BUFFER_SIZE = 131072 };
+#endif
 	FArchiveFileLoad( const char* InFilename )
 	: File(NULL)
 	, Pos(0)
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+	, ReadBuffer(NULL)
+	, ReadBufferStart(0)
+	, ReadBufferEnd(0)
+	, PhysicalFilePos(0)
+#endif
 	{
 		guard(FArchiveFileLoad::FArchiveFileLoad);
 		appStrcpy( Filename, InFilename );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		ReadBuffer = new BYTE[UE1_OUYA_ARCHIVE_READ_BUFFER_SIZE];
+#endif
 		File = appFopen( Filename, "rb" );	
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+#endif
 		if( File == NULL )
 			appThrowf( LocalizeError("OpenFailed") );
 		appFseek( File, 0, USEEK_END );
 		Eof = appFtell( File );
 		appFseek( File, 0, USEEK_SET );
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		ReadBufferStart = ReadBufferEnd = 0;
+		PhysicalFilePos = 0;
+#endif
 		unguard;
 	}
 	FArchiveFileLoad()
 	: File(NULL)
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+	, ReadBuffer(NULL)
+	, ReadBufferStart(0)
+	, ReadBufferEnd(0)
+	, PhysicalFilePos(0)
+#endif
 	{}
 	~FArchiveFileLoad()
 	{
 		guard(FArchiveFileLoad::~FArchiveFileLoad);
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		if( ReadBuffer )
+			delete [] ReadBuffer;
+		ReadBuffer = NULL;
+		ReadBufferStart = ReadBufferEnd = 0;
+#endif
 		if( File )
 			appFclose( File );
 		File = NULL;
@@ -279,43 +312,146 @@ public:
 		guard(FArchiveFileLoad::Seek);
 		check(InPos>=0);
 		check(InPos<=Eof);
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		// OUYA_LOAD_PROFILE_V3_READ_BUFFER: logical seek only; physical seek happens on buffer refill.
+		if( !(ReadBuffer && InPos >= ReadBufferStart && InPos <= ReadBufferEnd) )
+			ReadBufferStart = ReadBufferEnd = 0;
+		Pos = InPos;
+#else
 		INT Result = appFseek(File,InPos,USEEK_SET);
 		if( Result!=0 )
 			appErrorf( "Seek Failed %i/%i (%i): %i %i", InPos, Eof, Pos, Result, appFerror(File) );
-		unguard;
 		Pos = InPos;
+#endif
+		unguard;
 	}
 	INT Tell()
 	{
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		return Pos;
+#else
 		return appFtell( File );
+#endif
 	}
 	void Push( FFileStatus& St, BYTE* NewBuffer )
 	{
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		St.SavedPos = Pos;
+#else
 		St.SavedPos = appFtell( File );
+#endif
 	}
 	void Pop( FFileStatus& St )
 	{
 		guardSlow(FArchiveFileLoad::Pop);
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+		Seek( St.SavedPos );
+#else
 		INT Result = appFseek( File, St.SavedPos, USEEK_SET );
 		if( Result!=0 )
 			appErrorf( "Seek Failed %i/%i (%i): %i %i", St.SavedPos, Eof, Pos, Result, appFerror(File) );
 		Pos = St.SavedPos;
+#endif
 		unguardSlow;
 	}
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+	void PhysicalSeekForRead( INT InPos )
+	{
+		if( PhysicalFilePos == InPos )
+			return;
+
+		INT Result = appFseek( File, InPos, USEEK_SET );
+		if( Result!=0 )
+			appErrorf( "Seek Failed %i/%i (%i): %i %i", InPos, Eof, Pos, Result, appFerror(File) );
+		PhysicalFilePos = InPos;
+	}
+
+	INT PhysicalRead( void* V, INT Length )
+	{
+		INT Count = appFread( V, Length, 1, File );
+		if( Count == 1 )
+			PhysicalFilePos += Length;
+		else
+			PhysicalFilePos = -1;
+		return Count;
+	}
+
+	void FillReadBuffer( INT InPos )
+	{
+		if( !ReadBuffer )
+			appErrorf( "Read buffer not allocated for %s", Filename );
+		check(InPos>=0);
+		check(InPos<=Eof);
+		PhysicalSeekForRead( InPos );
+		const INT Remaining = Eof - InPos;
+		const INT ToRead = Remaining < UE1_OUYA_ARCHIVE_READ_BUFFER_SIZE ? Remaining : UE1_OUYA_ARCHIVE_READ_BUFFER_SIZE;
+		if( ToRead <= 0 )
+		{
+			ReadBufferStart = ReadBufferEnd = InPos;
+			return;
+		}
+		INT Count = PhysicalRead( ReadBuffer, ToRead );
+		if( Count!=1 )
+			appErrorf( "appFread failed: Count=%i Length=%i Error=%i", Count, ToRead, appFerror(File) );
+		ReadBufferStart = InPos;
+		ReadBufferEnd = InPos + ToRead;
+	}
+#endif
 	FArchive& Serialize( void* V, INT Length )
 	{
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+
+		if( Length == 0 )
+			return *this;
+
+		if( Length > UE1_OUYA_ARCHIVE_READ_BUFFER_SIZE / 2 )
+		{
+			ReadBufferStart = ReadBufferEnd = 0;
+			PhysicalSeekForRead( Pos );
+			INT Count = PhysicalRead( V, Length );
+			if( Count!=1 )
+				appErrorf( "appFread failed: Count=%i Length=%i Error=%i", Count, Length, appFerror(File) );
+			Pos += Length;
+			check(Pos<=Eof);
+			return *this;
+		}
+
+		BYTE* Out = (BYTE*)V;
+		INT Remaining = Length;
+		while( Remaining > 0 )
+		{
+			if( !(ReadBuffer && Pos >= ReadBufferStart && Pos < ReadBufferEnd) )
+				FillReadBuffer( Pos );
+
+			const INT Available = ReadBufferEnd - Pos;
+			if( Available <= 0 )
+				appErrorf( "Read buffer exhausted: Pos=%i Length=%i Eof=%i path=%s", Pos, Length, Eof, Filename );
+
+			const INT Copy = Available < Remaining ? Available : Remaining;
+			appMemcpy( Out, ReadBuffer + (Pos - ReadBufferStart), Copy );
+			Out += Copy;
+			Pos += Copy;
+			Remaining -= Copy;
+		}
+#else
 		INT Count = appFread( V, Length, 1, File );
 		if( Count!=1 && Length!=0 )
 			appErrorf( "appFread failed: Count=%i Length=%i Error=%i", Count, Length, appFerror(File) );
 		Pos += Length;
+#endif
 		check(Pos<=Eof);
 		return *this;
 	}
 //!!private:
 	FILE* File;
 	INT Eof;
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+	BYTE* ReadBuffer;
+	INT ReadBufferStart;
+	INT ReadBufferEnd;
+	INT PhysicalFilePos;
+#endif
 };
-
 /*----------------------------------------------------------------------------
 	Items stored in Unrealfiles.
 ----------------------------------------------------------------------------*/
@@ -835,6 +971,18 @@ class ULinkerLoad : public ULinker, public FArchiveFileLoad
 		check(Object);
 		if( Object->GetLinker() )
 		{
+// OUYA_LOAD_PROFILE_V11_PRELOAD_FASTPATH_BEGIN
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+			// OUYA/API16: avoid repeatedly walking already-loaded UStruct super chains.
+			// LinkOffsets() calls Ar.Preload(Field) for many children; once a field is fully loaded,
+			// the old code still recursed into SuperField on every later Preload() call.
+			// That showed up as large fieldPreloadMS while RF_NeedLoad was already clear.
+			const DWORD ObjectLoadFlags = Object->GetFlags();
+			if( ObjectLoadFlags & (RF_NeedLoad|RF_Preloading) )
+			{
+#endif
+// OUYA_LOAD_PROFILE_V11_PRELOAD_FASTPATH_END
+
 			// If this is a struct, preload its super.
 			if(	Object->IsA(UStruct::StaticClass) )
 				if( ((UStruct*)Object)->SuperField )
@@ -851,6 +999,11 @@ class ULinkerLoad : public ULinker, public FArchiveFileLoad
 				// Warning for internal development.
 				//debugf( "Object preload reentrancy: %s", Object->GetFullName() );
 			}
+// OUYA_LOAD_PROFILE_V11_PRELOAD_FASTPATH_BEGIN
+#if defined(PLATFORM_ANDROID) && defined(ANDROID_LEGACY_API16)
+			}
+#endif
+// OUYA_LOAD_PROFILE_V11_PRELOAD_FASTPATH_END
 		}
 		unguard;
 	}
