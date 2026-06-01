@@ -26,9 +26,10 @@
 - [x] Android mouse support
 - [x] Customizable controls
 - [x] Fix Controller recognition issues
+- [ ] Fix Keyboard input
 
 ## Future/Uncertain Expansions
 
-- [ ] Touchscreen overlay
+- [x] Touchscreen overlay
 - [ ] Full 64-bit gameplay parity with 32-bit build
 - [ ] Eliminate remaining arm64 gameplay/event bugs
