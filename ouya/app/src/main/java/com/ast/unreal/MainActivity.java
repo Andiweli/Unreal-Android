@@ -2,6 +2,7 @@ package com.ast.unreal;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,27 +10,45 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int REQ_LEGACY_STORAGE = 2001;
     private static final int REQ_SELECT_UNREAL_FOLDER = 3001;
     private static final int REQ_SELECT_UNREAL_ZIP = 3002;
+    private static final String DEFAULT_ONLINE_UNREAL_ZIP_URL = "http://ouya.cweiske.de/apks/com.ast.unreal/Unreal_v1.200.zip";
 
     private File selectedRoot;
     private String lastImportMessage;
+    private ProgressBar installProgressBar;
+    private TextView installProgressText;
+    private TextView installMessageText;
 
     private File unrealRoot() {
         if (selectedRoot == null) selectedRoot = UnrealDataPaths.findBestUnrealRoot(this);
@@ -133,6 +152,25 @@ public class MainActivity extends Activity {
         return isGermanUi() ? de : en;
     }
 
+    private boolean isOuyaDevice() {
+        String model = String.valueOf(Build.MODEL).toLowerCase(Locale.US);
+        String manufacturer = String.valueOf(Build.MANUFACTURER).toLowerCase(Locale.US);
+        String product = String.valueOf(Build.PRODUCT).toLowerCase(Locale.US);
+        return model.contains("ouya") || manufacturer.contains("ouya") || product.contains("ouya");
+    }
+
+    private boolean isLegacyZipPickerDevice() {
+        return Build.VERSION.SDK_INT <= 17 || isOuyaDevice();
+    }
+
+    private Button makeButton(String label, View.OnClickListener listener) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setOnClickListener(listener);
+        return button;
+    }
+
 
     private void clearImportScreen() {
         FrameLayout blank = new FrameLayout(this);
@@ -142,8 +180,9 @@ public class MainActivity extends Activity {
     }
 
     private void showMissingDataScreen() {
-        File root = unrealRoot();
         String appPath = UnrealDataPaths.primaryAppRoot(this).getAbsolutePath();
+        final boolean ouyaMode = isOuyaDevice();
+        final boolean hasLaunchData = selectedRoot != null && UnrealDataPaths.hasRequiredData(selectedRoot, true);
 
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -152,68 +191,114 @@ public class MainActivity extends Activity {
         body.setBackgroundColor(Color.BLACK);
 
         TextView title = new TextView(this);
-        title.setText(t("Unreal-Daten fehlen", "Unreal data not found"));
-        title.setTextSize(24);
+        title.setText(hasLaunchData
+                ? t("Unreal bereit", "Unreal ready")
+                : t("Unreal-Daten fehlen", "Unreal data not found"));
+        title.setTextSize(24.0f);
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         body.addView(title);
 
-        TextView msg = new TextView(this);
         String extra = "";
         if (lastImportMessage != null && lastImportMessage.length() > 0) {
             extra = t("\n\nLetzte Meldung:\n", "\n\nLast message:\n") + lastImportMessage;
         }
-        msg.setText(t(
-                "Es wurde kein vollständig lesbarer Unreal-Datenordner gefunden.\n\n" +
-                "Wähle jetzt entweder den Ordner 'Unreal' aus oder importiere direkt eine ZIP-Datei mit den Unreal-Daten.\n\n" +
-                "Importziel:\n" + appPath + "\n\n" +
-                "Der gewählte Ordner bzw. die ZIP-Datei muss mindestens enthalten:\n" +
-                "System/Core.u\nSystem/Engine.u\nSystem/UnrealI.u oder System/UnrealShare.u\nMaps/*.unr" + extra,
-                "No fully readable Unreal data folder was found.\n\n" +
-                "Select the 'Unreal' folder or import a ZIP file containing the Unreal data.\n\n" +
-                "Import target:\n" + appPath + "\n\n" +
-                "The selected folder or ZIP file must contain at least:\n" +
-                "System/Core.u\nSystem/Engine.u\nSystem/UnrealI.u or System/UnrealShare.u\nMaps/*.unr" + extra));
-        msg.setTextSize(16);
+
+        TextView msg = new TextView(this);
+        if (hasLaunchData) {
+            msg.setText(t(
+                    "Spieldaten gefunden unter:\n" + selectedRoot.getAbsolutePath() + extra,
+                    "Game data found at:\n" + selectedRoot.getAbsolutePath() + extra));
+        } else if (ouyaMode) {
+            msg.setText(t(
+                    "Es wurde kein vollständig lesbarer Unreal-Datenordner gefunden.\n\n" +
+                    "Auf OUYA kannst du die Spieldaten direkt online herunterladen oder eine lokale ZIP-Datei importieren.\n\n" +
+                    "Installationsziel:\n" + appPath + "\n\n" +
+                    "Benötigt werden mindestens:\nSystem/Core.u, System/Engine.u, UnrealI.u oder UnrealShare.u und Maps/*.unr" + extra,
+                    "No fully readable Unreal data folder was found.\n\n" +
+                    "On OUYA you can download the game data directly or import a local ZIP file.\n\n" +
+                    "Install target:\n" + appPath + "\n\n" +
+                    "Required at minimum:\nSystem/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u and Maps/*.unr" + extra));
+        } else {
+            msg.setText(t(
+                    "Es wurde kein vollständig lesbarer Unreal-Datenordner gefunden.\n\n" +
+                    "Du kannst jetzt entweder den Unreal-Ordner auswählen oder eine ZIP-Datei importieren.\n\n" +
+                    "Installationsziel:\n" + appPath + "\n\n" +
+                    "Benötigt werden mindestens:\nSystem/Core.u, System/Engine.u, UnrealI.u oder UnrealShare.u und Maps/*.unr" + extra,
+                    "No fully readable Unreal data folder was found.\n\n" +
+                    "Select the Unreal folder or import a ZIP file containing the game data.\n\n" +
+                    "Install target:\n" + appPath + "\n\n" +
+                    "Required at minimum:\nSystem/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u and Maps/*.unr" + extra));
+        }
+        msg.setTextSize(16.0f);
         msg.setTextColor(Color.WHITE);
         msg.setGravity(Gravity.CENTER);
         msg.setPadding(0, 24, 0, 24);
         body.addView(msg);
 
-        Button chooseFolder = new Button(this);
-        chooseFolder.setText(t("Unreal-Ordner auswählen", "Select Unreal folder"));
-        chooseFolder.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { openUnrealFolderPicker(); }
-        });
-        body.addView(chooseFolder);
+        Button firstFocusButton = null;
+        if (hasLaunchData) {
+            firstFocusButton = makeButton(t("Unreal starten", "Start Unreal"), new View.OnClickListener() {
+                @Override public void onClick(View v) { launchGame(selectedRoot); }
+            });
+            body.addView(firstFocusButton);
+        }
 
-        Button chooseZip = new Button(this);
-        chooseZip.setText(t("Unreal-ZIP auswählen", "Select Unreal ZIP"));
-        chooseZip.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { openUnrealZipPicker(); }
-        });
-        body.addView(chooseZip);
+        if (ouyaMode) {
+            Button onlineZip = makeButton(t("Online-ZIP herunterladen", "Download online ZIP"), new View.OnClickListener() {
+                @Override public void onClick(View v) { showOnlineZipDialog(); }
+            });
+            body.addView(onlineZip);
+            if (firstFocusButton == null) firstFocusButton = onlineZip;
 
-        Button retry = new Button(this);
-        retry.setText(t("Erneut prüfen", "Check again"));
-        retry.setOnClickListener(new View.OnClickListener() {
+            Button chooseZip = makeButton(t("Lokales ZIP auswählen", "Select local ZIP"), new View.OnClickListener() {
+                @Override public void onClick(View v) { openUnrealZipPicker(); }
+            });
+            body.addView(chooseZip);
+            if (firstFocusButton == null) firstFocusButton = chooseZip;
+        } else {
+            Button chooseFolder = makeButton(t("Unreal-Ordner auswählen", "Select Unreal folder"), new View.OnClickListener() {
+                @Override public void onClick(View v) { openUnrealFolderPicker(); }
+            });
+            body.addView(chooseFolder);
+            if (firstFocusButton == null) firstFocusButton = chooseFolder;
+
+            Button chooseZip = makeButton(t("Unreal-ZIP auswählen", "Select Unreal ZIP"), new View.OnClickListener() {
+                @Override public void onClick(View v) { openUnrealZipPicker(); }
+            });
+            body.addView(chooseZip);
+            if (firstFocusButton == null) firstFocusButton = chooseZip;
+        }
+
+        Button retry = makeButton(t("Erneut prüfen", "Check again"), new View.OnClickListener() {
             @Override public void onClick(View v) {
                 selectedRoot = null;
                 continueStartup();
             }
         });
         body.addView(retry);
+        if (firstFocusButton == null) firstFocusButton = retry;
 
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(Color.BLACK);
         scroll.addView(body);
         setContentView(scroll);
         hideSystemUi();
+        restoreControllerFocus(firstFocusButton);
+    }
+
+    private void restoreControllerFocus(final View focusTarget) {
+        if (focusTarget == null) return;
+        focusTarget.setFocusable(true);
+        focusTarget.setFocusableInTouchMode(true);
+        focusTarget.postDelayed(new Runnable() {
+            @Override public void run() {
+                try { focusTarget.requestFocus(); } catch (Throwable ignored) {}
+            }
+        }, 80L);
     }
 
     private void showBusyScreen(String titleText, String messageText) {
-        clearImportScreen();
-
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER);
@@ -222,25 +307,70 @@ public class MainActivity extends Activity {
 
         TextView title = new TextView(this);
         title.setText(titleText);
-        title.setTextSize(24);
+        title.setTextSize(24.0f);
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         body.addView(title);
 
-        ProgressBar progress = new ProgressBar(this);
-        progress.setIndeterminate(true);
-        body.addView(progress);
+        installMessageText = new TextView(this);
+        installMessageText.setText(messageText);
+        installMessageText.setTextSize(16.0f);
+        installMessageText.setTextColor(Color.WHITE);
+        installMessageText.setGravity(Gravity.CENTER);
+        installMessageText.setPadding(0, 24, 0, 16);
+        body.addView(installMessageText);
 
-        TextView msg = new TextView(this);
-        msg.setText(messageText);
-        msg.setTextSize(16);
-        msg.setTextColor(Color.WHITE);
-        msg.setGravity(Gravity.CENTER);
-        msg.setPadding(0, 24, 0, 24);
-        body.addView(msg);
+        installProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        installProgressBar.setIndeterminate(false);
+        installProgressBar.setMax(100);
+        installProgressBar.setProgress(0);
+        int progressWidth = Math.max(240, getResources().getDisplayMetrics().widthPixels / 2);
+        LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(progressWidth, LinearLayout.LayoutParams.WRAP_CONTENT);
+        progressParams.gravity = Gravity.CENTER_HORIZONTAL;
+        body.addView(installProgressBar, progressParams);
+
+        installProgressText = new TextView(this);
+        installProgressText.setText("0%");
+        installProgressText.setTextSize(16.0f);
+        installProgressText.setTextColor(Color.WHITE);
+        installProgressText.setGravity(Gravity.CENTER);
+        installProgressText.setPadding(0, 8, 0, 0);
+        body.addView(installProgressText);
 
         setContentView(body);
         hideSystemUi();
+    }
+
+    private void updateInstallMessage(final String message) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                if (installMessageText != null) installMessageText.setText(message);
+            }
+        });
+    }
+
+    private void updateInstallProgress(final String phase, final int percent) {
+        final int safePercent = Math.max(0, Math.min(100, percent));
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                if (installProgressBar != null) installProgressBar.setProgress(safePercent);
+                if (installProgressText != null) {
+                    if (phase != null && phase.length() > 0) {
+                        installProgressText.setText(phase + " " + safePercent + "%");
+                    } else {
+                        installProgressText.setText(safePercent + "%");
+                    }
+                }
+            }
+        });
+    }
+
+    private UnrealDataPaths.ProgressCallback installProgressCallback() {
+        return new UnrealDataPaths.ProgressCallback() {
+            @Override public void onProgress(String phase, int percent) {
+                updateInstallProgress(phase, percent);
+            }
+        };
     }
 
     private void openUnrealFolderPicker() {
@@ -267,6 +397,10 @@ public class MainActivity extends Activity {
     }
 
     private void openUnrealZipPicker() {
+        if (isLegacyZipPickerDevice()) {
+            openLegacyZipPicker(legacyZipStartDir());
+            return;
+        }
         try {
             String action = Build.VERSION.SDK_INT >= 19 ? Intent.ACTION_OPEN_DOCUMENT : Intent.ACTION_GET_CONTENT;
             Intent intent = new Intent(action);
@@ -279,6 +413,10 @@ public class MainActivity extends Activity {
             clearImportScreen();
             startActivityForResult(chooser, REQ_SELECT_UNREAL_ZIP);
         } catch (ActivityNotFoundException ex) {
+            if (isLegacyZipPickerDevice()) {
+                openLegacyZipPicker(legacyZipStartDir());
+                return;
+            }
             lastImportMessage = t(
                     "Auf diesem Gerät wurde kein kompatibler Dateiauswahldialog gefunden: ",
                     "No compatible file picker was found on this device: ") + ex.getMessage();
@@ -320,7 +458,7 @@ public class MainActivity extends Activity {
                   "The selected folder is being checked and copied into the safe app folder.\nThis may take a few minutes depending on the SD card."));
         new Thread(new Runnable() {
             @Override public void run() {
-                final UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealFolderFromSaf(MainActivity.this, uri);
+                final UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealFolderFromSaf(MainActivity.this, uri, installProgressCallback());
                 runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(result); }});
             }
         }, "UE1FolderImport").start();
@@ -333,10 +471,271 @@ public class MainActivity extends Activity {
                   "The ZIP file is being checked and extracted into the safe app folder.\nThis may take a few minutes depending on the device."));
         new Thread(new Runnable() {
             @Override public void run() {
-                final UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealZip(MainActivity.this, uri);
+                final UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealZip(MainActivity.this, uri, installProgressCallback());
                 runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(result); }});
             }
         }, "UE1ZipImport").start();
+    }
+
+    private void showOnlineZipDialog() {
+        final EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setText(DEFAULT_ONLINE_UNREAL_ZIP_URL);
+        input.setSelectAllOnFocus(false);
+
+        new AlertDialog.Builder(this)
+                .setTitle(t("Online-ZIP herunterladen", "Download online ZIP"))
+                .setMessage(t("Download-URL:", "Download URL:"))
+                .setView(input)
+                .setPositiveButton(t("Download starten", "Start download"), new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        String url = String.valueOf(input.getText()).trim();
+                        if (url.length() == 0) {
+                            lastImportMessage = t("Keine Download-URL eingegeben.", "No download URL entered.");
+                            showMissingDataScreen();
+                            return;
+                        }
+                        importOnlineZipInBackground(url);
+                    }
+                })
+                .setNegativeButton(t("Abbrechen", "Cancel"), null)
+                .show();
+    }
+
+    private void importOnlineZipInBackground(final String urlText) {
+        showBusyScreen(
+                t("Online-ZIP wird heruntergeladen", "Downloading online ZIP"),
+                t("Die ZIP-Datei wird heruntergeladen und danach in den sicheren App-Ordner entpackt.\nDas kann je nach Verbindung einige Minuten dauern.",
+                  "The ZIP file is being downloaded and then extracted into the safe app folder.\nThis may take a few minutes depending on the connection."));
+        new Thread(new Runnable() {
+            @Override public void run() {
+                UnrealDataPaths.ImportResult result;
+                File tmp = new File(getCacheDir(), "unreal-online-download.zip");
+                try {
+                    if (tmp.exists() && !tmp.delete()) tmp.deleteOnExit();
+                    updateInstallMessage(t("Online-ZIP wird heruntergeladen …", "Downloading online ZIP …"));
+                    downloadOnlineZipToFile(urlText, tmp);
+                    if (!looksLikeZipFile(tmp)) {
+                        throw new IOException("Downloaded file is not a ZIP archive. Check the URL or server redirect.");
+                    }
+                    updateInstallMessage(t("Online-ZIP wird entpackt …", "Extracting online ZIP …"));
+                    result = UnrealDataPaths.importUnrealZipFile(MainActivity.this, tmp, installProgressCallback());
+                } catch (Throwable t) {
+                    result = UnrealDataPaths.ImportResult.fail(
+                            MainActivity.this.t("Online-ZIP-Import fehlgeschlagen.", "Online ZIP import failed."), t);
+                } finally {
+                    if (tmp.exists() && !tmp.delete()) tmp.deleteOnExit();
+                }
+                final UnrealDataPaths.ImportResult finalResult = result;
+                runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(finalResult); }});
+            }
+        }, "UE1OnlineZipImport").start();
+    }
+
+    private void downloadOnlineZipToFile(String urlText, File outFile) throws IOException {
+        URL url = new URL(urlText);
+        for (int redirect = 0; redirect < 5; ++redirect) {
+            String protocol = url.getProtocol();
+            if (protocol == null) throw new IOException("Download URL has no protocol.");
+            protocol = protocol.toLowerCase(Locale.US);
+            if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                throw new IOException("Only HTTP/HTTPS URLs are supported.");
+            }
+            if (isOuyaDevice() && "https".equals(protocol)) {
+                throw new IOException("OUYA cannot download HTTPS URLs. Use a direct HTTP URL without HTTPS redirect.");
+            }
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(20000);
+            connection.setReadTimeout(30000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("User-Agent", "Unreal-OUYA-Installer/1.1");
+            int code = connection.getResponseCode();
+            if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
+                String location = connection.getHeaderField("Location");
+                connection.disconnect();
+                if (location == null || location.length() == 0) throw new IOException("Server redirected without Location header.");
+                URL next = new URL(url, location);
+                if (isOuyaDevice() && "https".equalsIgnoreCase(next.getProtocol())) {
+                    throw new IOException("Server redirects to HTTPS, which OUYA cannot download. Use a direct HTTP mirror.");
+                }
+                url = next;
+                continue;
+            }
+            if (code < 200 || code >= 300) {
+                connection.disconnect();
+                throw new IOException("HTTP error " + code + " while downloading ZIP.");
+            }
+
+            InputStream input = null;
+            FileOutputStream output = null;
+            try {
+                int totalBytes = connection.getContentLength();
+                updateInstallProgress(t("Download", "Download"), 0);
+                input = new BufferedInputStream(connection.getInputStream());
+                output = new FileOutputStream(outFile, false);
+                copyWithProgress(input, output, totalBytes, t("Download", "Download"), 0, 45);
+                if (outFile.length() <= 0) throw new IOException("Downloaded file is empty.");
+                updateInstallProgress(t("Download", "Download"), 45);
+                return;
+            } finally {
+                if (input != null) try { input.close(); } catch (Throwable ignored) {}
+                if (output != null) try { output.close(); } catch (Throwable ignored) {}
+                connection.disconnect();
+            }
+        }
+        throw new IOException("Too many redirects while downloading ZIP.");
+    }
+
+    private long copyWithProgress(InputStream input, FileOutputStream output, long totalBytes, String phase, int startPercent, int spanPercent) throws IOException {
+        byte[] buffer = new byte[128 * 1024];
+        long total = 0;
+        int read;
+        int lastPercent = -1;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+            total += read;
+            if (phase != null && totalBytes > 0 && spanPercent > 0) {
+                int percent = startPercent + (int) Math.min(spanPercent, (total * spanPercent) / totalBytes);
+                if (percent != lastPercent) {
+                    lastPercent = percent;
+                    updateInstallProgress(phase, percent);
+                }
+            }
+        }
+        output.flush();
+        if (phase != null && spanPercent > 0 && totalBytes > 0) {
+            updateInstallProgress(phase, startPercent + spanPercent);
+        }
+        return total;
+    }
+
+    private boolean looksLikeZipFile(File file) {
+        if (file == null || !file.isFile() || file.length() < 4) return false;
+        FileInputStream in = null;
+        try {
+            in = new FileInputStream(file);
+            int p = in.read();
+            int k = in.read();
+            return p == 'P' && k == 'K';
+        } catch (IOException ignored) {
+            return false;
+        } finally {
+            if (in != null) try { in.close(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private File legacyZipStartDir() {
+        try {
+            File external = Environment.getExternalStorageDirectory();
+            if (external != null && external.isDirectory()) return external;
+        } catch (Throwable ignored) {}
+        File[] candidates = new File[] {
+                new File("/sdcard"),
+                new File("/mnt/sdcard"),
+                new File("/storage/sdcard0"),
+                new File("/storage/emulated/0"),
+                new File("/mnt/usbdrive"),
+                new File("/mnt/usbdrive0"),
+                new File("/mnt/usb_storage")
+        };
+        for (File candidate : candidates) if (candidate.isDirectory()) return candidate;
+        return new File("/");
+    }
+
+    private void openLegacyZipPicker(final File dir) {
+        final File current = dir != null && dir.isDirectory() ? dir : legacyZipStartDir();
+        final List<LegacyChoice> choices = legacyZipChoices(current);
+        if (choices.isEmpty()) {
+            lastImportMessage = t("Keine ZIP-Dateien oder Unterordner gefunden in:\n", "No ZIP files or subfolders found in:\n") + current.getAbsolutePath();
+            showMissingDataScreen();
+            return;
+        }
+
+        String[] labels = new String[choices.size()];
+        for (int i = 0; i < choices.size(); ++i) labels[i] = choices.get(i).label;
+
+        new AlertDialog.Builder(this)
+                .setTitle(t("Lokales Unreal-ZIP auswählen", "Select local Unreal ZIP") + "\n" + current.getAbsolutePath())
+                .setItems(labels, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                        LegacyChoice choice = choices.get(which);
+                        if (choice.parent) {
+                            File parent = current.getParentFile();
+                            if (parent == null) parent = current;
+                            openLegacyZipPicker(parent);
+                        } else if (choice.directory) {
+                            openLegacyZipPicker(choice.file);
+                        } else {
+                            importLegacyZipInBackground(choice.file);
+                        }
+                    }
+                })
+                .setNegativeButton(t("Abbrechen", "Cancel"), null)
+                .show();
+    }
+
+    private List<LegacyChoice> legacyZipChoices(File dir) {
+        ArrayList<LegacyChoice> choices = new ArrayList<LegacyChoice>();
+        if (dir == null || !dir.isDirectory()) return choices;
+        File parent = dir.getParentFile();
+        if (parent != null) choices.add(LegacyChoice.parent());
+        File[] files = dir.listFiles();
+        if (files == null) return choices;
+        ArrayList<File> sorted = new ArrayList<File>();
+        for (File file : files) {
+            if (file == null || file.isHidden()) continue;
+            if (file.isDirectory() || (file.isFile() && file.getName().toLowerCase(Locale.US).endsWith(".zip"))) sorted.add(file);
+        }
+        Collections.sort(sorted, new Comparator<File>() {
+            @Override public int compare(File a, File b) {
+                if (a.isDirectory() != b.isDirectory()) return a.isDirectory() ? -1 : 1;
+                return a.getName().compareToIgnoreCase(b.getName());
+            }
+        });
+        for (File file : sorted) choices.add(new LegacyChoice(file));
+        return choices;
+    }
+
+    private void importLegacyZipInBackground(final File zipFile) {
+        if (zipFile == null || !zipFile.isFile()) {
+            Toast.makeText(this, t("ZIP-Datei nicht lesbar.", "ZIP file is not readable."), Toast.LENGTH_LONG).show();
+            return;
+        }
+        showBusyScreen(
+                t("Unreal-ZIP wird importiert", "Importing Unreal ZIP"),
+                t("Die ZIP-Datei wird geprüft und in den sicheren App-Ordner entpackt.\nDas kann je nach Gerät einige Minuten dauern.",
+                  "The ZIP file is being checked and extracted into the safe app folder.\nThis may take a few minutes depending on the device."));
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealZipFile(MainActivity.this, zipFile, installProgressCallback());
+                runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(result); }});
+            }
+        }, "UE1LegacyZipImport").start();
+    }
+
+    private static final class LegacyChoice {
+        final File file;
+        final boolean directory;
+        final boolean parent;
+        final String label;
+
+        LegacyChoice(File file) {
+            this.file = file;
+            this.directory = file != null && file.isDirectory();
+            this.parent = false;
+            this.label = directory ? "[" + file.getName() + "]" : file.getName();
+        }
+
+        private LegacyChoice() {
+            this.file = null;
+            this.directory = false;
+            this.parent = true;
+            this.label = "[..]";
+        }
+
+        static LegacyChoice parent() { return new LegacyChoice(); }
     }
 
     private void handleImportResult(UnrealDataPaths.ImportResult result) {

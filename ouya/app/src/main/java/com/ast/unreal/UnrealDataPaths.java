@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 final class UnrealDataPaths {
@@ -72,6 +73,14 @@ final class UnrealDataPaths {
             Log.e(TAG_IMPORT, message, t);
             return new ImportResult(false, null, message + "\n\n" + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    static interface ProgressCallback {
+        void onProgress(String phase, int percent);
+    }
+
+    private static void progress(ProgressCallback callback, Context context, String de, String en, int percent) {
+        if (callback != null) callback.onProgress(tr(context, de, en), percent);
     }
 
     private static final String SAF_MIME_TYPE_DIR = "vnd.android.document/directory";
@@ -462,18 +471,43 @@ final class UnrealDataPaths {
         try {
             if (stream instanceof InputStream) ((InputStream) stream).close();
             else if (stream instanceof FileOutputStream) ((FileOutputStream) stream).close();
+            else if (stream instanceof ZipFile) ((ZipFile) stream).close();
         } catch (Throwable ignored) {}
     }
 
 
     private static void copyStream(InputStream in, FileOutputStream out) throws IOException {
+        copyStream(in, out, null, null, 0, 0, -1);
+    }
+
+    private static long copyStream(InputStream in, FileOutputStream out, ProgressCallback progress, String phase, int startPercent, int spanPercent, long totalBytes) throws IOException {
         byte[] buffer = new byte[128 * 1024];
+        long copied = 0;
         int read;
-        while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+        int lastPercent = -1;
+        while ((read = in.read(buffer)) != -1) {
+            out.write(buffer, 0, read);
+            copied += read;
+            if (progress != null && phase != null && totalBytes > 0 && spanPercent > 0) {
+                int percent = startPercent + (int) Math.min(spanPercent, (copied * spanPercent) / totalBytes);
+                if (percent != lastPercent) {
+                    lastPercent = percent;
+                    progress.onProgress(phase, percent);
+                }
+            }
+        }
         out.flush();
+        if (progress != null && phase != null && totalBytes > 0 && spanPercent > 0) {
+            progress.onProgress(phase, startPercent + spanPercent);
+        }
+        return copied;
     }
 
     static ImportResult importUnrealFolderFromSaf(Context context, Uri treeUri) {
+        return importUnrealFolderFromSaf(context, treeUri, null);
+    }
+
+    static ImportResult importUnrealFolderFromSaf(Context context, Uri treeUri, ProgressCallback progress) {
         if (treeUri == null) return ImportResult.fail(tr(context, "Kein Ordner ausgewählt.", "No folder selected."));
         if (Build.VERSION.SDK_INT < 21) {
             return ImportResult.fail(tr(context,
@@ -481,6 +515,7 @@ final class UnrealDataPaths {
                     "This Android version has no system folder import. Please copy the Unreal folder to USB/SD or into the app folder."));
         }
         try {
+            progress(progress, context, "Prüfung", "Checking", 2);
             String selectedDocId = safGetTreeDocumentId(treeUri);
             if (selectedDocId == null || selectedDocId.length() == 0) {
                 return ImportResult.fail(tr(context, "Der ausgewählte Ordner konnte nicht gelesen werden.", "The selected folder could not be read."));
@@ -496,9 +531,14 @@ final class UnrealDataPaths {
             File target = primaryAppRoot(context);
             ensureDirectoryLayout(target);
             Log.i(TAG_IMPORT, "Importing SAF Unreal folder to " + target.getAbsolutePath());
-            copySafTree(context, treeUri, unrealDocId, target);
+            int[] copied = new int[] { 0 };
+            int totalFiles = countSafFiles(context, treeUri, unrealDocId);
+            progress(progress, context, "Kopieren", "Copying", 5);
+            copySafTree(context, treeUri, unrealDocId, target, progress, tr(context, "Kopieren", "Copying"), copied, totalFiles);
+            progress(progress, context, "Konfiguration", "Config", 92);
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
+            progress(progress, context, "Fertig", "Done", 100);
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context,
@@ -516,8 +556,13 @@ final class UnrealDataPaths {
     }
 
     static ImportResult importUnrealZip(Context context, Uri zipUri) {
+        return importUnrealZip(context, zipUri, null);
+    }
+
+    static ImportResult importUnrealZip(Context context, Uri zipUri, ProgressCallback progress) {
         if (zipUri == null) return ImportResult.fail(tr(context, "Keine ZIP-Datei ausgewählt.", "No ZIP file selected."));
         try {
+            progress(progress, context, "ZIP prüfen", "Checking ZIP", 45);
             String rootPrefix = detectUnrealZipRootPrefix(context, zipUri);
             if (rootPrefix == null) {
                 return ImportResult.fail(tr(context,
@@ -528,9 +573,50 @@ final class UnrealDataPaths {
             File target = primaryAppRoot(context);
             ensureDirectoryLayout(target);
             Log.i(TAG_IMPORT, "Importing ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
-            extractZipRoot(context, zipUri, rootPrefix, target);
+            extractZipRoot(context, zipUri, rootPrefix, target, progress);
+            progress(progress, context, "Konfiguration", "Config", 92);
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
+            progress(progress, context, "Fertig", "Done", 100);
+
+            if (!hasRequiredData(target, true)) {
+                return ImportResult.fail(tr(context,
+                        "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ",
+                        "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());
+            }
+            return ImportResult.ok(target, tr(context,
+                    "Unreal-Daten wurden erfolgreich aus der ZIP-Datei importiert nach:\n",
+                    "Unreal data was imported successfully from the ZIP file to:\n") + target.getAbsolutePath());
+        } catch (Throwable t) {
+            return ImportResult.fail(tr(context,
+                    "Import aus der ZIP-Datei fehlgeschlagen.",
+                    "Import from the ZIP file failed."), t);
+        }
+    }
+
+    static ImportResult importUnrealZipFile(Context context, File zipFile) {
+        return importUnrealZipFile(context, zipFile, null);
+    }
+
+    static ImportResult importUnrealZipFile(Context context, File zipFile, ProgressCallback progress) {
+        if (zipFile == null || !zipFile.isFile()) return ImportResult.fail(tr(context, "Keine ZIP-Datei ausgewählt.", "No ZIP file selected."));
+        try {
+            progress(progress, context, "ZIP prüfen", "Checking ZIP", 45);
+            String rootPrefix = detectUnrealZipRootPrefix(zipFile);
+            if (rootPrefix == null) {
+                return ImportResult.fail(tr(context,
+                        "Die ZIP-Datei enthält keine gültige Unreal-Datenstruktur. Erwartet werden mindestens System/Core.u, System/Engine.u, UnrealI.u oder UnrealShare.u und Maps/*.unr.",
+                        "The ZIP file does not contain a valid Unreal data structure. Expected at least: System/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u, and Maps/*.unr."));
+            }
+
+            File target = primaryAppRoot(context);
+            ensureDirectoryLayout(target);
+            Log.i(TAG_IMPORT, "Importing local ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
+            extractZipRoot(zipFile, rootPrefix, target, progress, context);
+            progress(progress, context, "Konfiguration", "Config", 92);
+            installDefaultConfigsIfNeeded(context, target);
+            normalizeConfigForDetectedData(target);
+            progress(progress, context, "Fertig", "Done", 100);
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context,
@@ -631,14 +717,27 @@ final class UnrealDataPaths {
         return out;
     }
 
+    private static int countSafFiles(Context context, Uri treeUri, String parentDocId) {
+        int count = 0;
+        for (SafNode child : listSafChildren(context, treeUri, parentDocId)) {
+            if (child.isDirectory()) count += countSafFiles(context, treeUri, child.docId);
+            else count++;
+        }
+        return count;
+    }
+
     private static void copySafTree(Context context, Uri treeUri, String parentDocId, File outDir) throws IOException {
+        copySafTree(context, treeUri, parentDocId, outDir, null, null, null, 0);
+    }
+
+    private static void copySafTree(Context context, Uri treeUri, String parentDocId, File outDir, ProgressCallback progress, String phase, int[] copiedFiles, int totalFiles) throws IOException {
         if (!outDir.exists() && !outDir.mkdirs()) throw new IOException("Could not create " + outDir.getAbsolutePath());
         for (SafNode child : listSafChildren(context, treeUri, parentDocId)) {
             String safeName = sanitizeFileName(child.name);
             if (safeName.length() == 0) continue;
             File out = new File(outDir, safeName);
             if (child.isDirectory()) {
-                copySafTree(context, treeUri, child.docId, out);
+                copySafTree(context, treeUri, child.docId, out, progress, phase, copiedFiles, totalFiles);
             } else {
                 InputStream in = null;
                 FileOutputStream fos = null;
@@ -651,6 +750,11 @@ final class UnrealDataPaths {
                     if (in == null) throw new IOException("Could not open SAF file " + child.name);
                     fos = new FileOutputStream(out);
                     copyStream(in, fos);
+                    if (progress != null && copiedFiles != null && totalFiles > 0) {
+                        copiedFiles[0]++;
+                        int percent = 5 + (int) Math.min(85, (copiedFiles[0] * 85L) / totalFiles);
+                        progress.onProgress(phase, percent);
+                    }
                 } catch (Exception ex) {
                     if (ex instanceof IOException) throw (IOException) ex;
                     throw new IOException("Could not copy SAF file " + child.name + ": " + ex);
@@ -665,6 +769,30 @@ final class UnrealDataPaths {
     private static String sanitizeFileName(String name) {
         if (name == null) return "";
         return name.replace('/', '_').replace('\\', '_').trim();
+    }
+
+    private static String detectUnrealZipRootPrefix(File zipFile) throws IOException {
+        HashMap<String, ZipRootFlags> roots = new HashMap<String, ZipRootFlags>();
+        FileInputStream raw = null;
+        ZipInputStream zip = null;
+        try {
+            raw = new FileInputStream(zipFile);
+            zip = new ZipInputStream(raw);
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                String normalized = normalizeZipName(entry.getName());
+                if (normalized.length() == 0) continue;
+                updateZipRootFlags(roots, normalized);
+            }
+        } finally {
+            closeQuietly(zip);
+            closeQuietly(raw);
+        }
+
+        String bestPrefix = bestZipRootPrefix(roots);
+        Log.i(TAG_IMPORT, "Detected ZIP file Unreal root prefix: " + bestPrefix);
+        return bestPrefix;
     }
 
     private static String detectUnrealZipRootPrefix(Context context, Uri zipUri) throws IOException {
@@ -685,6 +813,12 @@ final class UnrealDataPaths {
             closeQuietly(zip);
         }
 
+        String bestPrefix = bestZipRootPrefix(roots);
+        Log.i(TAG_IMPORT, "Detected ZIP Unreal root prefix: " + bestPrefix);
+        return bestPrefix;
+    }
+
+    private static String bestZipRootPrefix(HashMap<String, ZipRootFlags> roots) {
         String bestPrefix = null;
         int bestScore = -1;
         for (Map.Entry<String, ZipRootFlags> e : roots.entrySet()) {
@@ -696,7 +830,6 @@ final class UnrealDataPaths {
                 bestPrefix = e.getKey();
             }
         }
-        Log.i(TAG_IMPORT, "Detected ZIP Unreal root prefix: " + bestPrefix);
         return bestPrefix;
     }
 
@@ -733,11 +866,106 @@ final class UnrealDataPaths {
         return b.toString();
     }
 
-    private static void extractZipRoot(Context context, Uri zipUri, String rootPrefix, File targetRoot) throws IOException {
-        String targetCanonical = targetRoot.getCanonicalPath() + File.separator;
+    private static int countExtractableZipFiles(File zipFile, String rootPrefix) throws IOException {
+        int count = 0;
+        ZipFile zip = new ZipFile(zipFile);
+        try {
+            java.util.Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+                String normalized = normalizeZipName(entry.getName());
+                if (normalized.length() == 0 || !normalized.startsWith(rootPrefix)) continue;
+                String relative = normalized.substring(rootPrefix.length());
+                if (relative.length() == 0 || relative.contains("../") || relative.startsWith("/")) continue;
+                count++;
+            }
+        } finally {
+            closeQuietly(zip);
+        }
+        return count;
+    }
+
+    private static int countExtractableZipFiles(Context context, Uri zipUri, String rootPrefix) throws IOException {
+        int count = 0;
         InputStream raw = context.getContentResolver().openInputStream(zipUri);
         if (raw == null) throw new IOException("Could not open ZIP stream");
         ZipInputStream zip = null;
+        try {
+            zip = new ZipInputStream(raw);
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                String normalized = normalizeZipName(entry.getName());
+                if (normalized.length() == 0 || !normalized.startsWith(rootPrefix)) continue;
+                String relative = normalized.substring(rootPrefix.length());
+                if (relative.length() == 0 || relative.contains("../") || relative.startsWith("/")) continue;
+                count++;
+            }
+        } finally {
+            closeQuietly(zip);
+        }
+        return count;
+    }
+
+    private static void extractZipRoot(File zipFile, String rootPrefix, File targetRoot) throws IOException {
+        extractZipRoot(zipFile, rootPrefix, targetRoot, null, null);
+    }
+
+    private static void extractZipRoot(File zipFile, String rootPrefix, File targetRoot, ProgressCallback progress, Context context) throws IOException {
+        String targetCanonical = targetRoot.getCanonicalPath() + File.separator;
+        int totalExtractFiles = countExtractableZipFiles(zipFile, rootPrefix);
+        if (progress != null) progress.onProgress(context != null ? tr(context, "Installation", "Installing") : "Installing", 45);
+        FileInputStream raw = null;
+        ZipInputStream zip = null;
+        int files = 0;
+        try {
+            raw = new FileInputStream(zipFile);
+            zip = new ZipInputStream(raw);
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                String normalized = normalizeZipName(entry.getName());
+                if (normalized.length() == 0 || !normalized.startsWith(rootPrefix)) continue;
+                String relative = normalized.substring(rootPrefix.length());
+                if (relative.length() == 0 || relative.contains("../") || relative.startsWith("/")) continue;
+                File out = new File(targetRoot, relative.replace('/', File.separatorChar));
+                String outCanonical = out.getCanonicalPath();
+                if (!outCanonical.startsWith(targetCanonical)) throw new IOException("Unsafe ZIP entry: " + entry.getName());
+                File parent = out.getParentFile();
+                if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+                FileOutputStream fos = null;
+                try {
+                    fos = new FileOutputStream(out);
+                    copyStream(zip, fos);
+                    files++;
+                    if (progress != null && totalExtractFiles > 0) {
+                        int percent = 45 + (int) Math.min(45, (files * 45L) / totalExtractFiles);
+                        progress.onProgress(context != null ? tr(context, "Installation", "Installing") : "Installing", percent);
+                    }
+                } finally {
+                    closeQuietly(fos);
+                }
+            }
+        } finally {
+            closeQuietly(zip);
+            closeQuietly(raw);
+        }
+    }
+
+
+    private static void extractZipRoot(Context context, Uri zipUri, String rootPrefix, File targetRoot) throws IOException {
+        extractZipRoot(context, zipUri, rootPrefix, targetRoot, null);
+    }
+
+    private static void extractZipRoot(Context context, Uri zipUri, String rootPrefix, File targetRoot, ProgressCallback progress) throws IOException {
+        String targetCanonical = targetRoot.getCanonicalPath() + File.separator;
+        int totalExtractFiles = countExtractableZipFiles(context, zipUri, rootPrefix);
+        progress(progress, context, "Installation", "Installing", 45);
+        InputStream raw = context.getContentResolver().openInputStream(zipUri);
+        if (raw == null) throw new IOException("Could not open ZIP stream");
+        ZipInputStream zip = null;
+        int files = 0;
         try {
             zip = new ZipInputStream(raw);
             ZipEntry entry;
@@ -756,6 +984,11 @@ final class UnrealDataPaths {
                 try {
                     fos = new FileOutputStream(out);
                     copyStream(zip, fos);
+                    files++;
+                    if (progress != null && totalExtractFiles > 0) {
+                        int percent = 45 + (int) Math.min(45, (files * 45L) / totalExtractFiles);
+                        progress.onProgress(tr(context, "Installation", "Installing"), percent);
+                    }
                 } finally {
                     closeQuietly(fos);
                 }
@@ -764,6 +997,7 @@ final class UnrealDataPaths {
             closeQuietly(zip);
         }
     }
+
 
     private static String normalizeZipName(String name) {
         if (name == null) return "";
