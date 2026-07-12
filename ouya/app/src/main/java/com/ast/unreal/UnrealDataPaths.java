@@ -8,12 +8,14 @@ import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PushbackInputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -561,36 +563,17 @@ final class UnrealDataPaths {
 
     static ImportResult importUnrealZip(Context context, Uri zipUri, ProgressCallback progress) {
         if (zipUri == null) return ImportResult.fail(tr(context, "Keine ZIP-Datei ausgewählt.", "No ZIP file selected."));
+        InputStream input = null;
         try {
-            progress(progress, context, "ZIP prüfen", "Checking ZIP", 45);
-            String rootPrefix = detectUnrealZipRootPrefix(context, zipUri);
-            if (rootPrefix == null) {
-                return ImportResult.fail(tr(context,
-                        "Die ZIP-Datei enthält keine gültige Unreal-Datenstruktur. Erwartet werden mindestens System/Core.u, System/Engine.u, UnrealI.u oder UnrealShare.u und Maps/*.unr.",
-                        "The ZIP file does not contain a valid Unreal data structure. Expected at least: System/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u, and Maps/*.unr."));
-            }
-
-            File target = primaryAppRoot(context);
-            ensureDirectoryLayout(target);
-            Log.i(TAG_IMPORT, "Importing ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
-            extractZipRoot(context, zipUri, rootPrefix, target, progress);
-            progress(progress, context, "Konfiguration", "Config", 92);
-            installDefaultConfigsIfNeeded(context, target);
-            normalizeConfigForDetectedData(target);
-            progress(progress, context, "Fertig", "Done", 100);
-
-            if (!hasRequiredData(target, true)) {
-                return ImportResult.fail(tr(context,
-                        "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ",
-                        "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());
-            }
-            return ImportResult.ok(target, tr(context,
-                    "Unreal-Daten wurden erfolgreich aus der ZIP-Datei importiert nach:\n",
-                    "Unreal data was imported successfully from the ZIP file to:\n") + target.getAbsolutePath());
+            input = context.getContentResolver().openInputStream(zipUri);
+            if (input == null) throw new IOException("Could not open selected ZIP stream.");
+            return importUnrealZipStream(context, input, -1L, progress, tr(context, "ZIP-Installation", "ZIP installation"));
         } catch (Throwable t) {
             return ImportResult.fail(tr(context,
                     "Import aus der ZIP-Datei fehlgeschlagen.",
                     "Import from the ZIP file failed."), t);
+        } finally {
+            closeQuietly(input);
         }
     }
 
@@ -600,37 +583,374 @@ final class UnrealDataPaths {
 
     static ImportResult importUnrealZipFile(Context context, File zipFile, ProgressCallback progress) {
         if (zipFile == null || !zipFile.isFile()) return ImportResult.fail(tr(context, "Keine ZIP-Datei ausgewählt.", "No ZIP file selected."));
+        FileInputStream input = null;
         try {
-            progress(progress, context, "ZIP prüfen", "Checking ZIP", 45);
-            String rootPrefix = detectUnrealZipRootPrefix(zipFile);
-            if (rootPrefix == null) {
-                return ImportResult.fail(tr(context,
-                        "Die ZIP-Datei enthält keine gültige Unreal-Datenstruktur. Erwartet werden mindestens System/Core.u, System/Engine.u, UnrealI.u oder UnrealShare.u und Maps/*.unr.",
-                        "The ZIP file does not contain a valid Unreal data structure. Expected at least: System/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u, and Maps/*.unr."));
+            input = new FileInputStream(zipFile);
+            return importUnrealZipStream(context, input, zipFile.length(), progress, tr(context, "ZIP-Installation", "ZIP installation"));
+        } catch (Throwable t) {
+            return ImportResult.fail(tr(context,
+                    "Import aus der ZIP-Datei fehlgeschlagen.",
+                    "Import from the ZIP file failed."), t);
+        } finally {
+            closeQuietly(input);
+        }
+    }
+
+    static ImportResult importUnrealZipStream(Context context, InputStream rawInput, long totalCompressedBytes,
+                                              ProgressCallback progress, String progressPhase) {
+        if (rawInput == null) return ImportResult.fail(tr(context, "ZIP-Stream nicht lesbar.", "ZIP stream is not readable."));
+        File target = primaryAppRoot(context);
+        File stagingData = null;
+        File stagingRoot = null;
+        boolean replaced = false;
+        InstallStats stats = new InstallStats();
+        try {
+            progress(progress, context, "ZIP prüfen", "Checking ZIP", 3);
+            stagingData = createTargetSiblingStagingData(target);
+            stagingRoot = stagingData.getParentFile();
+
+            CountingInputStream countingInput = new CountingInputStream(rawInput);
+            InputStream checkedInput = checkedZipInputStream(countingInput);
+            ZipInputStream zipInput = null;
+            try {
+                zipInput = new ZipInputStream(checkedInput);
+                extractZipStreamDirect(context, zipInput, stagingData, stats, progress,
+                        countingInput, totalCompressedBytes, progressPhase);
+            } finally {
+                closeQuietly(zipInput);
             }
 
-            File target = primaryAppRoot(context);
-            ensureDirectoryLayout(target);
-            Log.i(TAG_IMPORT, "Importing local ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
-            extractZipRoot(zipFile, rootPrefix, target, progress, context);
-            progress(progress, context, "Konfiguration", "Config", 92);
+            if (stats.files <= 0) {
+                throw new IOException("ZIP did not contain extractable Unreal files.");
+            }
+
+            progress(progress, context, "Konfiguration", "Config", 90);
+            installDefaultConfigsIfNeeded(context, stagingData);
+            normalizeConfigForDetectedData(stagingData);
+            if (!hasRequiredData(stagingData, true)) {
+                throw new IOException("ZIP extracted to staging folder, but required Unreal files were not found. Extracted files="
+                        + stats.files + ", bytes=" + stats.bytes);
+            }
+
+            progress(progress, context, "Aktivieren", "Activating", 92);
+            replaceTargetWithStagedData(stagingData, target);
+            replaced = true;
+
+            progress(progress, context, "Konfiguration", "Config", 96);
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
             progress(progress, context, "Fertig", "Done", 100);
 
             if (!hasRequiredData(target, true)) {
-                return ImportResult.fail(tr(context,
-                        "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ",
-                        "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());
+                throw new IOException("ZIP installed, but required Unreal files were not found in " + target.getAbsolutePath());
             }
             return ImportResult.ok(target, tr(context,
                     "Unreal-Daten wurden erfolgreich aus der ZIP-Datei importiert nach:\n",
-                    "Unreal data was imported successfully from the ZIP file to:\n") + target.getAbsolutePath());
+                    "Unreal data was successfully imported from the ZIP file to:\n") + target.getAbsolutePath());
         } catch (Throwable t) {
             return ImportResult.fail(tr(context,
                     "Import aus der ZIP-Datei fehlgeschlagen.",
                     "Import from the ZIP file failed."), t);
+        } finally {
+            if (!replaced && stagingRoot != null) {
+                try { deleteRecursive(stagingRoot); } catch (Throwable ignored) {}
+            } else if (stagingRoot != null && stagingRoot.exists()) {
+                try { deleteRecursive(stagingRoot); } catch (Throwable ignored) {}
+            }
         }
+    }
+
+    private static void extractZipStreamDirect(Context context, ZipInputStream zipInput, File targetRoot, InstallStats stats,
+                                               ProgressCallback progress, CountingInputStream countingInput,
+                                               long totalCompressedBytes, String progressPhase) throws IOException {
+        String prefix = null;
+        String prefixLower = null;
+        int lastPercent = -1;
+        progress(progress, context, "Installation", "Installing", 5);
+
+        ZipEntry entry;
+        while ((entry = zipInput.getNextEntry()) != null) {
+            String name = normalizeZipName(entry.getName());
+            String lowerName = name.toLowerCase(Locale.US);
+            if (name.length() == 0 || shouldSkipZipEntry(name)) {
+                zipInput.closeEntry();
+                continue;
+            }
+
+            if (prefix == null) {
+                prefix = findZipUnrealDataPrefixFromEntry(name);
+                if (prefix != null) prefixLower = prefix.toLowerCase(Locale.US);
+            }
+
+            if (prefix == null || !lowerName.startsWith(prefixLower)) {
+                zipInput.closeEntry();
+                continue;
+            }
+
+            String relative = name.substring(prefix.length());
+            if (relative.length() == 0 || shouldSkipZipEntry(relative)) {
+                zipInput.closeEntry();
+                continue;
+            }
+
+            File out = safeZipOutputFile(targetRoot, relative);
+            if (entry.isDirectory() || relative.endsWith("/")) {
+                if (!out.exists() && !out.mkdirs()) throw new IOException("Could not create " + out.getAbsolutePath());
+            } else {
+                File parent = out.getParentFile();
+                if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+                FileOutputStream fos = null;
+                try {
+                    fos = new FileOutputStream(out, false);
+                    stats.bytes += copyZipEntry(zipInput, fos, progress, countingInput,
+                            totalCompressedBytes, progressPhase, lastPercent);
+                    stats.files++;
+                    if (progress != null && totalCompressedBytes <= 0) {
+                        progress.onProgress(tr(context, "Installation", "Installing"), 45);
+                    }
+                    if (progress != null && totalCompressedBytes > 0) {
+                        int percent = zipStreamPercent(countingInput, totalCompressedBytes);
+                        if (percent != lastPercent) {
+                            lastPercent = percent;
+                            progress.onProgress(progressPhase, percent);
+                        }
+                    }
+                } finally {
+                    closeQuietly(fos);
+                }
+            }
+            zipInput.closeEntry();
+        }
+
+        if (prefix == null) {
+            throw new IOException("ZIP does not contain System, Maps and required Unreal game data.");
+        }
+    }
+
+    private static long copyZipEntry(ZipInputStream input, FileOutputStream output, ProgressCallback progress,
+                                     CountingInputStream countingInput, long totalCompressedBytes,
+                                     String progressPhase, int lastPercent) throws IOException {
+        byte[] buffer = new byte[128 * 1024];
+        long total = 0;
+        int read;
+        int localLastPercent = lastPercent;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+            total += read;
+            if (progress != null && totalCompressedBytes > 0) {
+                int percent = zipStreamPercent(countingInput, totalCompressedBytes);
+                if (percent != localLastPercent) {
+                    localLastPercent = percent;
+                    progress.onProgress(progressPhase, percent);
+                }
+            }
+        }
+        output.flush();
+        return total;
+    }
+
+    private static String findZipUnrealDataPrefixFromEntry(String normalizedName) {
+        if (normalizedName == null) return null;
+        String lower = normalizeZipName(normalizedName).toLowerCase(Locale.US);
+        String[] markers = { "system/", "maps/", "textures/", "sounds/", "music/", "meshes/" };
+        for (String marker : markers) {
+            int idx = lower.indexOf(marker);
+            while (idx >= 0) {
+                if (idx == 0 || lower.charAt(idx - 1) == '/') {
+                    return normalizedName.substring(0, idx);
+                }
+                idx = lower.indexOf(marker, idx + 1);
+            }
+        }
+        return null;
+    }
+
+    private static InputStream checkedZipInputStream(InputStream input) throws IOException {
+        PushbackInputStream pushback = new PushbackInputStream(new BufferedInputStream(input), 4);
+        byte[] signature = new byte[4];
+        int read = 0;
+        while (read < signature.length) {
+            int got = pushback.read(signature, read, signature.length - read);
+            if (got < 0) break;
+            read += got;
+        }
+        if (read > 0) pushback.unread(signature, 0, read);
+        if (read < 4 || signature[0] != 'P' || signature[1] != 'K' ||
+                !((signature[2] == 3 || signature[2] == 5 || signature[2] == 7) &&
+                        (signature[3] == 4 || signature[3] == 6 || signature[3] == 8))) {
+            throw new IOException("Selected file is not a ZIP archive.");
+        }
+        return pushback;
+    }
+
+    private static int zipStreamPercent(CountingInputStream input, long totalCompressedBytes) {
+        if (input == null || totalCompressedBytes <= 0) return 45;
+        return 5 + (int) Math.min(85L, (input.bytesRead * 85L) / totalCompressedBytes);
+    }
+
+    private static boolean shouldSkipZipEntry(String relative) {
+        String lower = relative.toLowerCase(Locale.US);
+        return lower.startsWith("__macosx/") || lower.endsWith("/.ds_store") || lower.equals(".ds_store");
+    }
+
+    private static File safeZipOutputFile(File targetRoot, String relative) throws IOException {
+        String normalized = normalizeZipName(relative);
+        if (normalized.length() == 0 || normalized.contains("../") || normalized.equals("..") || normalized.startsWith("../")) {
+            throw new IOException("Unsafe ZIP entry: " + relative);
+        }
+        File out = new File(targetRoot, normalized.replace('/', File.separatorChar));
+        String rootPath = targetRoot.getCanonicalPath() + File.separator;
+        String outPath = out.getCanonicalPath();
+        if (!outPath.startsWith(rootPath)) {
+            throw new IOException("Unsafe ZIP entry path: " + relative);
+        }
+        return out;
+    }
+
+    private static File createTargetSiblingStagingData(File targetRoot) throws IOException {
+        File parent = targetRoot.getParentFile();
+        if (parent == null) throw new IOException("Install target has no parent folder.");
+        if (!parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+        cleanupOldInstallWorkDirs(parent);
+        File stagingRoot = uniqueChild(parent, ".unreal-install-staging-");
+        File stagingData = new File(stagingRoot, targetRoot.getName());
+        if (!stagingData.mkdirs() && !stagingData.isDirectory()) {
+            throw new IOException("Could not create temporary install folder in " + parent.getAbsolutePath());
+        }
+        Log.i(TAG_IMPORT, "streaming ZIP staging=" + stagingData.getAbsolutePath() + " target=" + targetRoot.getAbsolutePath());
+        return stagingData;
+    }
+
+    private static File uniqueChild(File parent, String prefix) {
+        long now = android.os.SystemClock.uptimeMillis();
+        for (int i = 0; i < 100; i++) {
+            File child = new File(parent, prefix + now + (i == 0 ? "" : "-" + i));
+            if (!child.exists()) return child;
+        }
+        return new File(parent, prefix + now + "-" + java.lang.System.nanoTime());
+    }
+
+    private static void cleanupOldInstallWorkDirs(File parent) {
+        File[] children = parent.listFiles();
+        if (children == null) return;
+        for (File child : children) {
+            if (child == null) continue;
+            String name = child.getName();
+            if (name.startsWith(".unreal-install-staging-") || name.startsWith(".unreal-install-backup-")) {
+                try { deleteRecursive(child); }
+                catch (IOException ex) { Log.w(TAG_IMPORT, "could not delete old install work folder " + child.getAbsolutePath(), ex); }
+            }
+        }
+    }
+
+    private static void replaceTargetWithStagedData(File stagingData, File targetRoot) throws IOException {
+        if (stagingData == null || !stagingData.isDirectory()) throw new IOException("Staged install folder is not readable.");
+        File parent = targetRoot.getParentFile();
+        if (parent == null) throw new IOException("Install target has no parent folder.");
+        if (!parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+
+        File backup = null;
+        boolean backupActive = false;
+        try {
+            if (targetRoot.exists()) {
+                backup = uniqueChild(parent, ".unreal-install-backup-");
+                if (backup.exists()) deleteRecursive(backup);
+                if (targetRoot.renameTo(backup)) {
+                    backupActive = true;
+                } else {
+                    clearDirectory(targetRoot);
+                }
+            }
+
+            if (!stagingData.renameTo(targetRoot)) {
+                if (!targetRoot.exists() && !targetRoot.mkdirs()) {
+                    throw new IOException("Could not create " + targetRoot.getAbsolutePath());
+                }
+                copyDirectoryThrow(stagingData, targetRoot);
+            }
+        } catch (IOException ex) {
+            if (backupActive && backup != null && backup.exists()) {
+                try {
+                    deleteRecursive(targetRoot);
+                    backup.renameTo(targetRoot);
+                } catch (Throwable restoreError) {
+                    Log.e(TAG_IMPORT, "could not restore previous Unreal data after failed activation", restoreError);
+                }
+            }
+            throw ex;
+        }
+
+        if (backupActive && backup != null) {
+            try { deleteRecursive(backup); }
+            catch (IOException ex) { Log.w(TAG_IMPORT, "could not delete old Unreal backup folder " + backup.getAbsolutePath(), ex); }
+        }
+    }
+
+    private static void copyDirectoryThrow(File source, File target) throws IOException {
+        if (source == null || target == null) return;
+        if (source.isDirectory()) {
+            if (!target.exists() && !target.mkdirs()) throw new IOException("Could not create " + target.getAbsolutePath());
+            File[] children = source.listFiles();
+            if (children == null) return;
+            for (File child : children) copyDirectoryThrow(child, new File(target, child.getName()));
+            return;
+        }
+        if (!source.isFile()) return;
+        File parent = target.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+        copyFile(source, target);
+    }
+
+    private static void clearDirectory(File dir) throws IOException {
+        File[] children = dir.listFiles();
+        if (children == null) return;
+        for (File child : children) deleteRecursive(child);
+    }
+
+    private static void deleteRecursive(File file) throws IOException {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) deleteRecursive(child);
+            }
+        }
+        if (!file.delete() && file.exists()) {
+            throw new IOException("Could not delete " + file.getAbsolutePath());
+        }
+    }
+
+    private static final class CountingInputStream extends InputStream {
+        private final InputStream input;
+        long bytesRead;
+
+        CountingInputStream(InputStream input) {
+            this.input = input;
+        }
+
+        @Override
+        public int read() throws IOException {
+            int value = input.read();
+            if (value >= 0) bytesRead++;
+            return value;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            int read = input.read(buffer, offset, length);
+            if (read > 0) bytesRead += read;
+            return read;
+        }
+
+        @Override
+        public void close() throws IOException {
+            input.close();
+        }
+    }
+
+    private static final class InstallStats {
+        int files;
+        long bytes;
     }
 
     private static String safGetTreeDocumentId(Uri treeUri) throws Exception {

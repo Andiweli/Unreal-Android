@@ -188,14 +188,12 @@ public class MainActivity extends Activity {
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER);
         body.setPadding(48, 36, 48, 36);
-        body.setBackgroundColor(Color.BLACK);
 
         TextView title = new TextView(this);
         title.setText(hasLaunchData
                 ? t("Unreal bereit", "Unreal ready")
                 : t("Unreal-Daten fehlen", "Unreal data not found"));
         title.setTextSize(24.0f);
-        title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         body.addView(title);
 
@@ -231,7 +229,6 @@ public class MainActivity extends Activity {
                     "Required at minimum:\nSystem/Core.u, System/Engine.u, UnrealI.u or UnrealShare.u and Maps/*.unr" + extra));
         }
         msg.setTextSize(16.0f);
-        msg.setTextColor(Color.WHITE);
         msg.setGravity(Gravity.CENTER);
         msg.setPadding(0, 24, 0, 24);
         body.addView(msg);
@@ -280,7 +277,6 @@ public class MainActivity extends Activity {
         if (firstFocusButton == null) firstFocusButton = retry;
 
         ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(Color.BLACK);
         scroll.addView(body);
         setContentView(scroll);
         hideSystemUi();
@@ -303,19 +299,16 @@ public class MainActivity extends Activity {
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER);
         body.setPadding(48, 36, 48, 36);
-        body.setBackgroundColor(Color.BLACK);
 
         TextView title = new TextView(this);
         title.setText(titleText);
         title.setTextSize(24.0f);
-        title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         body.addView(title);
 
         installMessageText = new TextView(this);
         installMessageText.setText(messageText);
         installMessageText.setTextSize(16.0f);
-        installMessageText.setTextColor(Color.WHITE);
         installMessageText.setGravity(Gravity.CENTER);
         installMessageText.setPadding(0, 24, 0, 16);
         body.addView(installMessageText);
@@ -332,7 +325,6 @@ public class MainActivity extends Activity {
         installProgressText = new TextView(this);
         installProgressText.setText("0%");
         installProgressText.setTextSize(16.0f);
-        installProgressText.setTextColor(Color.WHITE);
         installProgressText.setGravity(Gravity.CENTER);
         installProgressText.setPadding(0, 8, 0, 0);
         body.addView(installProgressText);
@@ -482,13 +474,14 @@ public class MainActivity extends Activity {
         input.setSingleLine(true);
         input.setText(DEFAULT_ONLINE_UNREAL_ZIP_URL);
         input.setSelectAllOnFocus(false);
+        input.setSelection(input.getText().length());
 
-        new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(t("Online-ZIP herunterladen", "Download online ZIP"))
                 .setMessage(t("Download-URL:", "Download URL:"))
                 .setView(input)
                 .setPositiveButton(t("Download starten", "Start download"), new android.content.DialogInterface.OnClickListener() {
-                    @Override public void onClick(android.content.DialogInterface dialog, int which) {
+                    @Override public void onClick(android.content.DialogInterface d, int which) {
                         String url = String.valueOf(input.getText()).trim();
                         if (url.length() == 0) {
                             lastImportMessage = t("Keine Download-URL eingegeben.", "No download URL entered.");
@@ -498,131 +491,97 @@ public class MainActivity extends Activity {
                         importOnlineZipInBackground(url);
                     }
                 })
-                .setNegativeButton(t("Abbrechen", "Cancel"), null)
-                .show();
+                .setNegativeButton(t("Abbrechen", "Cancel"), new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int which) { showMissingDataScreen(); }
+                })
+                .create();
+
+        dialog.setOnCancelListener(new android.content.DialogInterface.OnCancelListener() {
+            @Override public void onCancel(android.content.DialogInterface d) { showMissingDataScreen(); }
+        });
+        dialog.setOnShowListener(new android.content.DialogInterface.OnShowListener() {
+            @Override public void onShow(android.content.DialogInterface d) {
+                try {
+                    Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                    if (positive != null) {
+                        positive.setFocusable(true);
+                        positive.requestFocus();
+                    }
+                } catch (Throwable ignored) {}
+            }
+        });
+        dialog.show();
     }
 
     private void importOnlineZipInBackground(final String urlText) {
         showBusyScreen(
-                t("Online-ZIP wird heruntergeladen", "Downloading online ZIP"),
-                t("Die ZIP-Datei wird heruntergeladen und danach in den sicheren App-Ordner entpackt.\nDas kann je nach Verbindung einige Minuten dauern.",
-                  "The ZIP file is being downloaded and then extracted into the safe app folder.\nThis may take a few minutes depending on the connection."));
+                t("Installiere Unreal-Daten", "Installing Unreal data"),
+                t("Online-ZIP wird gestreamt und entpackt …", "Streaming and extracting online ZIP …"));
         new Thread(new Runnable() {
             @Override public void run() {
-                UnrealDataPaths.ImportResult result;
-                File tmp = new File(getCacheDir(), "unreal-online-download.zip");
-                try {
-                    if (tmp.exists() && !tmp.delete()) tmp.deleteOnExit();
-                    updateInstallMessage(t("Online-ZIP wird heruntergeladen …", "Downloading online ZIP …"));
-                    downloadOnlineZipToFile(urlText, tmp);
-                    if (!looksLikeZipFile(tmp)) {
-                        throw new IOException("Downloaded file is not a ZIP archive. Check the URL or server redirect.");
-                    }
-                    updateInstallMessage(t("Online-ZIP wird entpackt …", "Extracting online ZIP …"));
-                    result = UnrealDataPaths.importUnrealZipFile(MainActivity.this, tmp, installProgressCallback());
-                } catch (Throwable t) {
-                    result = UnrealDataPaths.ImportResult.fail(
-                            MainActivity.this.t("Online-ZIP-Import fehlgeschlagen.", "Online ZIP import failed."), t);
-                } finally {
-                    if (tmp.exists() && !tmp.delete()) tmp.deleteOnExit();
-                }
-                final UnrealDataPaths.ImportResult finalResult = result;
-                runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(finalResult); }});
+                final UnrealDataPaths.ImportResult result = importOnlineZip(urlText, installProgressCallback());
+                runOnUiThread(new Runnable() { @Override public void run() { handleImportResult(result); }});
             }
-        }, "UE1OnlineZipImport").start();
+        }, "UE1OnlineZipStreamingImport").start();
     }
 
-    private void downloadOnlineZipToFile(String urlText, File outFile) throws IOException {
-        URL url = new URL(urlText);
-        for (int redirect = 0; redirect < 5; ++redirect) {
-            String protocol = url.getProtocol();
-            if (protocol == null) throw new IOException("Download URL has no protocol.");
-            protocol = protocol.toLowerCase(Locale.US);
-            if (!"http".equals(protocol) && !"https".equals(protocol)) {
-                throw new IOException("Only HTTP/HTTPS URLs are supported.");
-            }
-            if (isOuyaDevice() && "https".equals(protocol)) {
-                throw new IOException("OUYA cannot download HTTPS URLs. Use a direct HTTP URL without HTTPS redirect.");
-            }
-
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(20000);
-            connection.setReadTimeout(30000);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestProperty("User-Agent", "Unreal-OUYA-Installer/1.1");
-            int code = connection.getResponseCode();
-            if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP ||
-                    code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
-                String location = connection.getHeaderField("Location");
-                connection.disconnect();
-                if (location == null || location.length() == 0) throw new IOException("Server redirected without Location header.");
-                URL next = new URL(url, location);
-                if (isOuyaDevice() && "https".equalsIgnoreCase(next.getProtocol())) {
-                    throw new IOException("Server redirects to HTTPS, which OUYA cannot download. Use a direct HTTP mirror.");
-                }
-                url = next;
-                continue;
-            }
-            if (code < 200 || code >= 300) {
-                connection.disconnect();
-                throw new IOException("HTTP error " + code + " while downloading ZIP.");
-            }
-
-            InputStream input = null;
-            FileOutputStream output = null;
-            try {
-                int totalBytes = connection.getContentLength();
-                updateInstallProgress(t("Download", "Download"), 0);
-                input = new BufferedInputStream(connection.getInputStream());
-                output = new FileOutputStream(outFile, false);
-                copyWithProgress(input, output, totalBytes, t("Download", "Download"), 0, 45);
-                if (outFile.length() <= 0) throw new IOException("Downloaded file is empty.");
-                updateInstallProgress(t("Download", "Download"), 45);
-                return;
-            } finally {
-                if (input != null) try { input.close(); } catch (Throwable ignored) {}
-                if (output != null) try { output.close(); } catch (Throwable ignored) {}
-                connection.disconnect();
-            }
-        }
-        throw new IOException("Too many redirects while downloading ZIP.");
-    }
-
-    private long copyWithProgress(InputStream input, FileOutputStream output, long totalBytes, String phase, int startPercent, int spanPercent) throws IOException {
-        byte[] buffer = new byte[128 * 1024];
-        long total = 0;
-        int read;
-        int lastPercent = -1;
-        while ((read = input.read(buffer)) != -1) {
-            output.write(buffer, 0, read);
-            total += read;
-            if (phase != null && totalBytes > 0 && spanPercent > 0) {
-                int percent = startPercent + (int) Math.min(spanPercent, (total * spanPercent) / totalBytes);
-                if (percent != lastPercent) {
-                    lastPercent = percent;
-                    updateInstallProgress(phase, percent);
-                }
-            }
-        }
-        output.flush();
-        if (phase != null && spanPercent > 0 && totalBytes > 0) {
-            updateInstallProgress(phase, startPercent + spanPercent);
-        }
-        return total;
-    }
-
-    private boolean looksLikeZipFile(File file) {
-        if (file == null || !file.isFile() || file.length() < 4) return false;
-        FileInputStream in = null;
+    private UnrealDataPaths.ImportResult importOnlineZip(String urlText, UnrealDataPaths.ProgressCallback progress) {
         try {
-            in = new FileInputStream(file);
-            int p = in.read();
-            int k = in.read();
-            return p == 'P' && k == 'K';
-        } catch (IOException ignored) {
-            return false;
-        } finally {
-            if (in != null) try { in.close(); } catch (Throwable ignored) {}
+            URL url = new URL(urlText);
+            for (int redirect = 0; redirect < 5; ++redirect) {
+                String protocol = url.getProtocol();
+                if (protocol == null) throw new IOException("Download URL has no protocol.");
+                protocol = protocol.toLowerCase(Locale.US);
+                if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                    throw new IOException("Only HTTP/HTTPS URLs are supported.");
+                }
+                if (isOuyaDevice() && "https".equals(protocol)) {
+                    throw new IOException("OUYA cannot download HTTPS URLs. Use a direct HTTP URL without HTTPS redirect.");
+                }
+
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(20000);
+                connection.setReadTimeout(60000);
+                connection.setInstanceFollowRedirects(false);
+                connection.setRequestProperty("User-Agent", "Unreal-Android-Installer/1.3.2-streaming");
+                connection.connect();
+
+                int code = connection.getResponseCode();
+                if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
+                    String location = connection.getHeaderField("Location");
+                    connection.disconnect();
+                    if (location == null || location.trim().length() == 0) throw new IOException("Server redirected without Location header.");
+                    URL next = new URL(url, location);
+                    if (isOuyaDevice() && "https".equalsIgnoreCase(next.getProtocol())) {
+                        throw new IOException("Server redirects to HTTPS, which OUYA cannot download. Use a direct HTTP mirror.");
+                    }
+                    url = next;
+                    continue;
+                }
+
+                if (code < 200 || code >= 300) {
+                    connection.disconnect();
+                    throw new IOException("HTTP error " + code + " while downloading ZIP.");
+                }
+
+                InputStream input = null;
+                try {
+                    long totalBytes = connection.getContentLength();
+                    if (progress != null) progress.onProgress(t("Download/Installation", "Download/installation"), 1);
+                    updateInstallMessage(t("Online-ZIP wird direkt ins Ziel-Staging entpackt …", "Online ZIP is being extracted directly into target staging …"));
+                    input = connection.getInputStream();
+                    return UnrealDataPaths.importUnrealZipStream(MainActivity.this, input, totalBytes, progress,
+                            t("Download/Installation", "Download/installation"));
+                } finally {
+                    if (input != null) try { input.close(); } catch (Throwable ignored) {}
+                    connection.disconnect();
+                }
+            }
+            throw new IOException("Too many redirects while downloading ZIP.");
+        } catch (Throwable t) {
+            return UnrealDataPaths.ImportResult.fail(
+                    MainActivity.this.t("Online-ZIP-Import fehlgeschlagen.", "Online ZIP import failed."), t);
         }
     }
 
