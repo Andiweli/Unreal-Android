@@ -65,7 +65,7 @@
 - Android 4.x / API16 compatible device for the OUYA legacy build.
 - OpenGL ES 2.0 capable GPU.
 - Android-compatible game controller recommended.
-- Unreal [v200 retail game data](https://www.google.com/search?q=archive.org+unreal+v1.200).
+- Unreal [v200 retail game data](https://archive.org/search?tab=all&query=unreal+v1.200).
 
 > [!IMPORTANT]
 > ## Installation procedere
