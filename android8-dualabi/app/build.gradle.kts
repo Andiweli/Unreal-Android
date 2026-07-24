@@ -8,7 +8,7 @@ plugins {
 val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.25.1"
-val overlayRevision = "rev33-unreal2-menu-abi-canvas-reset"
+val overlayRevision = "rev35-unreal2-arm64-guid-save-fix"
 val androidVersionName = "2.0"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
@@ -704,6 +704,8 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/CMakeLists.txt"), "UNREAL_DUALABI_64BIT_PORT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Inc/UnGcc.h"), "typedef uintptr_t UPTRINT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnClass.cpp"), "#define XFER_OBJ")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnGUID.cpp"), "UNREAL_ANDROID_GUID_FIXED_WIDTH_V8")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnGUID.cpp"), "UNREAL_ANDROID_GUID_SIZE_ASSERT_V8")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnCorSc.cpp"), "stale 32-bit metadata")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnObj.cpp"), "IntrinsicSize")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnPlat.cpp"), "CORE_API UPTRINT hWndMain")
