@@ -27,8 +27,7 @@
 - [x] Customizable controls
 - [x] Fix Controller recognition issues
 - [x] Touchscreen overlay
-- [ ] Fix Keyboard input
 
 ## Not planned / not in the scope of this project
 
-- [ ] Full 64-bit gameplay parity with 32-bit build
+- [x] Full 64-bit gameplay parity with 32-bit build
