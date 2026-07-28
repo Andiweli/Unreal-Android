@@ -66,6 +66,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             int eventType);
 
     private static native void nativeAndroidControllerReset(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
+    private static native void nativeAndroidSetAppVersionName(String versionName); // UNREAL_ANDROID_RUNTIME_VERSION_V141
     private static native boolean nativeAndroidIsMenuV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
     private static native void nativeAndroidTouchLookV131(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131 explicit native path
     private static native void nativeAndroidTouchLookV101(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129 fallback
@@ -76,6 +77,29 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             nativeAndroidControllerReset();
         } catch (UnsatisfiedLinkError ignored) {
             // Library may not be ready during early Activity startup. SDL remains fallback.
+        }
+    }
+
+    private String installedVersionNameV141() {
+        try {
+            android.content.pm.PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (info.versionName != null && info.versionName.length() > 0) {
+                return info.versionName;
+            }
+        } catch (Exception e) {
+            android.util.Log.w("UE1Version", "Unable to read installed versionName", e);
+        }
+        return "";
+    }
+
+    private void publishInstalledVersionNameV141() {
+        String versionName = installedVersionNameV141();
+        if (versionName.length() == 0) return;
+        try {
+            nativeAndroidSetAppVersionName(versionName);
+            android.util.Log.i("UE1Version", "Installed versionName: " + versionName);
+        } catch (UnsatisfiedLinkError e) {
+            android.util.Log.w("UE1Version", "Native version bridge unavailable", e);
         }
     }
 
@@ -129,6 +153,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         selectedRoot = selectedRootFromIntentOrScan();
         UnrealDataPaths.ensureWritableConfigFiles(this, selectedRoot); // UNREAL_ANDROID_CONFIG_BOOTSTRAP_REV31_PATH_FALLBACK_MORE_ROOTS
         super.onCreate(savedInstanceState);
+        publishInstalledVersionNameV141(); // UNREAL_ANDROID_RUNTIME_VERSION_V141
 
         inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         if (inputManager != null) {
@@ -143,11 +168,22 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     protected void onDestroy() {
+        final boolean cleanProcessExit = isFinishing() && !isChangingConfigurations();
         if (inputManager != null) {
             inputManager.unregisterInputDeviceListener(this);
             inputManager = null;
         }
         super.onDestroy();
+
+        // UE1 and several of its static native subsystems are not designed to execute
+        // SDL_main twice inside the same Android process. After a normal in-game exit,
+        // Android otherwise keeps the process alive and the next launch terminates early;
+        // the following launch then works only because that failed attempt ended the process.
+        // End the already-finished task cleanly so every launch starts with fresh native state.
+        if (cleanProcessExit) { // UNREAL_ANDROID_CLEAN_PROCESS_EXIT_V140
+            android.util.Log.i("UE1Lifecycle", "Game Activity finished; terminating native process for clean next launch");
+            android.os.Process.killProcess(android.os.Process.myPid());
+        }
     }
 
     @Override

@@ -8,8 +8,8 @@ plugins {
 val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.25.1"
-val overlayRevision = "rev35-unreal2-arm64-guid-save-fix"
-val androidVersionName = "2.0"
+val overlayRevision = "rev36-unreal202-runtime-version-clean-restart"
+val androidVersionName = "2.0.2"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
@@ -735,7 +735,7 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_RIGHT_STICK_MOUSELOOK")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_MOUSELOOK_SLOWER")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_MOUSELOOK_AXIS_DEADZONE")
-        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCon.cpp"), "UNREAL_ANDROID_MENU_VERSION_ABI_V3")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCon.cpp"), "UNREAL_ANDROID_MENU_VERSION_ABI_V4")
         projectDir.resolve(".cxx").deleteRecursively()
         layout.buildDirectory.dir("intermediates/cxx").get().asFile.deleteRecursively()
     }
@@ -792,7 +792,7 @@ android {
         applicationId = "com.ast.unreal"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = androidVersionName
 
         ndk {
