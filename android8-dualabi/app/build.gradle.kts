@@ -8,8 +8,8 @@ plugins {
 val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.25.1"
-val overlayRevision = "rev36-unreal202-runtime-version-clean-restart"
-val androidVersionName = "2.0.2"
+val overlayRevision = "rev41-unreal203-gamma-dpad-left-right-v17"
+val androidVersionName = "2.0.3"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
@@ -683,12 +683,15 @@ val prepareSources = tasks.register("prepareSources") {
         patchUE1Source(ue1Dir.asFile)
         applyUE1PatchOverlayV125(ue1Dir.asFile) // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_LEVELS_1_0_TO_3_0_V16")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_DPAD_LEFT_RIGHT_V17")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_USEJOYSTICK_BRIDGE_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_MENU_TEXT_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14")
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrv.cpp"), "UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124")
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h"), "UNREAL_ANDROID_MALI_ENDPOLY_BOUNDS_V124")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_NULLSAFE_STRNCPY_PATCH")
@@ -792,7 +795,7 @@ android {
         applicationId = "com.ast.unreal"
         minSdk = 23
         targetSdk = 36
-        versionCode = 3
+        versionCode = 4
         versionName = androidVersionName
 
         ndk {

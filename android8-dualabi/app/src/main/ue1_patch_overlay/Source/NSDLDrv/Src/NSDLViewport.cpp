@@ -722,13 +722,22 @@ struct FAndroidGammaMode
 	const char* Label;
 };
 
+// UNREAL_ANDROID_GAMMA_LEVELS_1_0_TO_3_0_V16
+// Display and apply the actual gamma value directly: 1.0 through 3.0
+// in 0.2 increments.
 static const FAndroidGammaMode GAndroidGammaModes[] =
 {
-	{ 1.00f, "Default"    },
-	{ 1.10f, "Default +1" },
-	{ 1.20f, "Default +2" },
-	{ 1.30f, "Default +3" },
-	{ 1.40f, "Default +4" },
+	{ 1.00f, "1.0" },
+	{ 1.20f, "1.2" },
+	{ 1.40f, "1.4" },
+	{ 1.60f, "1.6" },
+	{ 1.80f, "1.8" },
+	{ 2.00f, "2.0" },
+	{ 2.20f, "2.2" },
+	{ 2.40f, "2.4" },
+	{ 2.60f, "2.6" },
+	{ 2.80f, "2.8" },
+	{ 3.00f, "3.0" },
 };
 
 static FLOAT UE1AndroidGetConfiguredGammaModeValue()
@@ -968,12 +977,12 @@ static void UE1AndroidRefreshGammaMenuLabel()
 	unguard;
 }
 
-static void UE1AndroidToggleGammaMode( UNSDLViewport* Viewport, FOutputDevice* Out )
+static void UE1AndroidApplyGammaMode( UNSDLViewport* Viewport, FOutputDevice* Out, INT NewIndex, const char* Source )
 {
-	guard(UE1AndroidToggleGammaMode);
+	guard(UE1AndroidApplyGammaMode);
 
-	const INT Nearest = UE1AndroidGetNearestGammaModeIndex();
-	const INT NewIndex = ( Nearest + 1 ) % (INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0]));
+	const INT ModeCount = (INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0]));
+	NewIndex = Clamp( NewIndex, 0, ModeCount - 1 );
 	const FAndroidGammaMode& NewMode = GAndroidGammaModes[NewIndex];
 
 	char NewValue[32];
@@ -987,14 +996,25 @@ static void UE1AndroidToggleGammaMode( UNSDLViewport* Viewport, FOutputDevice* O
 	UE1AndroidRefreshGammaMenuLabel();
 
 	char Message[128];
-	appSprintf( Message, "Gamma: %s (%.2f)", NewMode.Label, NewMode.Value );
+	appSprintf( Message, "Gamma: %s", NewMode.Label );
 
 	if( Viewport && Viewport->Actor )
 		Viewport->Actor->eventClientMessage( Message );
 	if( Out )
 		Out->Log( Message );
 
-	debugf( NAME_Log, "Android gamma mode toggled via ToggleFullscreen: %s", Message );
+	debugf( NAME_Log, "Android gamma changed via %s: %s", Source ? Source : "menu", Message );
+
+	unguard;
+}
+
+static void UE1AndroidToggleGammaMode( UNSDLViewport* Viewport, FOutputDevice* Out )
+{
+	guard(UE1AndroidToggleGammaMode);
+
+	const INT ModeCount = (INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0]));
+	const INT NewIndex = ( UE1AndroidGetNearestGammaModeIndex() + 1 ) % ModeCount;
+	UE1AndroidApplyGammaMode( Viewport, Out, NewIndex, "ToggleFullscreen" );
 
 	unguard;
 }
@@ -1018,6 +1038,48 @@ static UBOOL UE1AndroidMenuIsExactClass( AMenu* Menu, const char* ClassName )
 	if( !Menu || !ClassName || !Menu->GetClass() )
 		return 0;
 	return !appStricmp( Menu->GetClass()->GetName(), ClassName );
+
+	unguard;
+}
+
+
+static UBOOL UE1AndroidHandleGammaMenuInput( UNSDLViewport* Viewport, INT iKey, EInputAction Action )
+{
+	guard(UE1AndroidHandleGammaMenuInput);
+
+	// UNREAL_ANDROID_GAMMA_DPAD_LEFT_RIGHT_V17
+	// Keep the stock Accept/Enter action as a forward cycle, but restore the
+	// expected option-menu behaviour: DPAD/arrow left lowers gamma and right
+	// raises it while the Gamma row is selected.
+	if( Action != IST_Press || ( iKey != IK_Left && iKey != IK_Right ) )
+		return 0;
+
+	AMenu* Menu = UE1AndroidGetActiveMenu( Viewport );
+	if( !UE1AndroidMenuIsExactClass( Menu, "UnrealVideoMenu" ) )
+		return 0;
+
+	UProperty* MenuListProperty = FindField<UProperty>( Menu->GetClass(), "MenuList" );
+	if( !MenuListProperty || MenuListProperty->ArrayDim <= 0 )
+		return 0;
+
+	const INT Index = Menu->Selection;
+	const INT ElementSize = MenuListProperty->GetElementSize();
+	if( Index < 0 || Index >= MenuListProperty->ArrayDim || ElementSize <= 1 )
+		return 0;
+
+	const char* MenuText = (const char*)((BYTE*)Menu + MenuListProperty->Offset + Index * ElementSize);
+	if( !UE1AndroidStringLooksLikeGammaFullscreenMenuItem( MenuText ) )
+		return 0;
+
+	const INT ModeCount = (INT)(sizeof(GAndroidGammaModes)/sizeof(GAndroidGammaModes[0]));
+	const INT CurrentIndex = UE1AndroidGetNearestGammaModeIndex();
+	const INT NewIndex = Clamp( CurrentIndex + ( iKey == IK_Right ? 1 : -1 ), 0, ModeCount - 1 );
+
+	// Consume the key at both end stops as well, so the menu does not interpret
+	// left/right as an unrelated action once gamma has reached 1.0 or 3.0.
+	if( NewIndex != CurrentIndex )
+		UE1AndroidApplyGammaMode( Viewport, NULL, NewIndex, iKey == IK_Right ? "DPAD Right" : "DPAD Left" );
+	return 1;
 
 	unguard;
 }
@@ -2458,6 +2520,10 @@ UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta
 	if( iKey > 0 )
 	{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// AUDIO/VIDEO Gamma row: DPAD/arrow left decreases, right increases.
+		if( UE1AndroidHandleGammaMenuInput( this, iKey, Action ) )
+			return 1;
+
 		// UnrealPlayerMenu originally exposes only Name/Team/Skin. The restored
 		// Class row is handled natively because the compiled Unreal.u cannot be
 		// changed safely on-device.

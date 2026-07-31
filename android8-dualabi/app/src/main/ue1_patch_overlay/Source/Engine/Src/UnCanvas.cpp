@@ -12,8 +12,42 @@ Revision history:
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <float.h> // UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
 #endif
 #ifdef PLATFORM_ANDROID // UE1_ANDROID_AUDIOVIDEO_MENU_DRAW_FIX
+// UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
+// UnrealHUD draws an inventory charge bar for every non-armour item. The
+// Translator has Charge=0 and Default.Charge=0, so the original script computes
+// 0/0 for the bar width. That NaN used to reach GLES and old Mali drivers drew
+// it as a long triangle from the screen centre to the Translator icon.
+static UBOOL AndroidCanvasFiniteFloat( FLOAT Value )
+{
+	return Value == Value && Value >= -FLT_MAX && Value <= FLT_MAX;
+}
+
+static UBOOL AndroidCanvasTileArgsFinite
+(
+	FLOAT X, FLOAT Y, FLOAT XL, FLOAT YL,
+	FLOAT U, FLOAT V, FLOAT UL, FLOAT VL, FLOAT Z
+)
+{
+	return AndroidCanvasFiniteFloat( X  ) && AndroidCanvasFiniteFloat( Y  )
+		&& AndroidCanvasFiniteFloat( XL ) && AndroidCanvasFiniteFloat( YL )
+		&& AndroidCanvasFiniteFloat( U  ) && AndroidCanvasFiniteFloat( V  )
+		&& AndroidCanvasFiniteFloat( UL ) && AndroidCanvasFiniteFloat( VL )
+		&& AndroidCanvasFiniteFloat( Z  );
+}
+
+static void AndroidCanvasWarnInvalidTileOnce( UTexture* Texture )
+{
+	static UBOOL Warned = 0;
+	if( !Warned )
+	{
+		debugf( NAME_Warning, "Android Canvas: rejected non-finite DrawTile geometry for %s", Texture ? Texture->GetPathName() : "None" );
+		Warned = 1;
+	}
+}
+
 static UBOOL AndroidCanvasNearlyEqual( FLOAT A, FLOAT B, FLOAT Tolerance )
 {
 	return ( A >= B - Tolerance ) && ( A <= B + Tolerance );
@@ -97,6 +131,17 @@ void UCanvas::DrawTile
 {
 	guard(UCanvas::DrawTile);
 	check(Texture);
+
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
+	// Reject invalid coordinates before clipping or renderer submission. Floating
+	// point comparisons with NaN are always false, so the original XL<=0 test did
+	// not catch the Translator's 0/0 charge-bar width.
+	if( !AndroidCanvasTileArgsFinite( X, Y, XL, YL, U, V, UL, VL, Z ) )
+	{
+		AndroidCanvasWarnInvalidTileOnce( Texture );
+		return;
+	}
+#endif
 
 	// Compute clipping region.
 	FLOAT ClipY0 = /*SpanBuffer ? SpanBuffer->StartY :*/ 0;
@@ -606,6 +651,16 @@ void UCanvas::execDrawTile( FFrame& Stack, BYTE*& Result )
 		Stack.ScriptWarn( 0, "DrawTile: Missing Texture" );
 		return;
 	}
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
+	// Stop invalid script values here as well, before CurX/CurYL are updated.
+	// This specifically prevents UnrealHUD.DrawHudIcon from propagating the
+	// Translator's NaN charge-bar width into later HUD drawing state.
+	if( !AndroidCanvasTileArgsFinite( OrgX + CurX, OrgY + CurY, XL, YL, U, V, UL, VL, Z ) )
+	{
+		AndroidCanvasWarnInvalidTileOnce( Tex );
+		return;
+	}
+#endif
 	//debugf( "DrawTile: %s %f %f %f %f %f %f", Tex->GetPathName(), XL, YL, U0, V0, U1, V1 );
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CANVAS_UI_SCALE_EXEC_DRAW_TILE
     FLOAT AndroidDrawX  = OrgX + CurX;

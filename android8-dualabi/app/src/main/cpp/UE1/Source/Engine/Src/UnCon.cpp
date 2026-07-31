@@ -6,15 +6,42 @@
 #include "EnginePrivate.h"
 #include "UnRender.h"
 
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MENU_VERSION_ABI_V3
+#ifdef PLATFORM_ANDROID
+#include <jni.h>
+#endif
+
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MENU_VERSION_ABI_V4
 #ifndef UNREAL_ANDROID_VERSION_NAME
 #define UNREAL_ANDROID_VERSION_NAME unknown
 #endif
 #define UE1_ANDROID_STRINGIZE_INNER(x) #x
 #define UE1_ANDROID_STRINGIZE(x) UE1_ANDROID_STRINGIZE_INNER(x)
 
+static char GUE1AndroidInstalledVersionNameV141[64] = {0};
+
+extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidSetAppVersionName(
+	JNIEnv* Env, jclass, jstring VersionName )
+{
+	if( !Env || !VersionName )
+		return;
+	const char* Raw = Env->GetStringUTFChars( VersionName, NULL );
+	if( Raw )
+	{
+		appStrncpy( GUE1AndroidInstalledVersionNameV141, Raw, ARRAY_COUNT(GUE1AndroidInstalledVersionNameV141) );
+		GUE1AndroidInstalledVersionNameV141[ARRAY_COUNT(GUE1AndroidInstalledVersionNameV141)-1] = 0;
+		Env->ReleaseStringUTFChars( VersionName, Raw );
+	}
+}
+
 static const char* UE1AndroidVersionNameText()
 {
+	// Runtime value comes from Android PackageManager and therefore always matches
+	// the installed Gradle versionName, including build-type suffixes when present.
+	if( GUE1AndroidInstalledVersionNameV141[0] ) // UNREAL_ANDROID_RUNTIME_VERSION_V141
+		return GUE1AndroidInstalledVersionNameV141;
+
+	// Compile-time fallback for unusual launch paths where the Activity bridge did
+	// not run. This still uses the same androidVersionName value from Gradle.
 	static char CleanVersion[64];
 	static UBOOL Initialized = 0;
 	if( !Initialized )
@@ -109,7 +136,7 @@ static void UE1AndroidDrawVersionAbiOverlay( UViewport* Viewport )
 	static UBOOL Logged = 0;
 	if( !Logged )
 	{
-		debugf( NAME_Log, "UNREAL_ANDROID_MENU_VERSION_ABI_V3 drawn: %s canvas=%ix%i", Text, Canvas->X, Canvas->Y );
+		debugf( NAME_Log, "UNREAL_ANDROID_MENU_VERSION_ABI_V4 drawn: %s canvas=%ix%i", Text, Canvas->X, Canvas->Y );
 		Logged = 1;
 	}
 
@@ -379,7 +406,7 @@ void UConsole::PostRender( FSceneNode* Frame )
 			Viewport->Canvas->WrappedPrintf( Viewport->Canvas->MedFont, 0, "%s", S );
 		}
 	}
-#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MENU_VERSION_ABI_V3
+#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_MENU_VERSION_ABI_V4
 	UE1AndroidDrawVersionAbiOverlay( Viewport );
 #endif
 	unguard;
