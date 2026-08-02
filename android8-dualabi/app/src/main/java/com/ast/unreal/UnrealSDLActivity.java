@@ -26,6 +26,14 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private InputManager inputManager;
     private UnrealTouchOverlayViewV124 touchOverlayViewV124; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
 
+    // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+    // Detect L3+A/Y before SDL/UE1 translates or consumes controller bindings.
+    private boolean controllerToggleL3HeldV22;
+    private boolean controllerToggleAmmoHeldV22;
+    private boolean controllerToggleHealthHeldV22;
+    private boolean controllerToggleAmmoConsumedV22;
+    private boolean controllerToggleHealthConsumedV22;
+
     // ANDROID_NATIVE_CONTROLLER_BACKEND_V88
     private static native boolean nativeAndroidControllerIsEnabled();
 
@@ -66,6 +74,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             int eventType);
 
     private static native void nativeAndroidControllerReset(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
+    private static native boolean nativeAndroidQueueGameplayToggleV22(int toggle); // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
     private static native void nativeAndroidSetAppVersionName(String versionName); // UNREAL_ANDROID_RUNTIME_VERSION_V141
     private static native boolean nativeAndroidIsMenuV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
     private static native void nativeAndroidTouchLookV131(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131 explicit native path
@@ -73,6 +82,11 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private static native void nativeAndroidTouchLookV124(float x, float y); // UNREAL_ANDROID_TOUCH_OVERLAY_V125 fallback
 
     private void resetAndroidNativeControllerState() {
+        controllerToggleL3HeldV22 = false; // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+        controllerToggleAmmoHeldV22 = false;
+        controllerToggleHealthHeldV22 = false;
+        controllerToggleAmmoConsumedV22 = false;
+        controllerToggleHealthConsumedV22 = false;
         try {
             nativeAndroidControllerReset();
         } catch (UnsatisfiedLinkError ignored) {
@@ -212,8 +226,115 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         }
     }
 
+    // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+    private boolean isControllerToggleL3V22(KeyEvent event) {
+        if (event == null) return false;
+        final int keyCode = event.getKeyCode();
+        final int scanCode = event.getScanCode();
+        return keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL
+                || scanCode == 317   // Linux BTN_THUMBL
+                || scanCode == 289;  // Linux BTN_THUMB on some handhelds
+    }
+
+    private int controllerToggleFaceV22(KeyEvent event) {
+        if (event == null) return 0;
+        final int keyCode = event.getKeyCode();
+        final int scanCode = event.getScanCode();
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_A || scanCode == 304) return 1; // ammo
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_Y || scanCode == 307) return 2; // health
+        return 0;
+    }
+
+    private boolean queueControllerGameplayToggleV22(int toggle, KeyEvent event) {
+        try {
+            final boolean queued = nativeAndroidQueueGameplayToggleV22(toggle);
+            android.util.Log.i(TAG,
+                    "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 queue=" + toggle
+                            + " queued=" + queued
+                            + " key=" + (event != null ? event.getKeyCode() : -1)
+                            + " scan=" + (event != null ? event.getScanCode() : -1));
+            return queued;
+        } catch (UnsatisfiedLinkError ignored) {
+            return false;
+        }
+    }
+
+    private boolean handleControllerGameplayToggleChordV22(KeyEvent event) {
+        if (event == null) return false;
+        if (!isControllerSource(event.getSource()) && !isGamepadButton(event.getKeyCode())) return false;
+
+        final boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
+        final boolean up = event.getAction() == KeyEvent.ACTION_UP;
+        if (!down && !up) return false;
+        final boolean firstDown = down && event.getRepeatCount() == 0;
+
+        if (isControllerToggleL3V22(event)) {
+            android.util.Log.i(TAG,
+                    "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 L3 "
+                            + (down ? "down" : "up")
+                            + " key=" + event.getKeyCode()
+                            + " scan=" + event.getScanCode());
+            controllerToggleL3HeldV22 = down;
+            if (firstDown) {
+                boolean consumed = false;
+                if (controllerToggleAmmoHeldV22 && !controllerToggleAmmoConsumedV22) {
+                    controllerToggleAmmoConsumedV22 = queueControllerGameplayToggleV22(1, event);
+                    consumed |= controllerToggleAmmoConsumedV22;
+                }
+                if (controllerToggleHealthHeldV22 && !controllerToggleHealthConsumedV22) {
+                    controllerToggleHealthConsumedV22 = queueControllerGameplayToggleV22(2, event);
+                    consumed |= controllerToggleHealthConsumedV22;
+                }
+                if (consumed) return true;
+            }
+            return false;
+        }
+
+        final int face = controllerToggleFaceV22(event);
+        if (face == 0) return false;
+        android.util.Log.i(TAG,
+                "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 face=" + face
+                        + " " + (down ? "down" : "up")
+                        + " l3=" + controllerToggleL3HeldV22
+                        + " key=" + event.getKeyCode()
+                        + " scan=" + event.getScanCode());
+
+        if (face == 1) {
+            if (up) {
+                controllerToggleAmmoHeldV22 = false;
+                if (controllerToggleAmmoConsumedV22) {
+                    controllerToggleAmmoConsumedV22 = false;
+                    return true;
+                }
+                return false;
+            }
+            controllerToggleAmmoHeldV22 = true;
+            if (firstDown && controllerToggleL3HeldV22) {
+                controllerToggleAmmoConsumedV22 = queueControllerGameplayToggleV22(1, event);
+                return controllerToggleAmmoConsumedV22;
+            }
+            return false;
+        }
+
+        if (up) {
+            controllerToggleHealthHeldV22 = false;
+            if (controllerToggleHealthConsumedV22) {
+                controllerToggleHealthConsumedV22 = false;
+                return true;
+            }
+            return false;
+        }
+        controllerToggleHealthHeldV22 = true;
+        if (firstDown && controllerToggleL3HeldV22) {
+            controllerToggleHealthConsumedV22 = queueControllerGameplayToggleV22(2, event);
+            return controllerToggleHealthConsumedV22;
+        }
+        return false;
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (handleControllerGameplayToggleChordV22(event)) return true;
         if (event != null && isMenuStartKeyV124(event.getKeyCode())) {
             // UNREAL_ANDROID_START_MENU_TAP_V124:
             // Some Android/OUYA controllers lose the matching KEY_UP for START/MENU.

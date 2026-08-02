@@ -1,17 +1,26 @@
 R""(
 
-varying mediump vec3 vPosition;
+// Keep large/tiled UE1 world coordinates in full precision on Mali.
+// GL_FRAGMENT_PRECISION_HIGH is supplied by GLSL ES when fragment highp is
+// available; old GLES2 devices retain a safe mediump fallback.
+#ifdef GL_FRAGMENT_PRECISION_HIGH // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
+#define UE1_WORLD_COORD_PRECISION highp
+#else
+#define UE1_WORLD_COORD_PRECISION mediump
+#endif
+
+varying UE1_WORLD_COORD_PRECISION vec3 vPosition; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #ifdef SF_Texture0
-varying mediump vec2 vTexCoord0;
+varying UE1_WORLD_COORD_PRECISION vec2 vTexCoord0; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture1
-varying mediump vec2 vTexCoord1;
+varying UE1_WORLD_COORD_PRECISION vec2 vTexCoord1; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture2
-varying mediump vec2 vTexCoord2;
+varying UE1_WORLD_COORD_PRECISION vec2 vTexCoord2; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture3
-varying mediump vec2 vTexCoord3;
+varying UE1_WORLD_COORD_PRECISION vec2 vTexCoord3; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_VtxColor
 varying lowp vec4 vVtxColor;
@@ -81,7 +90,7 @@ void main()
 	lowp vec4 Texel3 = texture2D(uTexture3, vTexCoord3) * 2.0;
 #ifdef SF_Detail
 	// TODO: XOpenGLDrv does some RGB->HSV->RGB magic on detail maps, we just * 2 instead
-	lowp float DetailScale = clamp(0.65 - vPosition.z / 380.0, 0.0, 1.0);
+	UE1_WORLD_COORD_PRECISION float DetailScale = clamp(0.65 - vPosition.z / 380.0, 0.0, 1.0); // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 	Texel3 = mix(vec4(1.0), Texel3, DetailScale);
 	Out.rgb *= Texel3.rgb;
 #else

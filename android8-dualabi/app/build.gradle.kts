@@ -8,8 +8,8 @@ plugins {
 val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.25.1"
-val overlayRevision = "rev41-unreal203-gamma-dpad-left-right-v17"
-val androidVersionName = "2.0.3"
+val overlayRevision = "rev48-unreal205-mali-world-uv-precision-v24"
+val androidVersionName = "2.0.5"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
@@ -685,6 +685,9 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_LEVELS_1_0_TO_3_0_V16")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_DPAD_LEFT_RIGHT_V17")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnActor.cpp"), "UNREAL_ANDROID_INFINITE_AMMO_FREEZE_V23")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnLevTic.cpp"), "UNREAL_ANDROID_INFINITE_AMMO_POST_TICK_V23")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138")
@@ -704,6 +707,8 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCon.cpp"), "UNREAL_ANDROID_CENTER_CONSOLE_BIGMESSAGE")
         requirePatched(ue1Dir.asFile.resolve("Source/IpDrv/Src/UdpLink.cpp"), "ANDROID_LAN_BEACON_LOOPBACK_FIX")
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/VertexShader.glsl.inc"), "UNREAL_ANDROID_MALI_SHADER_PRECISION_V121")
+        requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/VertexShader.glsl.inc"), "UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24")
+        requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/FragmentShader.glsl.inc"), "UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24")
         requirePatched(ue1Dir.asFile.resolve("Source/CMakeLists.txt"), "UNREAL_DUALABI_64BIT_PORT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Inc/UnGcc.h"), "typedef uintptr_t UPTRINT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnClass.cpp"), "#define XFER_OBJ")
@@ -795,7 +800,7 @@ android {
         applicationId = "com.ast.unreal"
         minSdk = 23
         targetSdk = 36
-        versionCode = 4
+        versionCode = 5
         versionName = androidVersionName
 
         ndk {

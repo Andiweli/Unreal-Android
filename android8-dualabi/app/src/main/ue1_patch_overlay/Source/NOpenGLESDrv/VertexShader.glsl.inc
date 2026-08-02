@@ -1,22 +1,22 @@
 R""(
 
 attribute highp vec3 aPosition; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
-varying highp vec3 vPosition; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
+varying highp vec3 vPosition; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121 UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #ifdef SF_Texture0
 attribute highp vec2 aTexCoord0; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
-varying mediump vec2 vTexCoord0;
+varying highp vec2 vTexCoord0; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture1
 attribute highp vec2 aTexCoord1; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
-varying mediump vec2 vTexCoord1;
+varying highp vec2 vTexCoord1; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture2
 attribute highp vec2 aTexCoord2; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
-varying mediump vec2 vTexCoord2;
+varying highp vec2 vTexCoord2; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_Texture3
 attribute highp vec2 aTexCoord3; // UNREAL_ANDROID_MALI_SHADER_PRECISION_V121
-varying mediump vec2 vTexCoord3;
+varying highp vec2 vTexCoord3; // UNREAL_ANDROID_MALI_WORLD_UV_PRECISION_V24
 #endif
 #ifdef SF_VtxColor
 attribute lowp vec4 aVtxColor;

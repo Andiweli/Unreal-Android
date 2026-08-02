@@ -91,6 +91,24 @@ static FLOAT GAndroidTouchLookXV124 = 0.0f; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
 static FLOAT GAndroidTouchLookYV124 = 0.0f; // UNREAL_ANDROID_TOUCH_OVERLAY_V125 / UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
 static FLOAT GAndroidTouchLookNextLogV131 = 0.0f; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131 / UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132
 
+// UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
+// Controller toggles are detected after every backend has already normalized
+// the physical input to UE1 Joy* keys.  This avoids relying on Android's often
+// vendor-specific KEYCODE_BUTTON_THUMBL value.
+extern "C" UBOOL UE1AndroidToggleInfiniteHealthV21( APlayerPawn* Player );
+extern "C" UBOOL UE1AndroidToggleInfiniteAmmoV21( APlayerPawn* Player );
+extern "C" void UE1AndroidUpdateInfiniteTogglesV21( APlayerPawn* Player );
+
+static UBOOL GAndroidToggleL3HeldV21 = 0;
+static UBOOL GAndroidToggleFaceDownV21[2] = { 0, 0 };
+static UBOOL GAndroidToggleFaceLatchedV21[2] = { 0, 0 };
+static UBOOL GAndroidToggleFaceConsumedV21[2] = { 0, 0 };
+
+// UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+// Java recognizes the raw L3+A/Y chord before SDL/UE1 bindings can consume it.
+// The UI thread only queues a bit; the engine thread applies the gameplay change.
+static INT GAndroidPendingGameplayTogglesV22 = 0;
+
 static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT Key );
 
 static SDL_mutex* UE1AndroidNativeControllerMutex()
@@ -165,6 +183,11 @@ static void UE1AndroidNativeControllerResetState()
 	GAndroidTouchDirectNextKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
 	GAndroidTouchDirectNextSavedBindingV139 = ""; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
 	GAndroidTouchDirectNextHasSavedBindingV139 = 0; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
+	GAndroidToggleL3HeldV21 = 0; // UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
+	GAndroidPendingGameplayTogglesV22 = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+	appMemset( GAndroidToggleFaceDownV21, 0, sizeof(GAndroidToggleFaceDownV21) );
+	appMemset( GAndroidToggleFaceLatchedV21, 0, sizeof(GAndroidToggleFaceLatchedV21) );
+	appMemset( GAndroidToggleFaceConsumedV21, 0, sizeof(GAndroidToggleFaceConsumedV21) );
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
@@ -199,7 +222,31 @@ static BYTE UE1AndroidNativeDirectionalAxisKey( INT Axis, INT Direction )
 	return IK_None;
 }
 
-static BYTE UE1AndroidNativeKeyCodeToUE1Key( INT KeyCode, UBOOL bIsInUI )
+static BYTE UE1AndroidNativeScanCodeToUE1KeyV21( INT ScanCode, UBOOL bIsInUI )
+{
+	// Linux evdev button codes used by Android's KeyEvent.getScanCode().
+	// Several handhelds report the correct scan code but KEYCODE_UNKNOWN for L3.
+	switch( ScanCode )
+	{
+		case 304: return bIsInUI ? IK_Enter  : IK_Joy1; // BTN_SOUTH / A / Cross
+		case 305: return bIsInUI ? IK_Escape : IK_Joy2; // BTN_EAST / B / Circle
+		case 308: return bIsInUI ? IK_N      : IK_Joy3; // BTN_WEST / X / Square
+		case 307: return bIsInUI ? IK_Y      : IK_Joy4; // BTN_NORTH / Y / Triangle
+		case 310: return IK_Joy10; // BTN_TL
+		case 311: return IK_Joy11; // BTN_TR
+		case 312: return IK_Joy12; // BTN_TL2
+		case 313: return IK_Joy13; // BTN_TR2
+		case 317: return IK_Joy8;  // BTN_THUMBL / LJoyPush
+		case 318: return IK_Joy9;  // BTN_THUMBR / RJoyPush
+
+		// Older joystick-style devices sometimes expose BTN_THUMB/BTN_THUMB2.
+		case 289: return IK_Joy8;
+		case 290: return IK_Joy9;
+	}
+	return IK_None;
+}
+
+static BYTE UE1AndroidNativeKeyCodeToUE1Key( INT KeyCode, INT ScanCode, UBOOL bIsInUI )
 {
 	// Android KeyEvent constants, kept numeric to avoid depending on Java headers.
 	switch( KeyCode )
@@ -223,7 +270,146 @@ static BYTE UE1AndroidNativeKeyCodeToUE1Key( INT KeyCode, UBOOL bIsInUI )
 		case 21:  return bIsInUI ? IK_Left  : IK_JoyPovLeft;
 		case 22:  return bIsInUI ? IK_Right : IK_JoyPovRight;
 	}
-	return IK_None;
+	return UE1AndroidNativeScanCodeToUE1KeyV21( ScanCode, bIsInUI );
+}
+
+// UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
+// Standard UE1 controller positions after backend normalization:
+//   Joy1 = Xbox A / PlayStation Cross, Joy4 = Xbox Y / PlayStation Triangle,
+//   Joy8 = LJoyPush/L3.
+enum EAndroidToggleFaceV21
+{
+	ATF_AmmoV21 = 0,
+	ATF_HealthV21,
+	ATF_CountV21
+};
+
+static INT UE1AndroidToggleFaceFromUE1KeyV21( INT Key )
+{
+	switch( Key )
+	{
+		case IK_Joy1: return ATF_AmmoV21;
+		case IK_Joy4: return ATF_HealthV21;
+	}
+	return INDEX_NONE;
+}
+
+static UBOOL UE1AndroidToggleInputBlockedV21( UNSDLViewport* Viewport )
+{
+	if( !Viewport || !Viewport->Actor )
+		return 1;
+
+	if( Viewport->Console )
+	{
+		UObject* ConsoleObject = (UObject*)Viewport->Console;
+		if( ConsoleObject->GetMainFrame() && ConsoleObject->GetMainFrame()->StateNode )
+		{
+			const FName StateName = ConsoleObject->GetMainFrame()->StateNode->GetFName();
+			if( StateName == "Menuing" || StateName == "KeyMenuing" || StateName == "MenuTyping" ||
+				StateName == "Typing" || StateName == "Console" )
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static void UE1AndroidRunSemanticToggleV21( UNSDLViewport* Viewport, INT Face )
+{
+	if( !Viewport || !Viewport->Actor )
+		return;
+
+	UBOOL Enabled = 0;
+	const char* Message = NULL;
+	if( Face == ATF_AmmoV21 )
+	{
+		Enabled = UE1AndroidToggleInfiniteAmmoV21( Viewport->Actor );
+		Message = Enabled ? "Infinite Ammo: ON" : "Infinite Ammo: OFF";
+	}
+	else if( Face == ATF_HealthV21 )
+	{
+		Enabled = UE1AndroidToggleInfiniteHealthV21( Viewport->Actor );
+		Message = Enabled ? "Infinite Health: ON" : "Infinite Health: OFF";
+	}
+
+	if( Message )
+	{
+		Viewport->Actor->eventClientMessage( Message );
+		debugf( NAME_Log, "Android semantic controller toggle L3: %s", Message );
+	}
+}
+
+static void UE1AndroidResetToggleComboInputV21()
+{
+	GAndroidToggleL3HeldV21 = 0;
+	appMemset( GAndroidToggleFaceDownV21, 0, sizeof(GAndroidToggleFaceDownV21) );
+	appMemset( GAndroidToggleFaceLatchedV21, 0, sizeof(GAndroidToggleFaceLatchedV21) );
+	appMemset( GAndroidToggleFaceConsumedV21, 0, sizeof(GAndroidToggleFaceConsumedV21) );
+}
+
+static UBOOL UE1AndroidHandleSemanticToggleComboV21( UNSDLViewport* Viewport, INT Key, EInputAction Action )
+{
+	if( Action != IST_Press && Action != IST_Release )
+		return 0;
+
+	if( UE1AndroidToggleInputBlockedV21( Viewport ) )
+	{
+		UE1AndroidResetToggleComboInputV21();
+		return 0;
+	}
+
+	const UBOOL bPressed = Action == IST_Press;
+	if( Key == IK_Joy8 )
+	{
+		GAndroidToggleL3HeldV21 = bPressed;
+		if( bPressed )
+		{
+			// Also supports the less common event order where the face button
+			// reaches UE1 one event before L3 in the same physical chord.
+			for( INT Face=0; Face<ATF_CountV21; ++Face )
+			{
+				if( GAndroidToggleFaceDownV21[Face] && !GAndroidToggleFaceLatchedV21[Face] )
+				{
+					GAndroidToggleFaceLatchedV21[Face] = 1;
+					GAndroidToggleFaceConsumedV21[Face] = 1;
+					UE1AndroidRunSemanticToggleV21( Viewport, Face );
+				}
+			}
+		}
+		else
+		{
+			appMemset( GAndroidToggleFaceLatchedV21, 0, sizeof(GAndroidToggleFaceLatchedV21) );
+		}
+
+		// L3 is reserved as the toggle modifier and must not invoke a normal bind.
+		return 1;
+	}
+
+	const INT Face = UE1AndroidToggleFaceFromUE1KeyV21( Key );
+	if( Face == INDEX_NONE )
+		return 0;
+
+	if( !bPressed )
+	{
+		GAndroidToggleFaceDownV21[Face] = 0;
+		GAndroidToggleFaceLatchedV21[Face] = 0;
+		if( GAndroidToggleFaceConsumedV21[Face] )
+		{
+			GAndroidToggleFaceConsumedV21[Face] = 0;
+			return 1;
+		}
+		return 0;
+	}
+
+	GAndroidToggleFaceDownV21[Face] = 1;
+	if( GAndroidToggleL3HeldV21 && !GAndroidToggleFaceLatchedV21[Face] )
+	{
+		GAndroidToggleFaceLatchedV21[Face] = 1;
+		GAndroidToggleFaceConsumedV21[Face] = 1;
+		UE1AndroidRunSemanticToggleV21( Viewport, Face );
+		return 1;
+	}
+
+	return 0;
 }
 
 
@@ -553,6 +739,23 @@ static UBOOL UE1AndroidNativeMotionIsNeutralForKeyCaptureV90( const FAndroidNati
 extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidControllerIsEnabled( JNIEnv*, jclass )
 {
 	return GAndroidNativeControllerRuntimeEnabled ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidQueueGameplayToggleV22( JNIEnv*, jclass, jint Toggle )
+{
+	// UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+	if( !GAndroidNativeControllerRuntimeEnabled || ( Toggle != 1 && Toggle != 2 ) )
+		return JNI_FALSE;
+
+	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
+	if( Mutex )
+		SDL_LockMutex( Mutex );
+	GAndroidPendingGameplayTogglesV22 |= Toggle;
+	if( Mutex )
+		SDL_UnlockMutex( Mutex );
+
+	__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 native queued=%d", (INT)Toggle );
+	return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidControllerKey(
@@ -2510,6 +2713,55 @@ void UNSDLViewport::SetMouseCapture( UBOOL Capture, UBOOL Clip, UBOOL OnlyFocus 
 
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT Key );
+
+// UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+static void UE1AndroidProcessPendingGameplayTogglesV22( UNSDLViewport* Viewport )
+{
+	INT Pending = 0;
+	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
+	if( Mutex )
+		SDL_LockMutex( Mutex );
+	Pending = GAndroidPendingGameplayTogglesV22;
+	GAndroidPendingGameplayTogglesV22 = 0;
+	if( Mutex )
+		SDL_UnlockMutex( Mutex );
+
+	if( !Pending || !Viewport || !Viewport->Actor )
+		return;
+
+	// Block only real menus/text entry. The normal gameplay console state is
+	// named "Console" in this UE1 build and must not suppress controller toggles.
+	if( Viewport->Console )
+	{
+		UObject* ConsoleObject = (UObject*)Viewport->Console;
+		if( ConsoleObject->GetMainFrame() && ConsoleObject->GetMainFrame()->StateNode )
+		{
+			const FName StateName = ConsoleObject->GetMainFrame()->StateNode->GetFName();
+			if( StateName == "Menuing" || StateName == "KeyMenuing" || StateName == "MenuTyping" || StateName == "Typing" )
+			{
+				__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 ignored while menu/text input is active" );
+				return;
+			}
+		}
+	}
+
+	if( Pending & 1 )
+	{
+		const UBOOL Enabled = UE1AndroidToggleInfiniteAmmoV21( Viewport->Actor );
+		const char* Message = Enabled ? "Infinite Ammo: ON" : "Infinite Ammo: OFF";
+		Viewport->Actor->eventClientMessage( Message );
+		debugf( NAME_Log, "Android direct controller toggle: %s", Message );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 %s", Message );
+	}
+	if( Pending & 2 )
+	{
+		const UBOOL Enabled = UE1AndroidToggleInfiniteHealthV21( Viewport->Actor );
+		const char* Message = Enabled ? "Infinite Health: ON" : "Infinite Health: OFF";
+		Viewport->Actor->eventClientMessage( Message );
+		debugf( NAME_Log, "Android direct controller toggle: %s", Message );
+		__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22 %s", Message );
+	}
+}
 #endif
 
 UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta )
@@ -2520,6 +2772,10 @@ UBOOL UNSDLViewport::CauseInputEvent( INT iKey, EInputAction Action, FLOAT Delta
 	if( iKey > 0 )
 	{
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		// UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+		// L3+A/Y is handled in UnrealSDLActivity and queued directly to the
+		// engine thread. The v21 UE1-key chord detector is intentionally bypassed.
+
 		// AUDIO/VIDEO Gamma row: DPAD/arrow left decreases, right increases.
 		if( UE1AndroidHandleGammaMenuInput( this, iKey, Action ) )
 			return 1;
@@ -2618,6 +2874,10 @@ UBOOL UNSDLViewport::TickInput()
 	INT Tmp;
 	const FLOAT CurTime = appSeconds();
 	const FLOAT DeltaTime = CurTime - InputUpdateTime;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	UE1AndroidProcessPendingGameplayTogglesV22( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
+	UE1AndroidUpdateInfiniteTogglesV21( Actor ); // UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
+#endif
 #ifdef __ANDROID__
 	// ANDROID_SOFT_KEYBOARD_V5_MENUTYPING_TICK
 	UE1Android_UpdateSoftKeyboardForMenuTyping( (UObject*)Console, SizeX, SizeY );
@@ -2791,6 +3051,9 @@ UBOOL UNSDLViewport::TickInput()
 						((UObject*)Console)->GetMainFrame() &&
 						((UObject*)Console)->GetMainFrame()->StateNode &&
 						((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Menuing";
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+					// Controller chords are handled after normalization in CauseInputEvent.
+#endif
 					const BYTE* JoyMap = bIsInUI ? JoyButtonMapUI : JoyButtonMap;
 #if PLATFORM_ANDROID
 					if( bIsInUI && Ev.type == SDL_CONTROLLERBUTTONDOWN && Ev.cbutton.button == SDL_CONTROLLER_BUTTON_A )
@@ -2951,7 +3214,9 @@ UBOOL UNSDLViewport::TickInput()
 				if( UE1AndroidTouchButtonDirectHandleV136( this, NE.KeyCode, NE.Action == 0, bIsInUI, bIsKeyMenuing ) )
 					continue;
 
-				const BYTE Key = UE1AndroidNativeKeyCodeToUE1Key( NE.KeyCode, bIsInUI );
+				const BYTE Key = UE1AndroidNativeKeyCodeToUE1Key( NE.KeyCode, NE.ScanCode, bIsInUI );
+				if( NE.Action == 0 && NE.RepeatCount == 0 && ( Key == IK_Joy1 || Key == IK_Joy4 || Key == IK_Joy8 ) )
+					debugf( NAME_Log, "Android controller key code=%d scan=%d mappedKey=%d", NE.KeyCode, NE.ScanCode, (INT)Key ); // UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
 				if( Key != IK_None && Key > 0 && Key < IK_MAX )
 				{
 					const UBOOL bPressed = NE.Action == 0;
