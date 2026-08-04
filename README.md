@@ -12,7 +12,7 @@
   <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.6.1">OUYA VERSION</a>
 </p>
 
-![Android 13](https://img.shields.io/badge/OS-up%20to%20Android%2013-green)
+![Android 15](https://img.shields.io/badge/OS-up%20to%20Android%2015-green)
 ![ABI](https://img.shields.io/badge/ABI-DualABI%2032%2F64bit-orange.svg)
 ![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
 ![Controller](https://img.shields.io/badge/Controls-Touch/Controller-blueviolet)
@@ -45,7 +45,7 @@
  
 ## ◈ Features
 
-- Android support for newer Android devices up to Android 13.
+- Android support for newer Android devices up to Android 15.
 - OUYA (Android 4.x) legacy support - with a lower internal render resolution for better performance on legacy hardware.
 - Improved Game Data Import – Unreal data can be imported via folder or ZIP selection and automatically installs to the app's data folder.
 - Android 8+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
