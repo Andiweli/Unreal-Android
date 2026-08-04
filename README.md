@@ -12,8 +12,8 @@
   <a href="https://github.com/Andiweli/Unreal-Android/releases/tag/v1.6.1">OUYA VERSION</a>
 </p>
 
-![Android 15](https://img.shields.io/badge/OS-up%20to%20Android%2015-green)
-![ABI](https://img.shields.io/badge/ABI-DualABI%2032%2F64bit-orange.svg)
+![OS](https://img.shields.io/badge/up%20to-Android%2016-green)
+![Architecture](https://img.shields.io/badge/architecture-32/64bit-orange.svg)
 ![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
 ![Controller](https://img.shields.io/badge/Controls-Touch/Controller-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/Multiplayer-local%20WiFi-blueviolet)
@@ -59,8 +59,8 @@
 ## ▣ Requirements
 
 - Android 8.0 or newer for the regular Android build.
-- Android 4.x / API16 compatible device for the OUYA legacy build.
 - OpenGL ES 2.0 capable GPU.
+- A compatible device.
 - Android-compatible game controller recommended.
 - Unreal [v200 retail game data](https://archive.org/search?tab=all&query=unreal+v1.200).
 
