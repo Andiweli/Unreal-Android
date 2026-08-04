@@ -20,9 +20,9 @@
 
 
 > [!NOTE]
-> Unofficial fan port.
-> No game data included.
-> Requires legally obtained Unreal v1.200 game files.
+> Unofficial fan port.  
+> No game data included.  
+> Requires legally obtained Unreal v1.200 game files.  
 > This project is not official and is not endorsed by Epic Games.
 
 
