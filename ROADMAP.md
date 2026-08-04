@@ -17,7 +17,7 @@
 - [x] Brightness / gamma improvements
 - [x] 16:9 and 4:3 resolution support
 - [x] Dynamic resolution scaling
-- [ ] Fixing render issues on MALI devices
+- [x] Fixing render issues on MALI devices
 
 ## Controls & Input
 
