@@ -15,7 +15,7 @@
 ![OS](https://img.shields.io/badge/up%20to-Android%2016-green)
 ![Architecture](https://img.shields.io/badge/architecture-32/64bit-orange.svg)
 ![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
-![Controller](https://img.shields.io/badge/Controls-Touch/Controller-blueviolet)
+![Controller](https://img.shields.io/badge/Controls-Touch/Controller/Keyboard-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/Multiplayer-local%20WiFi-blueviolet)
 
 
@@ -27,7 +27,7 @@
 
 
 > [!IMPORTANT]
-> Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input only and does only offer basic touchscreen controls.
+> Video games on smartphones are great, but not user-friendly if they require more than two thumbs to control. For this reason, this port is designed for controller input and does only offer basic touchscreen controls.
 >
 > This project is for preservation, experimentation and personal use only.  
 > Unreal, Unreal Engine and related trademarks are owned by Epic Games.  
@@ -52,6 +52,7 @@
 - Legacy storage behavior friendly for old sideload devices (place game data on your microSD/Unreal folder).
 - Local WiFi multiplayer and botmatches are available.
 - Added touch controls for use without a controller.
+- Added keyboard support (tested with Chromebook)
 
 > [!NOTE]
 > If you are experiencing problems with your player moving or turning slowly, please go to OPTIONS and Customize Controls.
