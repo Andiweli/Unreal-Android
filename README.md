@@ -21,8 +21,7 @@
 
 > [!NOTE]
 > Unofficial fan port.  
-> No game data included.  
-> Requires legally obtained Unreal v1.200 game files.  
+> No game data included. Requires legally obtained Unreal v1.200 game files.  
 > This project is not official and is not endorsed by Epic Games.
 
 
@@ -60,6 +59,7 @@
 ## ▣ Requirements
 
 - Android 8.0 or newer for the regular Android build.
+- Chromebook with at least 4GB RAM and a powerful CPU (eg. MediaTek Kompano 520)
 - OpenGL ES 2.0 capable GPU.
 - A compatible device.
 - Android-compatible game controller recommended.
