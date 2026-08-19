@@ -15,8 +15,10 @@
 ![OS](https://img.shields.io/badge/up%20to-Android%2016-green)
 ![Architecture](https://img.shields.io/badge/architecture-32/64bit-orange.svg)
 ![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
-![Controller](https://img.shields.io/badge/Controls-Controller/Touch/Keyboard-blueviolet)
+![Controller](https://img.shields.io/badge/Controls-Joypad/Touch/Keyb-blueviolet)
 ![Multiplayer](https://img.shields.io/badge/Multiplayer-local%20WiFi-blueviolet)
+[![Support via PayPal](https://img.shields.io/badge/Support%20via-PayPal-0070BA?logo=paypal\&logoColor=white)](https://paypal.me/andiweli)
+
 
 
 > [!NOTE]
@@ -101,6 +103,18 @@ Music
 ```
 
 If these folders are missing, the game will not start and the installer screen will ask you to select a valid folder or ZIP file.
+
+---
+
+## ❤️ Support
+
+If you enjoy this project and would like to support my work, you can make a small contribution via PayPal.
+
+Your support helps me spend more time maintaining existing projects, fixing bugs, improving compatibility, and working on new features.
+
+[![Support via PayPal](https://img.shields.io/badge/Support%20via-PayPal-0070BA?logo=paypal\&logoColor=white)](https://paypal.me/andiweli)
+
+Thank you for your support!
 
 ---
 
