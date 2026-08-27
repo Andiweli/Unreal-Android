@@ -319,6 +319,7 @@ final class UnrealDataPaths {
                     "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n[Engine.Input]\n");
             ensureConfigFile(systemDir, "Unreal.ini", new String[] { "Default.ini", "Unreal.ini.default" }, "");
             ensureAndroidControllerDirectPatch(systemDir);
+            ensureMobileMouseSensitivity(systemDir); // UNREAL_ANDROID_MOUSE_SENSITIVITY_V150
             Log.i(TAG_CONFIG, "Config root: " + root.getAbsolutePath());
             Log.i(TAG_CONFIG, "User.ini: " + new File(systemDir, "User.ini").getAbsolutePath());
         } catch (Throwable t) {
@@ -326,6 +327,29 @@ final class UnrealDataPaths {
         }
     }
 
+
+
+    private static void ensureMobileMouseSensitivity(File systemDir) {
+        // UNREAL_ANDROID_MOUSE_SENSITIVITY_V150
+        // Keep the mobile default at 5.0 in the two engine config files that may
+        // be created/imported on Android. This does not touch key bindings.
+        patchMobileMouseSensitivityFile(new File(systemDir, "Unreal.ini"));
+        patchMobileMouseSensitivityFile(new File(systemDir, "Default.ini"));
+    }
+
+    private static void patchMobileMouseSensitivityFile(File file) {
+        if (file == null || !file.isFile()) return;
+        try {
+            String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            String patched = setIniValue(text, "Engine.PlayerPawn", "MouseSensitivity", "5.000000");
+            if (!patched.equals(text)) {
+                Files.write(file.toPath(), patched.getBytes(StandardCharsets.UTF_8));
+                Log.i(TAG_CONFIG, "Patched mobile MouseSensitivity=5: " + file.getAbsolutePath());
+            }
+        } catch (IOException ex) {
+            Log.w(TAG_CONFIG, "Could not patch MouseSensitivity in " + file.getAbsolutePath() + ": " + ex);
+        }
+    }
 
     private static void ensureAndroidControllerDirectPatch(File systemDir) {
         // UNREAL_ANDROID_CONFIG_PRESERVE_V139

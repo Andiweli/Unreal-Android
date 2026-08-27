@@ -1,21 +1,40 @@
 package com.ast.unreal;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.hardware.input.InputManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.text.InputType;
+import android.widget.EditText;
+import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.util.Arrays;
 
 import org.libsdl.app.SDLActivity;
 
@@ -25,6 +44,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private File selectedRoot;
     private InputManager inputManager;
     private UnrealTouchOverlayViewV124 touchOverlayViewV124; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+    private EditText consoleEditTextV147; // UNREAL_ANDROID_CONSOLE_OVERLAY_V149
 
     // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
     // Detect L3+A/Y before SDL/UE1 translates or consumes controller bindings.
@@ -80,6 +100,199 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private static native void nativeAndroidTouchLookV131(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131 explicit native path
     private static native void nativeAndroidTouchLookV101(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129 fallback
     private static native void nativeAndroidTouchLookV124(float x, float y); // UNREAL_ANDROID_TOUCH_OVERLAY_V125 fallback
+    private static native boolean nativeAndroidConsoleExecV148(String command); // UNREAL_ANDROID_NATIVE_CONSOLE_EXEC_V149
+
+    private void forceLandscapeV141(String reason) {
+        try {
+            // V142: allow both landscape rotations but never portrait.
+            // SDLActivity may request orientation later from native code, so all callbacks
+            // are funneled through this method and sensor-landscape is reapplied.
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+            android.util.Log.i(TAG, "UNREAL_ANDROID_SENSOR_LANDSCAPE_LOCK_V142 " + reason);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    @Override
+    public void setOrientationBis(int w, int h, boolean resizable, String hint) {
+        // SDLActivity normally decides orientation from SDL's hint/window size. Ignore
+        // SDL portrait requests, but keep reverse-landscape rotation available.
+        forceLandscapeV141("setOrientationBis w=" + w + " h=" + h + " hint=" + hint);
+    }
+
+
+    private void setSoftKeyboardOverlayModeV147(String reason) {
+        try {
+            getWindow().setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+                            | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+            android.util.Log.i(TAG, "UNREAL_ANDROID_CONSOLE_IME_OVERLAY_V147 " + reason);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void ensureConsoleEditTextV147() {
+        if (consoleEditTextV147 != null) return;
+
+        consoleEditTextV147 = new EditText(this);
+        consoleEditTextV147.setSingleLine(true);
+        consoleEditTextV147.setTextColor(Color.WHITE);
+        consoleEditTextV147.setHintTextColor(0x99FFFFFF);
+        consoleEditTextV147.setTextSize(18.0f);
+        consoleEditTextV147.setHint("Unreal console command");
+        consoleEditTextV147.setPadding(18, 8, 18, 8);
+        consoleEditTextV147.setSelectAllOnFocus(false);
+        consoleEditTextV147.setBackgroundColor(0xCC000000);
+        consoleEditTextV147.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        consoleEditTextV147.setImeOptions(EditorInfo.IME_ACTION_DONE
+                | EditorInfo.IME_FLAG_NO_EXTRACT_UI
+                | EditorInfo.IME_FLAG_NO_FULLSCREEN);
+        consoleEditTextV147.setVisibility(View.GONE);
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            consoleEditTextV147.setElevation(20000.0f);
+            consoleEditTextV147.setTranslationZ(20000.0f);
+        }
+
+        consoleEditTextV147.setOnEditorActionListener((v, actionId, event) -> {
+            boolean enter = event != null
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == KeyEvent.ACTION_UP;
+            if (actionId == EditorInfo.IME_ACTION_DONE
+                    || actionId == EditorInfo.IME_ACTION_GO
+                    || actionId == EditorInfo.IME_ACTION_SEND
+                    || enter) {
+                submitConsoleCommandV147();
+                return true;
+            }
+            return false;
+        });
+
+        ViewGroup root = mLayout != null ? mLayout : null;
+        if (root == null) {
+            try {
+                View decor = getWindow() != null ? getWindow().getDecorView() : null;
+                if (decor instanceof ViewGroup) root = (ViewGroup) decor;
+            } catch (Throwable ignored) {
+            }
+        }
+
+        if (root != null) {
+            ViewGroup.LayoutParams lp;
+            int margin = dpV147(10);
+            int height = dpV147(46);
+            if (root instanceof android.widget.RelativeLayout) {
+                android.widget.RelativeLayout.LayoutParams rlp = new android.widget.RelativeLayout.LayoutParams(
+                        android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+                        height);
+                rlp.leftMargin = margin;
+                rlp.rightMargin = margin;
+                rlp.topMargin = margin;
+                rlp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_TOP);
+                lp = rlp;
+            } else if (root instanceof android.widget.FrameLayout) {
+                android.widget.FrameLayout.LayoutParams flp = new android.widget.FrameLayout.LayoutParams(
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                        height,
+                        Gravity.TOP);
+                flp.leftMargin = margin;
+                flp.rightMargin = margin;
+                flp.topMargin = margin;
+                lp = flp;
+            } else {
+                lp = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height);
+            }
+            root.addView(consoleEditTextV147, lp);
+            consoleEditTextV147.bringToFront();
+        } else {
+            addContentView(consoleEditTextV147, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dpV147(46)));
+        }
+    }
+
+    private int dpV147(int value) {
+        try {
+            return Math.max(1, (int) (value * getResources().getDisplayMetrics().density + 0.5f));
+        } catch (Throwable ignored) {
+            return value;
+        }
+    }
+
+    private void openConsoleCommandOverlayV147() {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                try {
+                    setSoftKeyboardOverlayModeV147("console-open");
+                    ensureConsoleEditTextV147();
+                    consoleEditTextV147.setText("");
+                    consoleEditTextV147.setVisibility(View.VISIBLE);
+                    consoleEditTextV147.bringToFront();
+                    consoleEditTextV147.requestFocus();
+
+                    InputMethodManager imm = (InputMethodManager)
+                            getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(consoleEditTextV147, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                } catch (Throwable t) {
+                    android.util.Log.w(TAG, "console overlay open failed", t);
+                }
+            }
+        });
+    }
+
+    private void hideConsoleCommandOverlayV147(final boolean hideKeyboard) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                try {
+                    if (consoleEditTextV147 != null) {
+                        if (hideKeyboard) {
+                            InputMethodManager imm = (InputMethodManager)
+                                    getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) imm.hideSoftInputFromWindow(consoleEditTextV147.getWindowToken(), 0);
+                        }
+                        consoleEditTextV147.clearFocus();
+                        consoleEditTextV147.setVisibility(View.GONE);
+                    }
+                    setSoftKeyboardOverlayModeV147("console-hide");
+                    hideSystemUi();
+                    bringTouchOverlayToFrontV125();
+                } catch (Throwable ignored) {
+                }
+            }
+        });
+    }
+
+    private void submitConsoleCommandV147() {
+        final String command = consoleEditTextV147 != null
+                ? String.valueOf(consoleEditTextV147.getText()).trim()
+                : "";
+        if (command.length() == 0) {
+            hideConsoleCommandOverlayV147(true);
+            return;
+        }
+
+        // V148: execute through native UE1 Exec instead of trying to fake
+        // Tab + keyboard text + Enter.  The old fake-typing path opened the
+        // input UI but the game did not receive a real console command.
+        hideConsoleCommandOverlayV147(true);
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                boolean ok = false;
+                try {
+                    ok = nativeAndroidConsoleExecV148(command);
+                } catch (Throwable t) {
+                    android.util.Log.w(TAG, "native console exec unavailable", t);
+                }
+                if (!ok) {
+                    Toast.makeText(UnrealSDLActivity.this,
+                            "Console command was not accepted: " + command,
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        }, 40L);
+    }
 
     private void resetAndroidNativeControllerState() {
         controllerToggleL3HeldV22 = false; // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
@@ -149,12 +362,13 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        forceLandscapeV141("onCreate-before-super");
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().getDecorView().setBackgroundColor(Color.BLACK);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        setSoftKeyboardOverlayModeV147("onCreate");
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
         }
@@ -167,6 +381,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         selectedRoot = selectedRootFromIntentOrScan();
         UnrealDataPaths.ensureWritableConfigFiles(this, selectedRoot); // UNREAL_ANDROID_CONFIG_BOOTSTRAP_REV31_PATH_FALLBACK_MORE_ROOTS
         super.onCreate(savedInstanceState);
+        forceLandscapeV141("onCreate-after-super");
         publishInstalledVersionNameV141(); // UNREAL_ANDROID_RUNTIME_VERSION_V141
 
         inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
@@ -209,6 +424,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     @Override
     protected void onResume() {
         super.onResume();
+        forceLandscapeV141("onResume");
         resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
         hideSystemUi();
         scheduleImmersiveRefresh();
@@ -216,9 +432,31 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     }
 
     @Override
+    protected void onStart() {
+        forceLandscapeV141("onStart-before-super");
+        super.onStart();
+        forceLandscapeV141("onStart-after-super");
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        forceLandscapeV141("onPostResume");
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        forceLandscapeV141("onConfigurationChanged");
+        hideSystemUi();
+        scheduleImmersiveRefresh();
+    }
+
+    @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
+            forceLandscapeV141("onWindowFocusChanged");
             resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
             hideSystemUi();
             scheduleImmersiveRefresh();
@@ -754,43 +992,97 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     private static final class UnrealTouchOverlayViewV124 extends View {
         private final UnrealSDLActivity activity;
-        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.RectF rect = new android.graphics.RectF();
-        private final android.util.SparseArray<TouchRole> roles = new android.util.SparseArray<TouchRole>();
-        private final android.graphics.Bitmap iconFire;
-        private final android.graphics.Bitmap iconAltFire;
-        private final android.graphics.Bitmap iconJump;
-        private final android.graphics.Bitmap iconCrouch;
-        private final android.graphics.Bitmap iconNext;
-        private final android.graphics.Bitmap iconMenu;
-        private final android.graphics.Bitmap iconDpad;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF rect = new RectF();
+        private final android.util.SparseArray<TouchRole> roles = new android.util.SparseArray<>();
+        private final android.util.SparseArray<TouchRole> lookButtonPointers = new android.util.SparseArray<>();
+        private final SharedPreferences layoutPrefs;
+        private final float[] buttonX = new float[TouchRole.values().length];
+        private final float[] buttonY = new float[TouchRole.values().length];
+        private final float[] buttonScale = new float[TouchRole.values().length];
+
+        private static final String LAYOUT_PREFS_NAME = "unreal_touch_overlay_layout_v139";
+        private static final float BUTTON_SCALE_MIN = 0.55f;
+        private static final float BUTTON_SCALE_MAX = 1.85f;
+
+        private final Bitmap iconFire;
+        private final Bitmap iconAltFire;
+        private final Bitmap iconJump;
+        private final Bitmap iconCrouch;
+        private final Bitmap iconNext;
+        private final Bitmap iconMenu;
+        private final Bitmap iconDpad;
+
         private long lastConfigReadMs;
-        private long lastMenuReadMs;
-        private long rightLookLogNextMsV129; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V132
-        private long leftStickLogNextMsV132; // UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132
+        private long rightLookLogNextMsV129;
+        private long leftStickLogNextMsV132;
+        private long lastEditToggleMs;
+
         private boolean enabled = true;
-        private boolean menuVisible = false;
-        private float leftBaseX, leftBaseY, rightBaseX, rightBaseY, rightLastX, rightLastY, lx, ly, rx, ry; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131
-        private boolean fire, fireButton, altFire, jump, crouch, next, menu; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-        private int rightFireAssistCount = 0; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-        private boolean dpadUp, dpadDown, dpadLeft, dpadRight, dpadCenter; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-        private static final int TOUCH_DIRECT_FIRE_V136 = 910105;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_ALT_FIRE_V136 = 910104; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_JUMP_V136 = 910096;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_CROUCH_V136 = 910097;   // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_NEXT_V136 = 910103;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private enum TouchRole { NONE, LEFT_STICK, RIGHT_LOOK, RIGHT_FIRE_ASSIST, FIRE, ALTFIRE, JUMP, CROUCH, NEXT, MENU, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, DPAD_CENTER }
+        private float leftBaseX, leftBaseY, rightLastX, rightLastY, lx, ly, rx, ry;
+        private boolean fire, fireButton, altFire, jump, crouch, next, menu, quickSave, quickLoad, console;
+        private int rightFireAssistCount = 0;
+        private boolean dpadUp, dpadDown, dpadLeft, dpadRight, dpadCenter;
+
+        private boolean editMode = false;
+        private int editDragPointerId = -1;
+        private int editPinchPointerId = -1;
+        private TouchRole editRole = null;
+        private float editGrabDx = 0f, editGrabDy = 0f;
+        private float editPinchStartDistance = 0f, editPinchStartScale = 1f;
+        private boolean editStartedOnEditButton = false, editDragMoved = false, editUsedPinch = false;
+        private float editDownX = 0f, editDownY = 0f;
+
+        private static final int TOUCH_DIRECT_FIRE_V136 = 910105;
+        private static final int TOUCH_DIRECT_ALT_FIRE_V136 = 910104;
+        private static final int TOUCH_DIRECT_JUMP_V136 = 910096;
+        private static final int TOUCH_DIRECT_CROUCH_V136 = 910097;
+        private static final int TOUCH_DIRECT_NEXT_V136 = 910103;
+
+        private enum TouchRole {
+            NONE,
+            LEFT_STICK,
+            RIGHT_LOOK,
+            RIGHT_FIRE_ASSIST,
+            FIRE,
+            ALTFIRE,
+            JUMP,
+            CROUCH,
+            NEXT,
+            MENU,
+            DPAD_UP,
+            DPAD_DOWN,
+            DPAD_LEFT,
+            DPAD_RIGHT,
+            DPAD_CENTER,
+            SAVE,
+            LOAD,
+            CONSOLE,
+            EDIT
+        }
 
         UnrealTouchOverlayViewV124(UnrealSDLActivity activity) {
             super(activity);
             this.activity = activity;
+            this.layoutPrefs = activity.getSharedPreferences(LAYOUT_PREFS_NAME, Context.MODE_PRIVATE);
+
+            Arrays.fill(buttonX, -1f);
+            Arrays.fill(buttonY, -1f);
+            Arrays.fill(buttonScale, 1f);
+            loadLayoutPrefs();
+
             setWillNotDraw(false);
             setFocusable(false);
             setFocusableInTouchMode(false);
             setClickable(true);
+            labelPaint.setTextAlign(Paint.Align.CENTER);
+            labelPaint.setFakeBoldText(true);
+
             if (android.os.Build.VERSION.SDK_INT >= 16) {
                 setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             }
+
             iconFire = loadIcon("touch_overlay/fire.png");
             iconAltFire = loadIcon("touch_overlay/alternate-fire.png");
             iconJump = loadIcon("touch_overlay/jump.png");
@@ -798,9 +1090,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             iconNext = loadIcon("touch_overlay/next-weapon.png");
             iconMenu = loadIcon("touch_overlay/menu.png");
             iconDpad = loadIcon("touch_overlay/dpad.png");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 overlay uses stable left-stick + UT99 right-half FPS look + grey smaller DPAD");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V136 repaired: second right-half touch uses native direct Fire while regular overlay buttons keep their own direct paths");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138 consumes all overlay touches while Touch Controls is FALSE");
+
+            android.util.Log.i(TAG,
+                    "UNREAL_ANDROID_TOUCH_EDIT_V139: UT99-style aim+fire, editable layout");
             postDelayed(redrawRunnable, 66L);
         }
 
@@ -811,18 +1103,237 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             }
         };
 
-        private android.graphics.Bitmap loadIcon(String assetPath) {
+        private Bitmap loadIcon(String assetPath) {
             try {
-                java.io.InputStream in = activity.getAssets().open(assetPath);
+                InputStream in = activity.getAssets().open(assetPath);
                 try {
-                    return android.graphics.BitmapFactory.decodeStream(in);
+                    return BitmapFactory.decodeStream(in);
                 } finally {
                     in.close();
                 }
             } catch (Throwable t) {
-                android.util.Log.w(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 missing icon " + assetPath, t);
+                android.util.Log.w(TAG, "missing touch icon " + assetPath, t);
                 return null;
             }
+        }
+
+        private void loadLayoutPrefs() {
+            if (layoutPrefs == null) return;
+            for (TouchRole role : TouchRole.values()) {
+                int i = role.ordinal();
+                buttonX[i] = layoutPrefs.getFloat(role.name() + "_x", -1f);
+                buttonY[i] = layoutPrefs.getFloat(role.name() + "_y", -1f);
+                buttonScale[i] = clampV124(layoutPrefs.getFloat(role.name() + "_scale", 1f),
+                        BUTTON_SCALE_MIN, BUTTON_SCALE_MAX);
+            }
+        }
+
+        private boolean isLayoutEditableButton(TouchRole role) {
+            return role == TouchRole.FIRE
+                    || role == TouchRole.ALTFIRE
+                    || role == TouchRole.JUMP
+                    || role == TouchRole.CROUCH
+                    || role == TouchRole.NEXT
+                    || role == TouchRole.SAVE
+                    || role == TouchRole.LOAD
+                    || role == TouchRole.CONSOLE
+                    || role == TouchRole.MENU
+                    || role == TouchRole.DPAD_CENTER
+                    || role == TouchRole.EDIT;
+        }
+
+        private float baseButtonRadius(TouchRole role, float w, float h) {
+            float s = Math.min(w, h);
+            float r = Math.max(50f, s * 0.0705f);
+            if (role == TouchRole.MENU || role == TouchRole.SAVE || role == TouchRole.LOAD || role == TouchRole.CONSOLE) return r * 0.82f;
+            if (role == TouchRole.DPAD_CENTER) return r * 1.52f;
+            if (role == TouchRole.EDIT) return Math.max(54f, r * 1.10f);
+            return r;
+        }
+
+        private float buttonScale(TouchRole role) {
+            if (role == null) return 1f;
+            float v = buttonScale[role.ordinal()];
+            return clampV124(v <= 0f ? 1f : v, BUTTON_SCALE_MIN, BUTTON_SCALE_MAX);
+        }
+
+        private float buttonRadius(TouchRole role, float w, float h) {
+            return baseButtonRadius(role, w, h) * buttonScale(role);
+        }
+
+        private float defaultButtonCx(TouchRole role, float w, float h) {
+            float s = Math.min(w, h);
+            float pad = Math.max(10f, s * 0.020f);
+            float r = Math.max(50f, s * 0.0705f);
+            float gap = Math.max(12f, s * 0.018f);
+            float bottomShiftLeft = r;
+            switch (role) {
+                case MENU:
+                    return pad + r * 0.72f;
+                case EDIT:
+                    return pad + r * 2.25f;
+                case DPAD_CENTER:
+                    return pad + r * 1.62f;
+                case SAVE:
+                case LOAD:
+                case CONSOLE:
+                case NEXT:
+                case FIRE:
+                case ALTFIRE:
+                    return w - pad - r;
+                case CROUCH:
+                    return w - pad - r - bottomShiftLeft;
+                case JUMP:
+                    return w - pad - r * 3.05f - gap - bottomShiftLeft;
+                default:
+                    return w * 0.5f;
+            }
+        }
+
+        private float defaultButtonCy(TouchRole role, float w, float h) {
+            float s = Math.min(w, h);
+            float pad = Math.max(10f, s * 0.020f);
+            float r = Math.max(50f, s * 0.0705f);
+            float gap = Math.max(12f, s * 0.018f);
+            float menuR = r * 0.76f;
+            float menuCy = pad + menuR;
+            float dpadR = r * 1.52f;
+            float dpadCy = menuCy + menuR + gap + dpadR;
+            float saveY = menuCy;
+            float loadY = saveY + r * 1.65f + gap;
+            float consoleY = loadY + r * 1.65f + gap;
+            float buttonUpShift = r + 10f;
+            float actionY1 = h * 0.42f + r * 2.0f - buttonUpShift;
+            float actionY2 = actionY1 + r * 2.0f + gap;
+            float nextY = actionY1 - r * 2.0f - gap;
+            float bottomY = h - pad - r - buttonUpShift;
+            switch (role) {
+                case MENU:
+                    return menuCy;
+                case EDIT:
+                    return menuCy;
+                case DPAD_CENTER:
+                    return dpadCy;
+                case SAVE:
+                    return saveY;
+                case LOAD:
+                    return loadY;
+                case CONSOLE:
+                    return consoleY;
+                case NEXT:
+                    return nextY;
+                case FIRE:
+                    return actionY1;
+                case ALTFIRE:
+                    return actionY2;
+                case CROUCH:
+                case JUMP:
+                    return bottomY;
+                default:
+                    return h * 0.5f;
+            }
+        }
+
+        private float buttonCx(TouchRole role, float w, float h) {
+            float r = buttonRadius(role, w, h);
+            float cx = (buttonX[role.ordinal()] >= 0f)
+                    ? buttonX[role.ordinal()] * w
+                    : defaultButtonCx(role, w, h);
+            return clampV124(cx, r, Math.max(r, w - r));
+        }
+
+        private float buttonCy(TouchRole role, float w, float h) {
+            float r = buttonRadius(role, w, h);
+            float cy = (buttonY[role.ordinal()] >= 0f)
+                    ? buttonY[role.ordinal()] * h
+                    : defaultButtonCy(role, w, h);
+            return clampV124(cy, r, Math.max(r, h - r));
+        }
+
+        private float hitMultiplier(TouchRole role) {
+            if (role == TouchRole.DPAD_CENTER) return 1.12f;
+            if (role == TouchRole.EDIT) return 1.45f;
+            return 1.35f;
+        }
+
+        private boolean insideButton(TouchRole role, float x, float y, float w, float h) {
+            float r = buttonRadius(role, w, h) * hitMultiplier(role);
+            return insideCircle(x, y, buttonCx(role, w, h), buttonCy(role, w, h), r);
+        }
+
+        private void saveButtonPositionPx(TouchRole role, float cx, float cy) {
+            if (!isLayoutEditableButton(role)) return;
+            float w = getWidth(), h = getHeight();
+            if (w <= 0f || h <= 0f) return;
+            float r = buttonRadius(role, w, h);
+            cx = clampV124(cx, r, Math.max(r, w - r));
+            cy = clampV124(cy, r, Math.max(r, h - r));
+            buttonX[role.ordinal()] = cx / w;
+            buttonY[role.ordinal()] = cy / h;
+            layoutPrefs.edit()
+                    .putFloat(role.name() + "_x", buttonX[role.ordinal()])
+                    .putFloat(role.name() + "_y", buttonY[role.ordinal()])
+                    .apply();
+        }
+
+        private void saveButtonScale(TouchRole role, float scale) {
+            if (!isLayoutEditableButton(role)) return;
+            buttonScale[role.ordinal()] = clampV124(scale, BUTTON_SCALE_MIN, BUTTON_SCALE_MAX);
+            layoutPrefs.edit().putFloat(role.name() + "_scale", buttonScale[role.ordinal()]).apply();
+            float w = getWidth(), h = getHeight();
+            if (w > 0f && h > 0f) {
+                saveButtonPositionPx(role, buttonCx(role, w, h), buttonCy(role, w, h));
+            }
+        }
+
+        @SuppressWarnings("unused")
+        private void resetTouchLayout() {
+            for (TouchRole role : TouchRole.values()) {
+                if (!isLayoutEditableButton(role)) continue;
+                buttonX[role.ordinal()] = -1f;
+                buttonY[role.ordinal()] = -1f;
+                buttonScale[role.ordinal()] = 1f;
+            }
+            layoutPrefs.edit().clear().apply();
+            Toast.makeText(activity, "Touch layout reset", Toast.LENGTH_SHORT).show();
+            invalidate();
+        }
+
+        private int findPointerIndex(MotionEvent event, int pointerId) {
+            if (event == null || pointerId < 0) return -1;
+            for (int i = 0; i < event.getPointerCount(); ++i) {
+                if (event.getPointerId(i) == pointerId) return i;
+            }
+            return -1;
+        }
+
+        private float pointerDistance(MotionEvent event, int pointerA, int pointerB) {
+            int ia = findPointerIndex(event, pointerA);
+            int ib = findPointerIndex(event, pointerB);
+            if (ia < 0 || ib < 0) return 0f;
+            float dx = event.getX(ia) - event.getX(ib);
+            float dy = event.getY(ia) - event.getY(ib);
+            return (float)Math.sqrt(dx * dx + dy * dy);
+        }
+
+        private void toggleEditMode() {
+            long now = android.os.SystemClock.uptimeMillis();
+            if (now - lastEditToggleMs < 250L) return;
+            lastEditToggleMs = now;
+            releaseAll();
+            roles.clear();
+            lookButtonPointers.clear();
+            editDragPointerId = -1;
+            editPinchPointerId = -1;
+            editRole = null;
+            editStartedOnEditButton = false;
+            editDragMoved = false;
+            editUsedPinch = false;
+            editMode = !editMode;
+            Toast.makeText(activity,
+                    editMode ? "Touch layout edit: drag buttons, pinch to resize" : "Touch layout saved",
+                    Toast.LENGTH_SHORT).show();
+            invalidate();
         }
 
         private void refreshState() {
@@ -831,108 +1342,167 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 lastConfigReadMs = now;
                 enabled = activity.readTouchControlsEnabledV124();
             }
-            if (now - lastMenuReadMs > 120L) {
-                lastMenuReadMs = now;
-                try {
-                    menuVisible = nativeAndroidIsMenuV124();
-                } catch (Throwable ignored) {
-                    menuVisible = false;
-                }
-            }
         }
 
-        @Override protected void onDraw(android.graphics.Canvas canvas) {
+        @Override
+        protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             refreshState();
             if (!enabled || canvas == null) return;
             float w = getWidth(), h = getHeight();
             if (w <= 0 || h <= 0) return;
-            float s = Math.min(w, h);
-            float pad = Math.max(10f, s * 0.020f);
-            float r = Math.max(50f, s * 0.0705f);
-            float gap = Math.max(12f, s * 0.018f);
 
-            final int iconAlpha = 96; // v125: visible, but still translucent like UT99
-            float menuR = r * 0.72f;
-            float menuCx = pad + menuR;
-            float menuCy = pad + menuR;
-            drawIconButton(canvas, menuCx, menuCy, menuR, iconMenu, iconAlpha);
+            drawRoleButton(canvas, TouchRole.MENU, iconMenu, null);
+            drawRoleButton(canvas, TouchRole.DPAD_CENTER, iconDpad, null);
+            drawIconButton(canvas,
+                    buttonCx(TouchRole.EDIT, w, h),
+                    buttonCy(TouchRole.EDIT, w, h),
+                    buttonRadius(TouchRole.EDIT, w, h),
+                    null,
+                    editMode ? "DONE" : "EDIT");
 
-            // Unreal needs menu navigation on touch.  Keep the DPAD directly under
-            // the menu icon, slightly smaller v134 size, with the same alpha.
-            float dpadR = menuR * 2.125f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: 15% smaller than v133
-            float dpadCx = pad + dpadR;
-            float dpadCy = menuCy + menuR + gap + dpadR;
-            drawIconButton(canvas, dpadCx, dpadCy, dpadR, iconDpad, iconAlpha);
+            // V140: keep gameplay buttons visible after leaving EDIT.
+            // On this Unreal build native menu detection may stay true too long,
+            // which hid FIRE/ALT/NEXT/JUMP/CROUCH after DONE in v139.
+            drawRoleButton(canvas, TouchRole.SAVE, null, "SAVE");
+            drawRoleButton(canvas, TouchRole.LOAD, null, "LOAD");
+            drawRoleButton(canvas, TouchRole.CONSOLE, null, "CON");
+            drawRoleButton(canvas, TouchRole.NEXT, iconNext, null);
+            drawRoleButton(canvas, TouchRole.FIRE, iconFire, null);
+            drawRoleButton(canvas, TouchRole.ALTFIRE, iconAltFire, null);
+            drawRoleButton(canvas, TouchRole.CROUCH, iconCrouch, null);
+            drawRoleButton(canvas, TouchRole.JUMP, iconJump, null);
 
-            float buttonUpShift = r + 10f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: v133 shift plus 10 px up
-            float actionY1 = h * 0.42f + r * 2.0f - buttonUpShift;
-            float actionY2 = actionY1 + r * 2.0f + gap;
-            float nextY = actionY1 - r * 2.0f - gap;
-            drawIconButton(canvas, w - pad - r, nextY, r, iconNext, iconAlpha);
-            drawIconButton(canvas, w - pad - r, actionY1, r, iconFire, iconAlpha);
-            drawIconButton(canvas, w - pad - r, actionY2, r, iconAltFire, iconAlpha);
-
-            float bottomY = h - pad - r - buttonUpShift;
-            float bottomShiftLeft = r;
-            drawIconButton(canvas, w - pad - r - bottomShiftLeft, bottomY, r, iconCrouch, iconAlpha);
-            drawIconButton(canvas, w - pad - r * 3.05f - gap - bottomShiftLeft, bottomY, r, iconJump, iconAlpha);
+            if (editMode) drawEditModeOverlay(canvas, w, h);
         }
 
-        private void drawIconButton(android.graphics.Canvas canvas, float cx, float cy, float r, android.graphics.Bitmap icon, int iconAlpha) {
-            paint.setStyle(android.graphics.Paint.Style.FILL);
+        private void drawRoleButton(Canvas canvas, TouchRole role, Bitmap icon, String label) {
+            float w = getWidth(), h = getHeight();
+            drawIconButton(canvas, buttonCx(role, w, h), buttonCy(role, w, h),
+                    buttonRadius(role, w, h), icon, label);
+        }
+
+        private void drawIconButton(Canvas canvas, float cx, float cy, float r, Bitmap icon, String label) {
+            paint.setStyle(Paint.Style.FILL);
             paint.setColor(0x06202020);
             canvas.drawCircle(cx, cy, r, paint);
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
+
+            paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(Math.max(2f, r * 0.055f));
             paint.setColor(0x1AFFFFFF);
             canvas.drawCircle(cx, cy, r, paint);
+
             if (icon != null) {
                 float iconR = r * 0.64f;
                 rect.set(cx - iconR, cy - iconR, cx + iconR, cy + iconR);
-                paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setAlpha(iconAlpha);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setAlpha(96);
                 canvas.drawBitmap(icon, null, rect, paint);
                 paint.setAlpha(255);
+            } else if (label != null) {
+                labelPaint.setColor(0x66FFFFFF);
+                boolean editLabel = "EDIT".equals(label) || "DONE".equals(label);
+                labelPaint.setTextSize(editLabel
+                        ? Math.max(15f, Math.min(28f, r * 0.50f))
+                        : Math.max(12f, Math.min(18f, r * 0.36f)));
+                Paint.FontMetrics fm = labelPaint.getFontMetrics();
+                canvas.drawText(label, cx, cy - (fm.ascent + fm.descent) * 0.5f, labelPaint);
             }
         }
 
-        @Override public boolean onTouchEvent(MotionEvent event) {
+        private void drawEditModeOverlay(Canvas canvas, float w, float h) {
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0x22000000);
+            canvas.drawRect(0f, 0f, w, Math.max(34f, h * 0.075f), paint);
+
+            labelPaint.setColor(0xAAFFFFFF);
+            labelPaint.setTextSize(Math.max(14f, Math.min(22f, h * 0.038f)));
+            Paint.FontMetrics fm = labelPaint.getFontMetrics();
+            canvas.drawText("EDIT MODE: drag buttons, pinch to resize, DONE to save",
+                    w * 0.5f,
+                    Math.max(17f, h * 0.037f) - (fm.ascent + fm.descent) * 0.5f,
+                    labelPaint);
+
+            for (TouchRole role : TouchRole.values()) {
+                if (!isLayoutEditableButton(role)) continue;
+                float cx = buttonCx(role, w, h);
+                float cy = buttonCy(role, w, h);
+                float r = buttonRadius(role, w, h);
+
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(Math.max(2f, r * 0.05f));
+                paint.setColor(role == editRole ? 0x99FFFFFF : 0x44FFFFFF);
+                canvas.drawCircle(cx, cy, r * 1.12f, paint);
+
+                labelPaint.setColor(0x88FFFFFF);
+                labelPaint.setTextSize(Math.max(10f, r * 0.22f));
+                canvas.drawText(roleLabel(role), cx, cy + r + Math.max(10f, r * 0.28f), labelPaint);
+            }
+        }
+
+        private String roleLabel(TouchRole role) {
+            if (role == TouchRole.DPAD_CENTER) return "DPAD";
+            if (role == TouchRole.ALTFIRE) return "ALT";
+            return role.name();
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
             if (event == null) return false;
             refreshState();
             if (!enabled) {
-                // UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138
-                // When Touch Controls is OFF, the transparent overlay must still
-                // consume screen touches. Otherwise the SDL SurfaceView below can
-                // receive the same tap as a raw mouse/fire event.
                 releaseAll();
                 roles.clear();
+                lookButtonPointers.clear();
                 return true;
             }
 
             int action = event.getActionMasked();
             int index = event.getActionIndex();
+            int pointerId = (index >= 0 && index < event.getPointerCount())
+                    ? event.getPointerId(index)
+                    : -1;
+
+            if (editMode) {
+                return handleLayoutEditTouchEvent(event);
+            }
+
             if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-                TouchRole role = resolveTouchRoleV135(event.getX(index), event.getY(index)); // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-                if (role == TouchRole.NONE) return false;
-                int pointerId = event.getPointerId(index);
+                if (pointerId < 0) return true;
+
+                TouchRole directRole = hitRole(event.getX(index), event.getY(index));
+                if (directRole == TouchRole.EDIT) {
+                    toggleEditMode();
+                    return true;
+                }
+
+                TouchRole role = resolveTouchRoleV139(event.getX(index), event.getY(index));
+
+
+                // Fire / AltFire / Crouch are transparent for aiming.
+                // One finger can hold the action and keep moving the camera.
+                if (isLookTransparentButton(role)) {
+                    setLookButtonPressed(role, true);
+                    lookButtonPointers.put(pointerId, role);
+                    role = TouchRole.RIGHT_LOOK;
+                }
+
                 roles.put(pointerId, role);
+
                 if (role == TouchRole.LEFT_STICK) {
                     leftBaseX = event.getX(index);
                     leftBaseY = event.getY(index);
                 } else if (role == TouchRole.RIGHT_LOOK) {
-                    rightBaseX = event.getX(index); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129
-                    rightBaseY = event.getY(index); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129
-                    rightLastX = rightBaseX;
-                    rightLastY = rightBaseY;
-                }
-                if (role == TouchRole.RIGHT_FIRE_ASSIST) {
-                    addRightFireAssistV135();
+                    rightLastX = event.getX(index);
+                    rightLastY = event.getY(index);
+                } else if (role == TouchRole.RIGHT_FIRE_ASSIST) {
+                    addRightFireAssistV139();
                 } else {
                     updateRole(role, event.getX(index), event.getY(index), true);
                 }
                 return true;
             }
+
             if (action == MotionEvent.ACTION_MOVE) {
                 boolean consumed = false;
                 for (int i = 0; i < event.getPointerCount(); ++i) {
@@ -946,17 +1516,25 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 }
                 return consumed;
             }
+
             if (action == MotionEvent.ACTION_CANCEL) {
                 releaseAll();
                 roles.clear();
+                lookButtonPointers.clear();
                 return true;
             }
+
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
-                int pointerId = event.getPointerId(index);
                 TouchRole role = roles.get(pointerId);
                 if (role != null && role != TouchRole.NONE) {
+                    TouchRole transparentButtonRole = lookButtonPointers.get(pointerId);
+                    if (transparentButtonRole != null) {
+                        setLookButtonPressed(transparentButtonRole, false);
+                        lookButtonPointers.remove(pointerId);
+                    }
+
                     if (role == TouchRole.RIGHT_FIRE_ASSIST) {
-                        removeRightFireAssistV135();
+                        removeRightFireAssistV139();
                     } else {
                         updateRole(role, event.getX(index), event.getY(index), false);
                     }
@@ -964,95 +1542,187 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     return true;
                 }
                 roles.remove(pointerId);
+                lookButtonPointers.remove(pointerId);
             }
-            return false;
+
+            return roles.size() > 0;
+        }
+
+        private boolean handleLayoutEditTouchEvent(MotionEvent event) {
+            if (event == null) return true;
+            int action = event.getActionMasked();
+            int index = event.getActionIndex();
+            int pointerId = (index >= 0 && index < event.getPointerCount())
+                    ? event.getPointerId(index)
+                    : -1;
+
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+                if (pointerId < 0) return true;
+
+                TouchRole role = hitEditableRole(event.getX(index), event.getY(index));
+
+                if (editDragPointerId < 0 && isLayoutEditableButton(role)) {
+                    editRole = role;
+                    editDragPointerId = pointerId;
+                    editPinchPointerId = -1;
+                    editStartedOnEditButton = role == TouchRole.EDIT;
+                    editDragMoved = false;
+                    editUsedPinch = false;
+                    editDownX = event.getX(index);
+                    editDownY = event.getY(index);
+                    float w = getWidth(), h = getHeight();
+                    editGrabDx = event.getX(index) - buttonCx(role, w, h);
+                    editGrabDy = event.getY(index) - buttonCy(role, w, h);
+                    invalidate();
+                    return true;
+                }
+
+                if (editRole != null && editPinchPointerId < 0 && pointerId != editDragPointerId) {
+                    editPinchPointerId = pointerId;
+                    editUsedPinch = true;
+                    editPinchStartDistance = pointerDistance(event, editDragPointerId, editPinchPointerId);
+                    editPinchStartScale = buttonScale(editRole);
+                    invalidate();
+                    return true;
+                }
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (editRole != null && editDragPointerId >= 0) {
+                    int dragIndex = findPointerIndex(event, editDragPointerId);
+                    if (dragIndex >= 0) {
+                        float dx = event.getX(dragIndex) - editDownX;
+                        float dy = event.getY(dragIndex) - editDownY;
+                        if ((dx * dx + dy * dy) > 64f) editDragMoved = true;
+                        saveButtonPositionPx(editRole,
+                                event.getX(dragIndex) - editGrabDx,
+                                event.getY(dragIndex) - editGrabDy);
+                    }
+
+                    if (editPinchPointerId >= 0) {
+                        editUsedPinch = true;
+                        float dist = pointerDistance(event, editDragPointerId, editPinchPointerId);
+                        if (editPinchStartDistance > 12f && dist > 1f) {
+                            saveButtonScale(editRole,
+                                    editPinchStartScale * (dist / editPinchStartDistance));
+                        }
+                    }
+                    invalidate();
+                }
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
+                if (pointerId == editPinchPointerId) {
+                    editPinchPointerId = -1;
+                    editPinchStartDistance = 0f;
+                    editPinchStartScale = editRole != null ? buttonScale(editRole) : 1f;
+                    return true;
+                }
+
+                if (pointerId == editDragPointerId) {
+                    boolean finishEdit = editRole == TouchRole.EDIT
+                            && editStartedOnEditButton
+                            && !editDragMoved
+                            && !editUsedPinch;
+                    editDragPointerId = -1;
+                    editPinchPointerId = -1;
+                    editRole = null;
+                    editGrabDx = editGrabDy = 0f;
+                    editPinchStartDistance = 0f;
+                    editPinchStartScale = 1f;
+                    editStartedOnEditButton = false;
+                    editDragMoved = false;
+                    editUsedPinch = false;
+                    invalidate();
+                    if (finishEdit) toggleEditMode();
+                    return true;
+                }
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_CANCEL) {
+                editDragPointerId = -1;
+                editPinchPointerId = -1;
+                editRole = null;
+                editGrabDx = editGrabDy = 0f;
+                editPinchStartDistance = 0f;
+                editPinchStartScale = 1f;
+                editStartedOnEditButton = false;
+                editDragMoved = false;
+                editUsedPinch = false;
+                invalidate();
+                return true;
+            }
+
+            return true;
+        }
+
+        private TouchRole hitEditableRole(float x, float y) {
+            float w = getWidth(), h = getHeight();
+            if (w <= 0f || h <= 0f) return TouchRole.NONE;
+            if (insideButton(TouchRole.EDIT, x, y, w, h)) return TouchRole.EDIT;
+            if (insideButton(TouchRole.MENU, x, y, w, h)) return TouchRole.MENU;
+            if (insideButton(TouchRole.DPAD_CENTER, x, y, w, h)) return TouchRole.DPAD_CENTER;
+            if (insideButton(TouchRole.SAVE, x, y, w, h)) return TouchRole.SAVE;
+            if (insideButton(TouchRole.LOAD, x, y, w, h)) return TouchRole.LOAD;
+            if (insideButton(TouchRole.CONSOLE, x, y, w, h)) return TouchRole.CONSOLE;
+            if (insideButton(TouchRole.NEXT, x, y, w, h)) return TouchRole.NEXT;
+            if (insideButton(TouchRole.FIRE, x, y, w, h)) return TouchRole.FIRE;
+            if (insideButton(TouchRole.ALTFIRE, x, y, w, h)) return TouchRole.ALTFIRE;
+            if (insideButton(TouchRole.CROUCH, x, y, w, h)) return TouchRole.CROUCH;
+            if (insideButton(TouchRole.JUMP, x, y, w, h)) return TouchRole.JUMP;
+            return TouchRole.NONE;
         }
 
         private TouchRole hitRole(float x, float y) {
-            float w = getWidth(), h = getHeight(), s = Math.min(w, h);
-            float pad = Math.max(10f, s * 0.020f);
-            float r = Math.max(50f, s * 0.0705f);
-            float gap = Math.max(12f, s * 0.018f);
-            float menuR = r * 0.72f;
-            float menuCx = pad + menuR;
-            float menuCy = pad + menuR;
-            if (insideCircle(x, y, menuCx, menuCy, menuR * 1.35f)) return TouchRole.MENU;
+            float w = getWidth(), h = getHeight();
+            if (w <= 0f || h <= 0f) return TouchRole.RIGHT_LOOK;
 
-            float dpadR = menuR * 2.125f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: keep hitbox aligned with 15% smaller DPAD
-            float dpadCx = pad + dpadR;
-            float dpadCy = menuCy + menuR + gap + dpadR;
-            if (insideCircle(x, y, dpadCx, dpadCy, dpadR * 1.12f)) {
-                float dx = x - dpadCx;
-                float dy = y - dpadCy;
+            // EDIT first so it stays easy to hit after moving buttons around.
+            if (insideButton(TouchRole.EDIT, x, y, w, h)) return TouchRole.EDIT;
+            if (insideButton(TouchRole.MENU, x, y, w, h)) return TouchRole.MENU;
+
+            if (insideButton(TouchRole.DPAD_CENTER, x, y, w, h)) {
+                float cx = buttonCx(TouchRole.DPAD_CENTER, w, h);
+                float cy = buttonCy(TouchRole.DPAD_CENTER, w, h);
+                float r = buttonRadius(TouchRole.DPAD_CENTER, w, h);
+                float dx = x - cx;
+                float dy = y - cy;
                 float dist = (float)Math.sqrt(dx * dx + dy * dy);
-                if (dist < dpadR * 0.30f) return TouchRole.DPAD_CENTER;
+                if (dist < r * 0.30f) return TouchRole.DPAD_CENTER;
                 if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? TouchRole.DPAD_LEFT : TouchRole.DPAD_RIGHT;
                 return dy < 0 ? TouchRole.DPAD_UP : TouchRole.DPAD_DOWN;
             }
 
-            float buttonUpShift = r + 10f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: keep hitboxes aligned with drawn buttons
-            float actionY1 = h * 0.42f + r * 2.0f - buttonUpShift;
-            float actionY2 = actionY1 + r * 2.0f + gap;
-            float nextY = actionY1 - r * 2.0f - gap;
-            if (insideCircle(x, y, w - pad - r, nextY, r * 1.35f)) return TouchRole.NEXT;
-            if (insideCircle(x, y, w - pad - r, actionY1, r * 1.35f)) return TouchRole.FIRE;
-            if (insideCircle(x, y, w - pad - r, actionY2, r * 1.35f)) return TouchRole.ALTFIRE;
-            float bottomY = h - pad - r - buttonUpShift;
-            float bottomShiftLeft = r;
-            if (insideCircle(x, y, w - pad - r - bottomShiftLeft, bottomY, r * 1.35f)) return TouchRole.CROUCH;
-            if (insideCircle(x, y, w - pad - r * 3.05f - gap - bottomShiftLeft, bottomY, r * 1.35f)) return TouchRole.JUMP;
+            if (insideButton(TouchRole.SAVE, x, y, w, h)) return TouchRole.SAVE;
+            if (insideButton(TouchRole.LOAD, x, y, w, h)) return TouchRole.LOAD;
+            if (insideButton(TouchRole.CONSOLE, x, y, w, h)) return TouchRole.CONSOLE;
+            if (insideButton(TouchRole.NEXT, x, y, w, h)) return TouchRole.NEXT;
+            if (insideButton(TouchRole.FIRE, x, y, w, h)) return TouchRole.FIRE;
+            if (insideButton(TouchRole.ALTFIRE, x, y, w, h)) return TouchRole.ALTFIRE;
+            if (insideButton(TouchRole.CROUCH, x, y, w, h)) return TouchRole.CROUCH;
+            if (insideButton(TouchRole.JUMP, x, y, w, h)) return TouchRole.JUMP;
 
-            // UNREAL_ANDROID_TOUCH_LAYOUT_V133:
-            // Do not gate the empty left/right gameplay halves by native menu state.
-            // On some devices this state can remain true briefly/stale and then the
-            // overlay returns NONE, which kills both virtual sticks. Menu/DPAD/buttons
-            // still win above by hit area; the remaining screen is always gameplay
-            // stick/look exactly like the working UT99 overlay.
             return x < w * 0.5f ? TouchRole.LEFT_STICK : TouchRole.RIGHT_LOOK;
         }
 
-        private boolean hasActiveRightLookPointerV135() {
+        private boolean hasActiveRightLookPointerV139() {
             for (int i = 0; i < roles.size(); ++i) {
                 if (roles.valueAt(i) == TouchRole.RIGHT_LOOK) return true;
             }
             return false;
         }
 
-        private TouchRole resolveTouchRoleV135(float x, float y) {
+        private TouchRole resolveTouchRoleV139(float x, float y) {
             TouchRole role = hitRole(x, y);
-            // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135:
-            // First free right-half touch stays FPS look/aim. A second free
-            // right-half touch acts as Fire while it is held. Explicit overlay
-            // buttons, DPAD and menu keep their existing roles.
-            if (role == TouchRole.RIGHT_LOOK && x >= getWidth() * 0.5f && hasActiveRightLookPointerV135()) {
+            if (role == TouchRole.RIGHT_LOOK
+                    && x >= getWidth() * 0.5f
+                    && hasActiveRightLookPointerV139()) {
                 return TouchRole.RIGHT_FIRE_ASSIST;
             }
             return role;
-        }
-
-        private void syncFireV135() {
-            boolean wantFire = fireButton || rightFireAssistCount > 0;
-            if (fire != wantFire) {
-                fire = wantFire;
-                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, wantFire);
-            }
-        }
-
-        private void setFireButtonV135(boolean down) {
-            if (fireButton != down) {
-                fireButton = down;
-                syncFireV135();
-            }
-        }
-
-        private void addRightFireAssistV135() {
-            rightFireAssistCount++;
-            syncFireV135();
-        }
-
-        private void removeRightFireAssistV135() {
-            if (rightFireAssistCount > 0) rightFireAssistCount--;
-            syncFireV135();
         }
 
         private boolean insideCircle(float x, float y, float cx, float cy, float r) {
@@ -1069,9 +1739,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         }
 
         private float touchLookDeltaV129(float deltaPx, float gain) {
-            // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129:
-            // Exact UT99 principle: relative swipe delta, tiny jitter filter only,
-            // no virtual right-stick centre and no continued rotation.
+            // Relative swipe delta, like UT99 touch look. No virtual right-stick center.
             if (Math.abs(deltaPx) < 0.25f) return 0f;
             return clampV124(deltaPx * gain, -1f, 1f);
         }
@@ -1085,15 +1753,60 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 } catch (Throwable v101) {
                     try {
                         nativeAndroidTouchLookV124(x, y);
-                    } catch (Throwable ignored) {
-                    }
+                    } catch (Throwable ignored) { }
                 }
             }
+        }
+
+        private boolean isLookTransparentButton(TouchRole role) {
+            return role == TouchRole.FIRE || role == TouchRole.ALTFIRE || role == TouchRole.CROUCH;
+        }
+
+        private void setLookButtonPressed(TouchRole role, boolean down) {
+            if (role == TouchRole.FIRE) {
+                setFireButtonV139(down);
+            } else if (role == TouchRole.ALTFIRE) {
+                if (altFire != down) {
+                    altFire = down;
+                    setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, down);
+                }
+            } else if (role == TouchRole.CROUCH) {
+                if (crouch != down) {
+                    crouch = down;
+                    setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, down);
+                }
+            }
+        }
+
+        private void syncFireV139() {
+            boolean wantFire = fireButton || rightFireAssistCount > 0;
+            if (fire != wantFire) {
+                fire = wantFire;
+                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, wantFire);
+            }
+        }
+
+        private void setFireButtonV139(boolean down) {
+            if (fireButton != down) {
+                fireButton = down;
+                syncFireV139();
+            }
+        }
+
+        private void addRightFireAssistV139() {
+            rightFireAssistCount++;
+            syncFireV139();
+        }
+
+        private void removeRightFireAssistV139() {
+            if (rightFireAssistCount > 0) rightFireAssistCount--;
+            syncFireV139();
         }
 
         private void updateRole(TouchRole role, float x, float y, boolean down) {
             float s = Math.min(getWidth(), getHeight());
             float moveRadius = Math.max(112f, s * 0.145f);
+
             switch (role) {
                 case LEFT_STICK:
                     lx = down ? analogValue(x - leftBaseX, moveRadius, 0.075f, 0.74f) : 0f;
@@ -1102,11 +1815,12 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                         long now = android.os.SystemClock.uptimeMillis();
                         if (now >= leftStickLogNextMsV132) {
                             leftStickLogNextMsV132 = now + 1200L;
-                            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V133 left-stick lx=" + lx + " ly=" + ly);
+                            android.util.Log.i(TAG, "touch left-stick lx=" + lx + " ly=" + ly);
                         }
                     }
                     sendNativeMotion();
                     break;
+
                 case RIGHT_LOOK:
                     if (down) {
                         float dx = x - rightLastX;
@@ -1119,7 +1833,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                             long now = android.os.SystemClock.uptimeMillis();
                             if (now >= rightLookLogNextMsV129) {
                                 rightLookLogNextMsV129 = now + 1200L;
-                                android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 right-look dx=" + dx + " dy=" + dy + " rx=" + rx + " ry=" + ry);
+                                android.util.Log.i(TAG, "touch right-look rx=" + rx + " ry=" + ry);
                             }
                         }
                     } else {
@@ -1127,104 +1841,152 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     }
                     sendTouchLookV129(rx, ry);
                     break;
+
                 case RIGHT_FIRE_ASSIST:
                     break;
                 case FIRE:
-                    setFireButtonV135(down);
+                    setFireButtonV139(down);
                     break;
                 case ALTFIRE:
-                    if (altFire != down) { altFire = down; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, down); }
+                    if (altFire != down) {
+                        altFire = down;
+                        setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, down);
+                    }
                     break;
                 case JUMP:
-                    if (jump != down) { jump = down; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, down); }
+                    if (jump != down) {
+                        jump = down;
+                        setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, down);
+                    }
                     break;
                 case CROUCH:
-                    if (crouch != down) { crouch = down; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, down); }
+                    if (crouch != down) {
+                        crouch = down;
+                        setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, down);
+                    }
                     break;
                 case NEXT:
-                    if (next != down) { next = down; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, down); }
+                    if (next != down) {
+                        next = down;
+                        setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, down);
+                    }
+                    break;
+                case SAVE:
+                    if (quickSave != down) {
+                        quickSave = down;
+                        setKeyboardAndButton(KeyEvent.KEYCODE_F6, down);
+                    }
+                    break;
+                case LOAD:
+                    if (quickLoad != down) {
+                        quickLoad = down;
+                        setKeyboardAndButton(KeyEvent.KEYCODE_F7, down);
+                    }
+                    break;
+                case CONSOLE:
+                    if (down && !console) {
+                        console = true;
+                        openConsoleInputV146();
+                    } else if (!down) {
+                        console = false;
+                    }
                     break;
                 case MENU:
-                    if (menu != down) { menu = down; setButton(KeyEvent.KEYCODE_MENU, down); }
+                    if (menu != down) {
+                        menu = down;
+                        setButton(KeyEvent.KEYCODE_MENU, down);
+                    }
                     break;
                 case DPAD_UP:
-                    if (dpadUp != down) { dpadUp = down; setButton(KeyEvent.KEYCODE_DPAD_UP, down); }
+                    if (dpadUp != down) {
+                        dpadUp = down;
+                        setButton(KeyEvent.KEYCODE_DPAD_UP, down);
+                    }
                     break;
                 case DPAD_DOWN:
-                    if (dpadDown != down) { dpadDown = down; setButton(KeyEvent.KEYCODE_DPAD_DOWN, down); }
+                    if (dpadDown != down) {
+                        dpadDown = down;
+                        setButton(KeyEvent.KEYCODE_DPAD_DOWN, down);
+                    }
                     break;
                 case DPAD_LEFT:
-                    if (dpadLeft != down) { dpadLeft = down; setButton(KeyEvent.KEYCODE_DPAD_LEFT, down); }
+                    if (dpadLeft != down) {
+                        dpadLeft = down;
+                        setButton(KeyEvent.KEYCODE_DPAD_LEFT, down);
+                    }
                     break;
                 case DPAD_RIGHT:
-                    if (dpadRight != down) { dpadRight = down; setButton(KeyEvent.KEYCODE_DPAD_RIGHT, down); }
+                    if (dpadRight != down) {
+                        dpadRight = down;
+                        setButton(KeyEvent.KEYCODE_DPAD_RIGHT, down);
+                    }
                     break;
                 case DPAD_CENTER:
-                    if (dpadCenter != down) { dpadCenter = down; setButton(KeyEvent.KEYCODE_BUTTON_A, down); }
+                    if (dpadCenter != down) {
+                        dpadCenter = down;
+                        setButton(KeyEvent.KEYCODE_BUTTON_A, down);
+                    }
                     break;
+                case EDIT:
                 case NONE:
                     break;
             }
         }
 
+
+        private void openConsoleInputV146() {
+            // V147: the real UE1 Type line is hard to see on Android and may be
+            // hidden by the IME. Show a small Android command field at the top;
+            // when the user presses Done/Enter, replay Tab + text + Enter into SDL.
+            activity.openConsoleCommandOverlayV147();
+        }
+
         private void setDirectTouchButtonV136(int directKeyCode, boolean down) {
-            // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136:
-            // Gameplay overlay buttons and assistive shoot use a native direct path
-            // that selects the current friendly controller binding or a safe PC fallback.
             try {
                 nativeAndroidControllerKey(
-                        -136,
-                        0,
-                        0,
-                        directKeyCode,
-                        0,
+                        -136, 0, 0, directKeyCode, 0,
                         down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
-                        0,
-                        InputDevice.SOURCE_GAMEPAD,
-                        "UnrealTouchButtonDirectV136");
-            } catch (Throwable ignored) {
-            }
+                        0, InputDevice.SOURCE_GAMEPAD, "UnrealTouchButtonDirectV139");
+            } catch (Throwable ignored) { }
         }
 
         private void setButton(int keyCode, boolean down) {
             try {
                 nativeAndroidControllerKey(
-                        -124,
-                        0,
-                        0,
-                        keyCode,
-                        0,
+                        -124, 0, 0, keyCode, 0,
                         down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
-                        0,
-                        InputDevice.SOURCE_GAMEPAD,
-                        "UnrealTouchOverlay");
-            } catch (Throwable ignored) {
-            }
+                        0, InputDevice.SOURCE_GAMEPAD, "UnrealTouchOverlayV139");
+            } catch (Throwable ignored) { }
+        }
+
+        private void setKeyboardAndButton(int keyCode, boolean down) {
+            // V143: F6/F7 are not controller buttons, so the native controller bridge
+            // may ignore them. Send them directly into SDL keyboard input too.
+            try {
+                if (down) {
+                    SDLActivity.onNativeKeyDown(keyCode);
+                } else {
+                    SDLActivity.onNativeKeyUp(keyCode);
+                }
+            } catch (Throwable ignored) { }
+            setButton(keyCode, down);
         }
 
         private void sendNativeMotion() {
             try {
                 nativeAndroidControllerMotion(
-                        -124,
-                        0,
-                        0,
-                        InputDevice.SOURCE_JOYSTICK,
-                        "UnrealTouchOverlay",
-                        lx,
-                        ly,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f);
-            } catch (Throwable ignored) {
-            }
+                        -124, 0, 0, InputDevice.SOURCE_JOYSTICK, "UnrealTouchOverlayV139",
+                        lx, ly,
+                        0f, 0f,
+                        0f, 0f,
+                        0f, 0f,
+                        0f, 0f);
+            } catch (Throwable ignored) { }
         }
 
         private void releaseAll() {
+            lookButtonPointers.clear();
+
             if (lx != 0f || ly != 0f) {
                 lx = ly = 0f;
                 sendNativeMotion();
@@ -1239,16 +2001,57 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 rightFireAssistCount = 0;
                 setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, false);
             }
-            if (altFire) { altFire = false; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, false); }
-            if (jump) { jump = false; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, false); }
-            if (crouch) { crouch = false; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, false); }
-            if (next) { next = false; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, false); }
-            if (menu) { menu = false; setButton(KeyEvent.KEYCODE_MENU, false); }
-            if (dpadUp) { dpadUp = false; setButton(KeyEvent.KEYCODE_DPAD_UP, false); }
-            if (dpadDown) { dpadDown = false; setButton(KeyEvent.KEYCODE_DPAD_DOWN, false); }
-            if (dpadLeft) { dpadLeft = false; setButton(KeyEvent.KEYCODE_DPAD_LEFT, false); }
-            if (dpadRight) { dpadRight = false; setButton(KeyEvent.KEYCODE_DPAD_RIGHT, false); }
-            if (dpadCenter) { dpadCenter = false; setButton(KeyEvent.KEYCODE_BUTTON_A, false); }
+            if (altFire) {
+                altFire = false;
+                setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, false);
+            }
+            if (jump) {
+                jump = false;
+                setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, false);
+            }
+            if (crouch) {
+                crouch = false;
+                setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, false);
+            }
+            if (next) {
+                next = false;
+                setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, false);
+            }
+            if (quickSave) {
+                quickSave = false;
+                setKeyboardAndButton(KeyEvent.KEYCODE_F6, false);
+            }
+            if (quickLoad) {
+                quickLoad = false;
+                setKeyboardAndButton(KeyEvent.KEYCODE_F7, false);
+            }
+            if (console) {
+                console = false;
+            }
+            if (menu) {
+                menu = false;
+                setButton(KeyEvent.KEYCODE_MENU, false);
+            }
+            if (dpadUp) {
+                dpadUp = false;
+                setButton(KeyEvent.KEYCODE_DPAD_UP, false);
+            }
+            if (dpadDown) {
+                dpadDown = false;
+                setButton(KeyEvent.KEYCODE_DPAD_DOWN, false);
+            }
+            if (dpadLeft) {
+                dpadLeft = false;
+                setButton(KeyEvent.KEYCODE_DPAD_LEFT, false);
+            }
+            if (dpadRight) {
+                dpadRight = false;
+                setButton(KeyEvent.KEYCODE_DPAD_RIGHT, false);
+            }
+            if (dpadCenter) {
+                dpadCenter = false;
+                setButton(KeyEvent.KEYCODE_BUTTON_A, false);
+            }
         }
     }
 

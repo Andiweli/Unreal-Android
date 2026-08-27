@@ -113,9 +113,38 @@ add_compile_definitions(
 # UE1 normally assumes UE1/Source is the top-level CMake source directory.
 # In Android Studio, this wrapper is the top-level source dir, so provide UE1's
 # original cmake module path explicitly.
+# UNREAL_ANDROID_NATIVE_CONSOLE_EXEC_V149
+# SDLLaunch.cpp keeps the active UEngine* local. Expose it to the Android
+# console JNI bridge without changing UE1 behavior on either 32-bit or 64-bit.
+set(UE1_ANDROID_SDL_LAUNCH "${UE1_ROOT}/Source/Unreal/Src/SDLLaunch.cpp")
+if(EXISTS "${UE1_ANDROID_SDL_LAUNCH}")
+    file(READ "${UE1_ANDROID_SDL_LAUNCH}" _ue1_android_sdl_launch_console)
+    if(NOT _ue1_android_sdl_launch_console MATCHES "GAndroidConsoleEngineV149")
+        string(REPLACE "#include \"Engine.h\""
+               "#include \"Engine.h\"\nextern UEngine* GAndroidConsoleEngineV149;"
+               _ue1_android_sdl_launch_console "${_ue1_android_sdl_launch_console}")
+        string(REPLACE "UEngine* Engine = InitEngine();"
+               "UEngine* Engine = InitEngine(); GAndroidConsoleEngineV149 = Engine;"
+               _ue1_android_sdl_launch_console "${_ue1_android_sdl_launch_console}")
+        string(REPLACE "ExitEngine( Engine );"
+               "GAndroidConsoleEngineV149 = NULL; ExitEngine( Engine );"
+               _ue1_android_sdl_launch_console "${_ue1_android_sdl_launch_console}")
+        file(WRITE "${UE1_ANDROID_SDL_LAUNCH}" "${_ue1_android_sdl_launch_console}")
+        message(STATUS "UNREAL_ANDROID_NATIVE_CONSOLE_EXEC_V149 patched SDLLaunch.cpp")
+    endif()
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${UE1_ROOT}/Source/cmake")
 
 add_subdirectory("${UE1_ROOT}/Source" "${CMAKE_BINARY_DIR}/UE1")
+
+if(TARGET Unreal)
+    target_sources(Unreal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/android/unreal_android_console_exec.cpp")
+    target_include_directories(Unreal PRIVATE
+            "${UE1_ROOT}/Source/Core/Inc"
+            "${UE1_ROOT}/Source/Engine/Inc"
+            "${UE1_ROOT}/Source/NSDLDrv/Inc")
+endif()
 
 # Android system libraries needed by the final shared object and some static UE1 modules.
 if(TARGET Unreal)
