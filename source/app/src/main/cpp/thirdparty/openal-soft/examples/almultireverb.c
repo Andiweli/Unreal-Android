@@ -157,8 +157,7 @@ static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
  */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err;
-    ALenum format;
+    ALenum err, format;
     ALuint buffer;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -265,15 +264,13 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
     const ALfloat portal_pos[3] = { 0.0f, 0.0f, 0.0f };
     const ALfloat portal_norm[3] = { sqrtf(0.5f), 0.0f, -sqrtf(0.5f) };
     const ALfloat portal_radius = 2.5f;
-    ALfloat other_dir[3];
-    ALfloat this_dir[3];
+    ALfloat other_dir[3], this_dir[3];
     ALfloat listener_pos[3];
     ALfloat local_norm[3];
     ALfloat local_dir[3];
     ALfloat near_edge[3];
     ALfloat far_edge[3];
-    ALfloat edist;
-    ALfloat dist;
+    ALfloat dist, edist;
 
     /* Update the listener position for the amount of time passed. This uses a
      * simple triangular LFO to offset the position (moves along the X axis
@@ -306,12 +303,9 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
     dist = sqrtf(dot_product(local_dir, local_dir));
     if(dist > 0.00001f)
     {
-        const EFXEAXREVERBPROPERTIES *other_reverb;
-        const EFXEAXREVERBPROPERTIES *this_reverb;
-        ALuint other_effect;
-        ALuint this_effect;
-        ALfloat magnitude;
-        ALfloat dir_dot_norm;
+        const EFXEAXREVERBPROPERTIES *other_reverb, *this_reverb;
+        ALuint other_effect, this_effect;
+        ALfloat magnitude, dir_dot_norm;
 
         /* Normalize the direction to the portal. */
         local_dir[0] /= dist;

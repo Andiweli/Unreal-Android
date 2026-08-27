@@ -31,7 +31,6 @@
  * generators, and have the ability to hook up EFX filters and effects.
  */
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -184,8 +183,7 @@ int main(int argc, char *argv[])
 {
     enum WaveType wavetype = WT_Sine;
     const char *appname = argv[0];
-    ALuint source;
-    ALuint buffer;
+    ALuint source, buffer;
     ALint last_pos;
     ALuint seconds = 4;
     ALint srate = -1;
@@ -193,9 +191,6 @@ int main(int argc, char *argv[])
     ALCint dev_rate;
     ALenum state;
     ALfloat gain = 1.0f;
-    ALfloat source_x = 0.0f;
-    ALfloat source_y = 0.0f;
-    ALfloat source_z = 0.0f;
     int i;
 
     argv++; argc--;
@@ -225,8 +220,7 @@ int main(int argc, char *argv[])
 "                                triangle, impulse, noise\n"
 "  --freq/-f <hz>            Tone frequency (default 1000 hz)\n"
 "  --gain/-g <gain>          gain 0.0 to 1 (default 1)\n"
-"  --srate/-s <sample rate>  Sampling rate (default output rate)\n"
-"  --position/-p <x,y,z>     Position of the source (default 0,0,0)\n",
+"  --srate/-s <sample rate>  Sampling rate (default output rate)\n",
                 appname
             );
             CloseAL();
@@ -292,33 +286,6 @@ int main(int argc, char *argv[])
                 srate = 40;
             }
         }
-        else if(i+1 < argc && (strcmp(argv[i], "--position") == 0 || strcmp(argv[i], "-p") == 0))
-        {
-            i++;
-            const char *argptr = argv[i];
-            char *nextptr = NULL;
-            bool okay = false;
-
-            source_x = strtof(argptr, &nextptr);
-            if(nextptr != argptr && *nextptr == ',')
-            {
-                argptr = nextptr+1;
-                source_y = strtof(argptr, &nextptr);
-                if(nextptr != argptr && *nextptr == ',')
-                {
-                    argptr = nextptr+1;
-                    source_z = strtof(argptr, &nextptr);
-                    okay = (nextptr != argptr && *nextptr == '\0');
-                }
-            }
-            if(!okay || !isfinite(source_x) || !isfinite(source_y) || !isfinite(source_z))
-            {
-                fprintf(stderr, "Invalid position: %s\n", argv[i]);
-                source_x = 0.0f;
-                source_y = 0.0f;
-                source_z = 0.0f;
-            }
-        }
     }
 
     {
@@ -337,15 +304,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("Playing %uhz %s-wave tone at (%f, %f, %f) with %dhz sample rate and %dhz output, for %u second%s...\n",
-        tone_freq, GetWaveTypeName(wavetype), source_x, source_y, source_z, srate, dev_rate, seconds, (seconds!=1)?"s":"");
+    printf("Playing %uhz %s-wave tone with %dhz sample rate and %dhz output, for %u second%s...\n",
+        tone_freq, GetWaveTypeName(wavetype), srate, dev_rate, seconds, (seconds!=1)?"s":"");
     fflush(stdout);
 
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
     alSourcei(source, AL_BUFFER, (ALint)buffer);
-    alSource3f(source, AL_POSITION, source_x, source_y, source_z);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound for a while. */

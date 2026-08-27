@@ -1,0 +1,15 @@
+<resources>
+    <!-- UNREAL_ANDROID_API16_THEME_V212: API 16-20 must not resolve a Material theme. -->
+    <style name="AppTheme" parent="android:style/Theme.Holo.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">#000000</item>
+    </style>
+
+    <style name="GameTheme" parent="android:style/Theme.Holo.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowBackground">#000000</item>
+    </style>
+</resources>

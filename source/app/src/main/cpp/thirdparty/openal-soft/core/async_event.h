@@ -1,17 +1,19 @@
 #ifndef CORE_EVENT_H
 #define CORE_EVENT_H
 
+#include <array>
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <variant>
 
-#include "altypes.hpp"
+#include "almalloc.h"
 
 struct EffectState;
 
+using uint = unsigned int;
 
-enum class AsyncEnableBits : u8 {
+
+enum class AsyncEnableBits : std::uint8_t {
     SourceState,
     BufferCompleted,
     Disconnected,
@@ -19,7 +21,7 @@ enum class AsyncEnableBits : u8 {
 };
 
 
-enum class AsyncSrcState : u8 {
+enum class AsyncSrcState : std::uint8_t {
     Reset,
     Stop,
     Play,
@@ -29,13 +31,13 @@ enum class AsyncSrcState : u8 {
 using AsyncKillThread = std::monostate;
 
 struct AsyncSourceStateEvent {
-    u32 mId;
+    uint mId;
     AsyncSrcState mState;
 };
 
 struct AsyncBufferCompleteEvent {
-    u32 mId;
-    u32 mCount;
+    uint mId;
+    uint mCount;
 };
 
 struct AsyncDisconnectEvent {
@@ -53,9 +55,10 @@ using AsyncEvent = std::variant<AsyncKillThread,
         AsyncDisconnectEvent>;
 
 template<typename T, typename ...Args>
-auto &InitAsyncEvent(AsyncEvent &event, Args&& ...args)
+auto &InitAsyncEvent(std::byte *evtbuf, Args&& ...args)
 {
-    auto *evt = std::construct_at(&event, std::in_place_type<T>, std::forward<Args>(args)...);
+    auto *evt = al::construct_at(reinterpret_cast<AsyncEvent*>(evtbuf), std::in_place_type<T>,
+        std::forward<Args>(args)...);
     return std::get<T>(*evt);
 }
 

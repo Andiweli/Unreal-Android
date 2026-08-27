@@ -10,7 +10,7 @@ namespace Ui {
 class MainWindow;
 }
 
-class MainWindow final : public QMainWindow {
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 private Q_SLOTS:
@@ -45,7 +45,7 @@ private Q_SLOTS:
     void addHrtfFile();
     void removeHrtfFile();
 
-    void updateHrtfRemoveButton() const;
+    void updateHrtfRemoveButton();
 
     void showEnabledBackendMenu(QPoint pt);
     void showDisabledBackendMenu(QPoint pt);
@@ -78,8 +78,7 @@ private:
 
     void selectDecoderFile(QLineEdit *line, const char *caption);
 
-    [[nodiscard]]
-    auto collectHrtfs() const -> QStringList;
+    QStringList collectHrtfs();
 
     void loadConfig(const QString &fname);
     void saveConfig(const QString &fname) const;

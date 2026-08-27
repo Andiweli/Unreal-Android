@@ -5,6 +5,9 @@
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 #include <android/log.h>
 #endif
+#if defined(__ANDROID__)
+#include <sys/system_properties.h> // UNREAL_ANDROID_OUYA_PERF_RESTORE_V214
+#endif
 
 #include "NOpenGLESDrvPrivate.h"
 
@@ -122,6 +125,45 @@ static void UE1GLESAndroidLogResolutionV71( const char* Text )
 	debugf( NAME_Log, "%s", Text );
 }
 
+// Runtime OUYA detection is required because the normal flavor serves both
+// ordinary Android devices and the API16/Tegra3 OUYA. Do not use a global
+// compile-time OUYA define here or modern 32-bit devices would inherit the
+// legacy performance path. // UNREAL_ANDROID_OUYA_PERF_RESTORE_V214
+static UBOOL UE1GLESAndroidPropertyContainsOuyaV214( const char* Property )
+{
+#if defined(__ANDROID__)
+	char Value[PROP_VALUE_MAX];
+	Value[0] = 0;
+	if( __system_property_get( Property, Value ) <= 0 || !Value[0] )
+		return false;
+
+	const INT ValueLen = appStrlen( Value );
+	for( INT i=0; i+4<=ValueLen; ++i )
+		if( appStrnicmp( Value+i, "ouya", 4 ) == 0 )
+			return true;
+#endif
+	return false;
+}
+
+static UBOOL UE1GLESAndroidIsOuyaV214()
+{
+	static INT Cached = -1;
+	if( Cached < 0 )
+	{
+		Cached =
+			UE1GLESAndroidPropertyContainsOuyaV214( "ro.product.manufacturer" ) ||
+			UE1GLESAndroidPropertyContainsOuyaV214( "ro.product.model" ) ||
+			UE1GLESAndroidPropertyContainsOuyaV214( "ro.product.device" ) ||
+			UE1GLESAndroidPropertyContainsOuyaV214( "ro.product.name" );
+
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		if( Cached )
+			__android_log_print( ANDROID_LOG_INFO, "UE1Android", "UNREAL_ANDROID_OUYA_PERF_RESTORE_V214 active: real OUYA detected" );
+#endif
+	}
+	return Cached != 0;
+}
+
 static INT UE1GLESAndroidResolutionModeV71()
 {
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
@@ -144,6 +186,12 @@ static UBOOL UE1GLESAndroidFixedRenderSizeV71( INT& OutX, INT& OutY )
 	{
 		OutX = 1024;
 		OutY = 768;
+		return true;
+	}
+	if( Mode == 3 ) // UNREAL_ANDROID_OUYA_960_REAL_FBO_V214
+	{
+		OutX = 960;
+		OutY = 540;
 		return true;
 	}
 	OutX = 0;
@@ -715,8 +763,11 @@ UBOOL UNOpenGLESRenderDevice::EnsureAndroidSceneFBO()
 	// stretched fullscreen to the Android drawable.  Use nearest so 1280x720 and
 	// 1024x768 are visibly different from Native and avoid extra filtering around
 	// old modulated overlays such as WaterRings2.
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	// The old optimized OUYA 1.3.0 path used linear filtering for its low-res
+	// render target. Keep the modern nearest path everywhere else.
+	const GLenum AndroidSceneFilter = UE1GLESAndroidIsOuyaV214() ? GL_LINEAR : GL_NEAREST; // UNREAL_ANDROID_OUYA_FBO_LINEAR_V214
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, AndroidSceneFilter );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, AndroidSceneFilter );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, RenderX, RenderY, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL );
@@ -941,7 +992,11 @@ void UNOpenGLESRenderDevice::Unlock( UBOOL Blit )
 	else if( AndroidSceneFBOActive )
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 
-	glFlush();
+	// OUYA 1.3.0 deliberately did not force an extra glFlush() before the SDL
+	// buffer swap. Tegra3 is sensitive to this redundant per-frame submission.
+	// SDL_GL_SwapWindow performs the required presentation/flush.
+	if( !UE1GLESAndroidIsOuyaV214() ) // UNREAL_ANDROID_OUYA_SKIP_FORCED_GLFLUSH_V214
+		glFlush();
 
 	unguard;
 }

@@ -4,14 +4,15 @@
 #include <algorithm>
 #include <array>
 #include <complex>
-#include <ranges>
-#include <span>
 #include <vector>
 
 #include "alcomplex.h"
-#include "opthelpers.h"
+#include "alspan.h"
 #include "polyphase_resampler.h"
 
+
+// The maximum path length used when processing filenames.
+inline constexpr auto MAX_PATH_LEN = 256u;
 
 // The limit to the number of 'distances' listed in the data set definition.
 // Must be less than 256
@@ -42,6 +43,8 @@ inline constexpr auto MIN_POINTS = 16u;
 inline constexpr auto MAX_POINTS = 8192u;
 
 
+using uint = unsigned int;
+
 /* Complex double type. */
 using complex_d = std::complex<double>;
 
@@ -67,33 +70,33 @@ enum ChannelTypeT {
 // Structured HRIR storage for stereo azimuth pairs, elevations, and fields.
 struct HrirAzT {
     double mAzimuth{0.0};
-    unsigned mIndex{0u};
+    uint mIndex{0u};
     std::array<double,2> mDelays{};
-    std::array<std::span<double>,2> mIrs{};
+    std::array<al::span<double>,2> mIrs{};
 };
 
 struct HrirEvT {
     double mElevation{0.0};
-    std::span<HrirAzT> mAzs;
+    al::span<HrirAzT> mAzs;
 };
 
 struct HrirFdT {
     double mDistance{0.0};
-    unsigned mEvStart{0u};
-    std::span<HrirEvT> mEvs;
+    uint mEvStart{0u};
+    al::span<HrirEvT> mEvs;
 };
 
 // The HRIR metrics and data set used when loading, processing, and storing
 // the resulting HRTF.
 struct HrirDataT {
-    unsigned mIrRate{0u};
+    uint mIrRate{0u};
     SampleTypeT mSampleType{ST_S24};
     ChannelTypeT mChannelType{CT_NONE};
-    unsigned mIrPoints{0u};
-    unsigned mFftSize{0u};
-    unsigned mIrSize{0u};
+    uint mIrPoints{0u};
+    uint mFftSize{0u};
+    uint mIrSize{0u};
     double mRadius{0.0};
-    unsigned mIrCount{0u};
+    uint mIrCount{0u};
 
     std::vector<double> mHrirsBase;
     std::vector<HrirEvT> mEvsBase;
@@ -102,38 +105,42 @@ struct HrirDataT {
     std::vector<HrirFdT> mFds;
 
     /* GCC warns when it tries to inline this. */
-    NOINLINE ~HrirDataT() = default;
+    ~HrirDataT();
 };
 
 
-bool PrepareHrirData(std::span<const double> distances,
-    std::span<const unsigned,MAX_FD_COUNT> evCounts,
-    std::span<const std::array<unsigned,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
+bool PrepareHrirData(const al::span<const double> distances,
+    const al::span<const uint,MAX_FD_COUNT> evCounts,
+    const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
 
 /* Calculate the magnitude response of the given input.  This is used in
  * place of phase decomposition, since the phase residuals are discarded for
  * minimum phase reconstruction.  The mirrored half of the response is also
  * discarded.
  */
-inline void MagnitudeResponse(const std::span<const complex_d> in, const std::span<double> out)
+inline void MagnitudeResponse(const al::span<const complex_d> in, const al::span<double> out)
 {
-    static constexpr auto Epsilon = 1e-9;
-    std::ranges::transform(in | std::views::take(out.size()), out.begin(),
-        [](const complex_d &c) -> double { return std::max(std::abs(c), Epsilon); });
+    static constexpr double Epsilon{1e-9};
+    for(size_t i{0};i < out.size();++i)
+        out[i] = std::max(std::abs(in[i]), Epsilon);
 }
 
 // Performs a forward FFT.
-inline void FftForward(unsigned const n, complex_d *inout)
-{ forward_fft(std::span{inout, n}); }
+inline void FftForward(const uint n, complex_d *inout)
+{ forward_fft(al::span{inout, n}); }
 
 // Performs an inverse FFT, scaling the result by the number of elements.
-inline void FftInverse(unsigned const n, complex_d *inout)
+inline void FftInverse(const uint n, complex_d *inout)
 {
-    const auto values = std::span{inout, n};
+    const auto values = al::span{inout, n};
     inverse_fft(values);
 
-    const auto f = 1.0 / n;
-    std::ranges::for_each(values, [f](complex_d &value) { value *= f; });
+    const double f{1.0 / n};
+    std::for_each(values.begin(), values.end(), [f](complex_d &value) { value *= f; });
 }
+
+// Performs linear interpolation.
+inline double Lerp(const double a, const double b, const double f)
+{ return a + f * (b - a); }
 
 #endif /* MAKEMHR_H */

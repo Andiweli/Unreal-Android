@@ -27,24 +27,22 @@
 
 namespace {
 
-struct LoopbackBackend final : BackendBase {
-    explicit LoopbackBackend(gsl::not_null<DeviceBase*> const device) noexcept
-        : BackendBase{device}
-    { }
+struct LoopbackBackend final : public BackendBase {
+    explicit LoopbackBackend(DeviceBase *device) noexcept : BackendBase{device} { }
 
     void open(std::string_view name) override;
-    auto reset() -> bool override;
+    bool reset() override;
     void start() override;
     void stop() override;
 };
 
 
-void LoopbackBackend::open(std::string_view const name)
+void LoopbackBackend::open(std::string_view name)
 {
     mDeviceName = name;
 }
 
-auto LoopbackBackend::reset() -> bool
+bool LoopbackBackend::reset()
 {
     setDefaultWFXChannelOrder();
     return true;
@@ -59,20 +57,19 @@ void LoopbackBackend::stop()
 } // namespace
 
 
-auto LoopbackBackendFactory::init() -> bool
+bool LoopbackBackendFactory::init()
 { return true; }
 
-auto LoopbackBackendFactory::querySupport(BackendType) -> bool
+bool LoopbackBackendFactory::querySupport(BackendType)
 { return true; }
 
 auto LoopbackBackendFactory::enumerate(BackendType) -> std::vector<std::string>
 { return {}; }
 
-auto LoopbackBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device, BackendType)
-    -> BackendPtr
+BackendPtr LoopbackBackendFactory::createBackend(DeviceBase *device, BackendType)
 { return BackendPtr{new LoopbackBackend{device}}; }
 
-auto LoopbackBackendFactory::getFactory() -> BackendFactory&
+BackendFactory &LoopbackBackendFactory::getFactory()
 {
     static LoopbackBackendFactory factory{};
     return factory;

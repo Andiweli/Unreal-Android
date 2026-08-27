@@ -21,40 +21,32 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
-#include "config.h"
-
 #include <cstdio>
 #include <memory>
-#include <ranges>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/base.h"
+#include "alspan.h"
+#include "fmt/core.h"
+
 #include "sofa-support.h"
 
 #include "mysofa.h"
 
 #include "win_main_utf8.h"
 
-#if HAVE_CXXMODULES
-import gsl;
-#else
-#include "gsl/gsl"
-#endif
-
 namespace {
 
 using namespace std::string_view_literals;
+using uint = unsigned int;
 
 void PrintSofaAttributes(const std::string_view prefix, MYSOFA_ATTRIBUTE *attribute)
 {
     while(attribute)
     {
-        fmt::println("{}.{}: {}", prefix, attribute->name ? attribute->name : "<null>",
-            attribute->value ? attribute->value : "<null>");
+        fmt::println("{}.{}: {}", prefix, attribute->name, attribute->value);
         attribute = attribute->next;
     }
 }
@@ -64,7 +56,7 @@ void PrintSofaArray(const std::string_view prefix, MYSOFA_ARRAY *array, bool sho
     PrintSofaAttributes(prefix, array->attributes);
     if(showValues)
     {
-        const auto values = std::span{array->values, array->elements};
+        const auto values = al::span{array->values, array->elements};
         for(size_t i{0u};i < values.size();++i)
             fmt::println("{}[{}]: {:.6f}", prefix, i, values[i]);
     }
@@ -78,7 +70,7 @@ void PrintSofaArray(const std::string_view prefix, MYSOFA_ARRAY *array, bool sho
  * possible.  Those sets that contain purely random measurements or use
  * different major axes will fail.
  */
-void PrintCompatibleLayout(const std::span<const float> xyzs)
+void PrintCompatibleLayout(const al::span<const float> xyzs)
 {
     fmt::println("");
 
@@ -89,10 +81,10 @@ void PrintCompatibleLayout(const std::span<const float> xyzs)
         return;
     }
 
-    auto used_elems = 0u;
+    uint used_elems{0};
     for(size_t fi{0u};fi < fds.size();++fi)
     {
-        for(unsigned ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
+        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
             used_elems += fds[fi].mAzCounts[ei];
     }
 
@@ -104,9 +96,9 @@ void PrintCompatibleLayout(const std::span<const float> xyzs)
     fmt::print("\nazimuths = ");
     for(size_t fi{0u};fi < fds.size();++fi)
     {
-        for(unsigned ei{0u};ei < fds[fi].mEvStart;++ei)
+        for(uint ei{0u};ei < fds[fi].mEvStart;++ei)
             fmt::print("{}{}", fds[fi].mAzCounts[fds[fi].mEvCount - 1 - ei], ", ");
-        for(unsigned ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
+        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
             fmt::print("{}{}", fds[fi].mAzCounts[ei],
                 (ei < (fds[fi].mEvCount - 1)) ? ", " :
                 (fi < (fds.size() - 1)) ? ";\n           " : "\n");
@@ -144,10 +136,10 @@ void SofaInfo(const std::string &filename)
     PrintSofaArray("DataDelay"sv, &sofa->DataDelay);
     PrintSofaArray("SourcePosition"sv, &sofa->SourcePosition, false);
 
-    PrintCompatibleLayout(std::span{sofa->SourcePosition.values, sofa->M*3_uz});
+    PrintCompatibleLayout(al::span{sofa->SourcePosition.values, sofa->M*3_uz});
 }
 
-int main(std::span<std::string_view> args)
+int main(al::span<std::string_view> args)
 {
     if(args.size() != 2)
     {
@@ -164,7 +156,8 @@ int main(std::span<std::string_view> args)
 
 int main(int argc, char **argv)
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
-    std::ranges::copy(std::views::counted(argv, argc), args.begin());
-    return main(std::span{args});
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
 }

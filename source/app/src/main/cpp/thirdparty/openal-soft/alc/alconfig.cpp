@@ -32,27 +32,22 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <istream>
 #include <limits>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "filesystem.h"
-#include "fmt/ranges.h"
-#include "gsl/gsl"
-#include "strutils.hpp"
+#include "strutils.h"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -66,77 +61,39 @@ namespace {
 
 using namespace std::string_view_literals;
 
-const auto EmptyString = std::string{};
+#if defined(_WIN32) && !defined(_GAMING_XBOX) && !ALSOFT_UWP
+struct CoTaskMemDeleter {
+    void operator()(void *mem) const { CoTaskMemFree(mem); }
+};
+#endif
 
 struct ConfigEntry {
     std::string key;
     std::string value;
-
-    ConfigEntry(auto&& key_, auto&& value_)
-        : key{std::forward<decltype(key_)>(key_)}, value{std::forward<decltype(value_)>(value_)}
-    { }
 };
 std::vector<ConfigEntry> ConfOpts;
 
 
-/* True UTF-8 validation is way beyond me. However, this should weed out any
- * obviously non-UTF-8 text.
- *
- * The general form of the byte stream is relatively simple. The first byte of
- * a codepoint either has a 0 bit for the msb, indicating a single-byte ASCII-
- * compatible codepoint, or the number of bytes that make up the codepoint
- * (including itself) indicated by the number of successive 1 bits, and each
- * successive byte of the codepoint has '10' for the top bits. That is:
- *
- * 0xxxxxxx - single-byte ASCII-compatible codepoint
- * 110xxxxx 10xxxxxx - two-byte codepoint
- * 1110xxxx 10xxxxxx 10xxxxxx - three-byte codepoint
- * 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx - four-byte codepoint
- * ... etc ...
- *
- * Where the 'x' bits are concatenated together to form a 32-bit Unicode
- * codepoint. This doesn't check whether the codepoints themselves are valid,
- * it just validates the correct number of bytes for multi-byte sequences.
- */
-auto validate_utf8(const std::string_view str) -> bool
+std::string &lstrip(std::string &line)
 {
-    auto const end = str.end();
-    /* Look for the first multi-byte/non-ASCII codepoint. */
-    auto current = std::ranges::find_if(str.begin(), end,
-        [](const char ch) -> bool { return (ch&0x80) != 0; });
-    while(const auto remaining = std::distance(current, end))
-    {
-        /* Get the number of bytes that make up this codepoint (must be at
-         * least 2). This includes the current byte.
-         */
-        const auto tocheck = std::countl_one(as_unsigned(*current));
-        if(tocheck < 2 || tocheck > remaining)
-            return false;
-
-        const auto next = std::next(current, tocheck);
-
-        /* Check that the following bytes are a proper continuation. */
-        const auto valid = std::ranges::all_of(std::next(current), next,
-            [](const char ch) -> bool { return (ch&0xc0) == 0x80; });
-        if(not valid)
-            return false;
-
-        /* Seems okay. Look for the next multi-byte/non-ASCII codepoint. */
-        current = std::ranges::find_if(next, end, [](const char ch) -> bool { return ch&0x80; });
-    }
-    return true;
-}
-
-auto lstrip(std::string &line) -> std::string&
-{
-    auto iter = std::ranges::find_if_not(line, [](const char c) { return std::isspace(c); });
-    line.erase(line.begin(), iter);
+    size_t pos{0};
+    while(pos < line.length() && std::isspace(line[pos]))
+        ++pos;
+    line.erase(0, pos);
     return line;
 }
 
-auto expdup(std::string_view str) -> std::string
+bool readline(std::istream &f, std::string &output)
 {
-    auto output = std::string{};
+    while(f.good() && f.peek() == '\n')
+        f.ignore();
+
+    return std::getline(f, output) && !output.empty();
+}
+
+std::string expdup(std::string_view str)
+{
+    std::string output;
 
     while(!str.empty())
     {
@@ -162,20 +119,19 @@ auto expdup(std::string_view str) -> std::string
             continue;
         }
 
-        const auto hasbraces = bool{str.front() == '{'};
+        const bool hasbraces{str.front() == '{'};
         if(hasbraces) str.remove_prefix(1);
 
-        const auto envenditer = std::ranges::find_if_not(str,
-            [](const char c) { return c == '_' || std::isalnum(c); });
-
-        if(hasbraces && (envenditer == str.end() || *envenditer != '}'))
+        size_t envend{0};
+        while(envend < str.size() && (std::isalnum(str[envend]) || str[envend] == '_'))
+            ++envend;
+        if(hasbraces && (envend == str.size() || str[envend] != '}'))
             continue;
+        const std::string envname{str.substr(0, envend)};
+        if(hasbraces) ++envend;
+        str.remove_prefix(envend);
 
-        const auto envend = gsl::narrow<size_t>(std::distance(str.begin(), envenditer));
-        const auto envname = std::string{str.substr(0, envend)};
-        str.remove_prefix(envend + hasbraces);
-
-        if(const auto envval = al::getenv(envname.c_str()))
+        if(auto envval = al::getenv(envname.c_str()))
             output += *envval;
     }
 
@@ -184,130 +140,126 @@ auto expdup(std::string_view str) -> std::string
 
 void LoadConfigFromFile(std::istream &f)
 {
-    constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
+    std::string curSection;
+    std::string buffer;
 
-    auto curSection = std::string{};
-    auto buffer = std::string{};
-    auto linenum = 0_uz;
-
-    while(std::getline(f, buffer))
+    while(readline(f, buffer))
     {
-        ++linenum;
         if(lstrip(buffer).empty())
             continue;
 
-        auto cmtpos = std::min(buffer.find('#'), buffer.size());
-        if(cmtpos != 0)
-            cmtpos = buffer.find_last_not_of(whitespace_chars, cmtpos-1)+1;
-        if(cmtpos == 0) continue;
-        buffer.erase(cmtpos);
-
-        if(not validate_utf8(buffer))
-        {
-            ERR(" config parse error: non-UTF-8 characters on line {}", linenum);
-            ERR("{}", fmt::format("  {::#04x}",
-                buffer|std::views::transform([](auto c) { return as_unsigned(c); })));
-            continue;
-        }
-
         if(buffer[0] == '[')
         {
-            const auto endpos = buffer.find(']', 1);
+            auto endpos = buffer.find(']', 1);
             if(endpos == 1 || endpos == std::string::npos)
             {
-                ERR(" config parse error on line {}: bad section \"{}\"", linenum, buffer);
+                ERR(" config parse error: bad line \"{}\"", buffer);
                 continue;
             }
-            if(const auto last = buffer.find_first_not_of(whitespace_chars, endpos+1);
-                last < buffer.size() && buffer[last] != '#')
+            if(buffer[endpos+1] != '\0')
             {
-                ERR(" config parse error on line {}: extraneous characters after section \"{}\"",
-                    linenum, buffer);
-                continue;
+                size_t last{endpos+1};
+                while(last < buffer.size() && std::isspace(buffer[last]))
+                    ++last;
+
+                if(last < buffer.size() && buffer[last] != '#')
+                {
+                    ERR(" config parse error: bad line \"{}\"", buffer);
+                    continue;
+                }
             }
 
             auto section = std::string_view{buffer}.substr(1, endpos-1);
 
             curSection.clear();
-            if(al::case_compare(section, "general"sv) == 0)
-                continue;
-
-            while(!section.empty())
+            if(al::case_compare(section, "general"sv) != 0)
             {
-                const auto nextp = section.find('%');
-                if(nextp == std::string_view::npos)
-                {
-                    curSection += section;
-                    break;
-                }
+                do {
+                    auto nextp = section.find('%');
+                    if(nextp == std::string_view::npos)
+                    {
+                        curSection += section;
+                        break;
+                    }
 
-                curSection += section.substr(0, nextp);
-                section.remove_prefix(nextp);
+                    curSection += section.substr(0, nextp);
+                    section.remove_prefix(nextp);
 
-                if(section.size() > 2
-                    && ((section[1] >= '0' && section[1] <= '9')
-                        || (section[1] >= 'a' && section[1] <= 'f')
-                        || (section[1] >= 'A' && section[1] <= 'F'))
-                    && ((section[2] >= '0' && section[2] <= '9')
-                        || (section[2] >= 'a' && section[2] <= 'f')
-                        || (section[2] >= 'A' && section[2] <= 'F')))
-                {
-                    auto b = 0;
-                    if(section[1] >= '0' && section[1] <= '9')
-                        b = (section[1]-'0') << 4;
-                    else if(section[1] >= 'a' && section[1] <= 'f')
-                        b = (section[1]-'a'+0xa) << 4;
-                    else if(section[1] >= 'A' && section[1] <= 'F')
-                        b = (section[1]-'A'+0x0a) << 4;
-                    if(section[2] >= '0' && section[2] <= '9')
-                        b |= section[2]-'0';
-                    else if(section[2] >= 'a' && section[2] <= 'f')
-                        b |= section[2]-'a'+0xa;
-                    else if(section[2] >= 'A' && section[2] <= 'F')
-                        b |= section[2]-'A'+0x0a;
-                    curSection += gsl::narrow_cast<char>(b);
-                    section.remove_prefix(3);
-                }
-                else if(section.size() > 1 && section[1] == '%')
-                {
-                    curSection += '%';
-                    section.remove_prefix(2);
-                }
-                else
-                {
-                    curSection += '%';
-                    section.remove_prefix(1);
-                }
+                    if(section.size() > 2 &&
+                       ((section[1] >= '0' && section[1] <= '9') ||
+                        (section[1] >= 'a' && section[1] <= 'f') ||
+                        (section[1] >= 'A' && section[1] <= 'F')) &&
+                       ((section[2] >= '0' && section[2] <= '9') ||
+                        (section[2] >= 'a' && section[2] <= 'f') ||
+                        (section[2] >= 'A' && section[2] <= 'F')))
+                    {
+                        int b{0};
+                        if(section[1] >= '0' && section[1] <= '9')
+                            b = (section[1]-'0') << 4;
+                        else if(section[1] >= 'a' && section[1] <= 'f')
+                            b = (section[1]-'a'+0xa) << 4;
+                        else if(section[1] >= 'A' && section[1] <= 'F')
+                            b = (section[1]-'A'+0x0a) << 4;
+                        if(section[2] >= '0' && section[2] <= '9')
+                            b |= (section[2]-'0');
+                        else if(section[2] >= 'a' && section[2] <= 'f')
+                            b |= (section[2]-'a'+0xa);
+                        else if(section[2] >= 'A' && section[2] <= 'F')
+                            b |= (section[2]-'A'+0x0a);
+                        curSection += static_cast<char>(b);
+                        section.remove_prefix(3);
+                    }
+                    else if(section.size() > 1 && section[1] == '%')
+                    {
+                        curSection += '%';
+                        section.remove_prefix(2);
+                    }
+                    else
+                    {
+                        curSection += '%';
+                        section.remove_prefix(1);
+                    }
+                } while(!section.empty());
             }
 
             continue;
         }
 
+        auto cmtpos = std::min(buffer.find('#'), buffer.size());
+        while(cmtpos > 0 && std::isspace(buffer[cmtpos-1]))
+            --cmtpos;
+        if(!cmtpos) continue;
+        buffer.erase(cmtpos);
+
         auto sep = buffer.find('=');
         if(sep == std::string::npos)
         {
-            ERR(" config parse error on line {}: malformed option \"{}\"", linenum, buffer);
+            ERR(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
         auto keypart = std::string_view{buffer}.substr(0, sep++);
-        keypart.remove_suffix(keypart.size() - (keypart.find_last_not_of(whitespace_chars)+1));
+        while(!keypart.empty() && std::isspace(keypart.back()))
+            keypart.remove_suffix(1);
         if(keypart.empty())
         {
-            ERR(" config parse error on line {}: malformed option \"{}\"", linenum, buffer);
+            ERR(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
         auto valpart = std::string_view{buffer}.substr(sep);
-        valpart.remove_prefix(std::min(valpart.find_first_not_of(whitespace_chars),
-            valpart.size()));
+        while(!valpart.empty() && std::isspace(valpart.front()))
+            valpart.remove_prefix(1);
 
-        auto fullKey = curSection;
-        if(!fullKey.empty())
+        std::string fullKey;
+        if(!curSection.empty())
+        {
+            fullKey += curSection;
             fullKey += '/';
+        }
         fullKey += keypart;
 
         if(valpart.size() > size_t{std::numeric_limits<int>::max()})
         {
-            ERR(" config parse error on line {}: value too long \"{}\"", linenum, buffer);
+            ERR(" config parse error: value too long in line \"{}\"", buffer);
             continue;
         }
         if(valpart.size() > 1)
@@ -323,7 +275,9 @@ void LoadConfigFromFile(std::istream &f)
         TRACE(" setting '{}' = '{}'", fullKey, valpart);
 
         /* Check if we already have this option set */
-        const auto ent = std::ranges::find(ConfOpts, fullKey, &ConfigEntry::key);
+        auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
+        { return entry.key == fullKey; };
+        auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
         if(ent != ConfOpts.end())
         {
             if(!valpart.empty())
@@ -332,7 +286,7 @@ void LoadConfigFromFile(std::istream &f)
                 ConfOpts.erase(ent);
         }
         else if(!valpart.empty())
-            ConfOpts.emplace_back(std::move(fullKey), expdup(valpart));
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(valpart)});
     }
     ConfOpts.shrink_to_fit();
 }
@@ -340,10 +294,11 @@ void LoadConfigFromFile(std::istream &f)
 auto GetConfigValue(const std::string_view devName, const std::string_view blockName,
     const std::string_view keyName) -> const std::string&
 {
+    static const auto emptyString = std::string{};
     if(keyName.empty())
-        return EmptyString;
+        return emptyString;
 
-    auto key = std::string{};
+    std::string key;
     if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
     {
         key = blockName;
@@ -356,17 +311,18 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
     }
     key += keyName;
 
-    const auto iter = std::ranges::find(ConfOpts, key, &ConfigEntry::key);
+    auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
+        [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option {} = \"{}\"", key, iter->value);
         if(!iter->value.empty())
             return iter->value;
-        return EmptyString;
+        return emptyString;
     }
 
     if(devName.empty())
-        return EmptyString;
+        return emptyString;
     return GetConfigValue({}, blockName, keyName);
 }
 
@@ -376,40 +332,39 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
 #ifdef _WIN32
 void ReadALConfig()
 {
-    auto path = fs::path{};
+    fs::path path;
 
 #if !defined(_GAMING_XBOX)
     {
 #if !ALSOFT_UWP
-        auto bufstore = std::unique_ptr<WCHAR, decltype([](WCHAR *mem){ CoTaskMemFree(mem); })>{};
-        const auto hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, al::out_ptr(bufstore));
+        std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
+        const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(bufstore))};
         if(SUCCEEDED(hr))
         {
-            const auto buffer = std::wstring_view{bufstore.get()};
+            const std::wstring_view buffer{bufstore.get()};
 #else
-        auto localSettings = winrt::Windows::Storage::ApplicationDataContainer{
-            winrt::Windows::Storage::ApplicationData::Current().LocalSettings()};
+        winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
         auto bufstore = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
-        auto buffer = std::wstring_view{bufstore};
+        std::wstring_view buffer{bufstore};
         {
 #endif
             path = fs::path{buffer};
             path /= L"alsoft.ini";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(auto f = fs::ifstream{path}; f.is_open())
+            if(fs::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
 #endif
 
-    path = fs::path(al::char_as_u8(GetProcBinary().path));
+    path = fs::u8path(GetProcBinary().path);
     if(!path.empty())
     {
         path /= L"alsoft.ini";
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = fs::ifstream{path}; f.is_open())
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -417,7 +372,7 @@ void ReadALConfig()
     {
         path = *confpath;
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = fs::ifstream{path}; f.is_open())
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -426,13 +381,13 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    auto path = fs::path{"/etc/openal/alsoft.conf"};
+    fs::path path{"/etc/openal/alsoft.conf"};
 
     TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-    if(auto f = fs::ifstream{path}; f.is_open())
+    if(fs::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
 
-    auto confpaths = al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg");
+    std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
     /* Go through the list in reverse, since "the order of base directories
      * denotes their importance; the first directory listed is the most
      * important". Ergo, we need to load the settings from the later dirs
@@ -459,22 +414,22 @@ void ReadALConfig()
             path /= "alsoft.conf";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(auto f = fs::ifstream{path}; f.is_open())
+            if(fs::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
 
 #ifdef __APPLE__
-    auto mainBundle = CFBundleRef{CFBundleGetMainBundle()};
+    CFBundleRef mainBundle = CFBundleGetMainBundle();
     if(mainBundle)
     {
-        auto configURL = CFURLRef{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"),
-            CFSTR(""), nullptr)};
+        CFURLRef configURL{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""),
+            nullptr)};
 
-        auto fileName = std::array<unsigned char,PATH_MAX>{};
+        std::array<unsigned char,PATH_MAX> fileName{};
         if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            if(auto f = std::ifstream{reinterpret_cast<char*>(fileName.data())}; f.is_open())
+            if(std::ifstream f{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -486,7 +441,7 @@ void ReadALConfig()
         path /= ".alsoftrc";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -507,7 +462,7 @@ void ReadALConfig()
     if(!path.empty())
     {
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -517,14 +472,14 @@ void ReadALConfig()
         path /= "alsoft.conf";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config {}...", *confname);
-        if(auto f = std::ifstream{*confname}; f.is_open())
+        if(std::ifstream f{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -538,42 +493,33 @@ auto ConfigValueStr(const std::string_view devName, const std::string_view block
     return std::nullopt;
 }
 
-auto ConfigValueI32(std::string_view const devName, std::string_view const blockName,
-    std::string_view const keyName) -> std::optional<i32>
+auto ConfigValueInt(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<int>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return std::stoi(val, nullptr, 0);
-    }
-    catch(std::out_of_range&) {
-        WARN("Option is out of range of i32: {} = {}", keyName, val);
+        return static_cast<int>(std::stol(val, nullptr, 0));
     }
     catch(std::exception&) {
-        WARN("Option is not an i32: {} = {}", keyName, val);
+        WARN("Option is not an int: {} = {}", keyName, val);
     }
 
     return std::nullopt;
 }
 
-auto ConfigValueU32(std::string_view const devName, std::string_view const blockName,
-    std::string_view const keyName) -> std::optional<u32>
+auto ConfigValueUInt(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<unsigned int>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return gsl::narrow<u32>(std::stoul(val, nullptr, 0));
-    }
-    catch(std::out_of_range&) {
-        WARN("Option is out of range of u32: {} = {}", keyName, val);
-    }
-    catch(gsl::narrowing_error&) {
-        WARN("Option is out of range of u32: {} = {}", keyName, val);
+        return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
     }
     catch(std::exception&) {
-        WARN("Option is not an u32: {} = {}", keyName, val);
+        WARN("Option is not an unsigned int: {} = {}", keyName, val);
     }
     return std::nullopt;
 }
 
-auto ConfigValueF32(std::string_view const devName, std::string_view const blockName,
-    std::string_view const keyName) -> std::optional<f32>
+auto ConfigValueFloat(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<float>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return std::stof(val);
@@ -584,8 +530,8 @@ auto ConfigValueF32(std::string_view const devName, std::string_view const block
     return std::nullopt;
 }
 
-auto ConfigValueBool(std::string_view const devName, std::string_view const blockName,
-    std::string_view const keyName) -> std::optional<bool>
+auto ConfigValueBool(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<bool>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0

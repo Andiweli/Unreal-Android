@@ -25,13 +25,12 @@
 #include <cmath>
 #include <complex>
 #include <cstdlib>
-#include <numbers>
-#include <ranges>
-#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/device.h"
@@ -48,30 +47,29 @@ struct ContextBase;
 
 namespace {
 
+using uint = unsigned int;
 using complex_f = std::complex<float>;
 
-constexpr auto StftSize = 1024_uz;
-constexpr auto StftHalfSize = StftSize >> 1;
-constexpr auto OversampleFactor = 8_uz;
+constexpr size_t StftSize{1024};
+constexpr size_t StftHalfSize{StftSize >> 1};
+constexpr size_t OversampleFactor{8};
 
 static_assert(StftSize%OversampleFactor == 0, "Factor must be a clean divisor of the size");
-constexpr auto StftStep = StftSize / OversampleFactor;
+constexpr size_t StftStep{StftSize / OversampleFactor};
 
 /* Define a Hann window, used to filter the STFT input and output. */
 struct Windower {
     alignas(16) std::array<float,StftSize> mData{};
 
-    Windower() noexcept
+    Windower()
     {
-        static constexpr auto scale = std::numbers::pi / double{StftSize};
         /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0_u32, u32{StftHalfSize}), mData.begin(),
-            [](u32 const i) -> float
+        for(size_t i{0};i < StftHalfSize;i++)
         {
-            const auto val = std::sin((i+0.5) * scale);
-            return static_cast<float>(val * val);
-        });
-        std::ranges::copy(mData | std::views::take(StftHalfSize), mData.rbegin());
+            constexpr double scale{al::numbers::pi / double{StftSize}};
+            const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
+            mData[i] = mData[StftSize-1-i] = static_cast<float>(val * val);
+        }
     }
 };
 const Windower gWindow{};
@@ -85,9 +83,9 @@ struct FrequencyBin {
 
 struct PshifterState final : public EffectState {
     /* Effect parameters */
-    usize mCount{};
-    usize mPos{};
-    u32 mPitchShiftI{};
+    size_t mCount{};
+    size_t mPos{};
+    uint mPitchShiftI{};
     float mPitchShift{};
 
     /* Effects buffers */
@@ -111,10 +109,10 @@ struct PshifterState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 };
 
 void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -140,15 +138,15 @@ void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
         mFft = PFFFTSetup{StftSize, PFFFT_REAL};
 }
 
-void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
+void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<PshifterProps>(*props_);
-    const auto tune = props.CoarseTune*100 + props.FineTune;
-    const auto pitch = std::pow(2.0f, static_cast<float>(tune) / 1200.0f);
-    mPitchShiftI = fastf2u(std::clamp(pitch*MixerFracOne, float{MixerFracHalf},
-        float{MixerFracOne}*2.0f));
-    mPitchShift = static_cast<float>(mPitchShiftI) * float{1.0f/MixerFracOne};
+    const int tune{props.CoarseTune*100 + props.FineTune};
+    const float pitch{std::pow(2.0f, static_cast<float>(tune) / 1200.0f)};
+    mPitchShiftI = std::clamp(fastf2u(pitch*MixerFracOne), uint{MixerFracHalf},
+        uint{MixerFracOne}*2u);
+    mPitchShift  = static_cast<float>(mPitchShiftI) * float{1.0f/MixerFracOne};
 
     static constexpr auto coeffs = CalcDirectionCoeffs(std::array{0.0f, 0.0f, -1.0f});
 
@@ -157,7 +155,7 @@ void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
 }
 
 void PshifterState::process(const size_t samplesToDo,
-    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -166,20 +164,19 @@ void PshifterState::process(const size_t samplesToDo,
     /* Cycle offset per update expected of each frequency bin (bin 0 is none,
      * bin 1 is x1, bin 2 is x2, etc).
      */
-    static constexpr auto expected_cycles = std::numbers::pi_v<float>*2.0f / OversampleFactor;
+    constexpr float expected_cycles{al::numbers::pi_v<float>*2.0f / OversampleFactor};
 
-    for(auto base = 0_uz;base < samplesToDo;)
+    for(size_t base{0u};base < samplesToDo;)
     {
-        const auto todo = std::min(StftStep-mCount, samplesToDo-base);
+        const size_t todo{std::min(StftStep-mCount, samplesToDo-base)};
 
         /* Retrieve the output samples from the FIFO and fill in the new input
          * samples.
          */
-        auto fiforange = mFIFO | std::views::drop(mPos + mCount) | std::views::take(todo);
-        std::ranges::copy(fiforange, (mBufferOut | std::views::drop(base)).begin());
+        auto fifo_iter = mFIFO.begin()+mPos + mCount;
+        std::copy_n(fifo_iter, todo, mBufferOut.begin()+base);
 
-        std::ranges::copy(samplesIn[0] | std::views::drop(base) | std::views::take(todo),
-            fiforange.begin());
+        std::copy_n(samplesIn[0].begin()+base, todo, fifo_iter);
         mCount += todo;
         base += todo;
 
@@ -191,24 +188,23 @@ void PshifterState::process(const size_t samplesToDo,
         /* Time-domain signal windowing, store in FftBuffer, and apply a
          * forward FFT to get the frequency-domain signal.
          */
-        const auto [_, windowiter, fftbufiter] = std::ranges::transform(
-            mFIFO | std::views::drop(mPos), gWindow.mData, mFftBuffer.begin(), std::multiplies{});
-        std::ranges::transform(mFIFO.begin(), mFIFO.end(), windowiter, gWindow.mData.end(),
-            fftbufiter, std::multiplies{});
-
-        mFft.transform_ordered(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
+        for(size_t src{mPos}, k{0u};src < StftSize;++src,++k)
+            mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
+        for(size_t src{0u}, k{StftSize-mPos};src < mPos;++src,++k)
+            mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
+        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
             PFFFT_FORWARD);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * StftHalfSize+1 samples are needed.
          */
-        for(auto k = 0_uz;k < StftHalfSize+1;++k)
+        for(size_t k{0u};k < StftHalfSize+1;++k)
         {
             const auto cplx = (k == 0) ? complex_f{mFftBuffer[0]} :
                 (k == StftHalfSize) ? complex_f{mFftBuffer[1]} :
                 complex_f{mFftBuffer[k*2], mFftBuffer[k*2 + 1]};
-            const auto magnitude = std::abs(cplx);
-            const auto phase = std::arg(cplx);
+            const float magnitude{std::abs(cplx)};
+            const float phase{std::arg(cplx)};
 
             /* Compute the phase difference from the last update and subtract
              * the expected phase difference for this bin.
@@ -218,13 +214,13 @@ void PshifterState::process(const size_t samplesToDo,
              * every 'OversampleFactor' bin.
              */
             const auto bin_offset = static_cast<float>(k % OversampleFactor);
-            auto tmp = (phase - mLastPhase[k]) - bin_offset*expected_cycles;
+            float tmp{(phase - mLastPhase[k]) - bin_offset*expected_cycles};
             /* Store the actual phase for the next update. */
             mLastPhase[k] = phase;
 
             /* Normalize from pi, and wrap the delta between -1 and +1. */
-            tmp *= std::numbers::inv_pi_v<float>;
-            auto qpd = float2int(tmp);
+            tmp *= al::numbers::inv_pi_v<float>;
+            int qpd{float2int(tmp)};
             tmp -= static_cast<float>(qpd + (qpd%2));
 
             /* Get deviation from bin frequency (-0.5 to +0.5), and account for
@@ -244,13 +240,13 @@ void PshifterState::process(const size_t samplesToDo,
         /* Shift the frequency bins according to the pitch adjustment,
          * accumulating the magnitudes of overlapping frequency bins.
          */
-        mSynthesisBuffer.fill(FrequencyBin{});
+        std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
 
-        constexpr auto bin_limit = size_t{((StftHalfSize+1)<<MixerFracBits) - MixerFracHalf - 1};
-        const auto bin_count = size_t{std::min(StftHalfSize+1, bin_limit/mPitchShiftI + 1)};
-        for(auto k = 0_uz;k < bin_count;++k)
+        static constexpr size_t bin_limit{((StftHalfSize+1)<<MixerFracBits) - MixerFracHalf - 1};
+        const size_t bin_count{std::min(StftHalfSize+1, bin_limit/mPitchShiftI + 1)};
+        for(size_t k{0u};k < bin_count;k++)
         {
-            const auto j = (k*mPitchShiftI + MixerFracHalf) >> MixerFracBits;
+            const size_t j{(k*mPitchShiftI + MixerFracHalf) >> MixerFracBits};
 
             /* If more than two bins end up together, use the target frequency
              * bin for the one with the dominant magnitude. There might be a
@@ -264,23 +260,23 @@ void PshifterState::process(const size_t samplesToDo,
         /* Reconstruct the frequency-domain signal from the adjusted frequency
          * bins.
          */
-        for(auto k = 0_uz;k < StftHalfSize+1;++k)
+        for(size_t k{0u};k < StftHalfSize+1;k++)
         {
             /* Calculate the actual delta phase for this bin's target frequency
              * bin, and accumulate it to get the actual bin phase.
              */
-            auto tmp = mSumPhase[k] + mSynthesisBuffer[k].FreqBin*expected_cycles;
+            float tmp{mSumPhase[k] + mSynthesisBuffer[k].FreqBin*expected_cycles};
 
             /* Wrap between -pi and +pi for the sum. If mSumPhase is left to
              * grow indefinitely, it will lose precision and produce less exact
              * phase over time.
              */
-            tmp *= std::numbers::inv_pi_v<float>;
-            auto qpd = float2int(tmp);
+            tmp *= al::numbers::inv_pi_v<float>;
+            int qpd{float2int(tmp)};
             tmp -= static_cast<float>(qpd + (qpd%2));
-            mSumPhase[k] = tmp * std::numbers::pi_v<float>;
+            mSumPhase[k] = tmp * al::numbers::pi_v<float>;
 
-            const auto cplx = std::polar(mSynthesisBuffer[k].Magnitude, mSumPhase[k]);
+            const complex_f cplx{std::polar(mSynthesisBuffer[k].Magnitude, mSumPhase[k])};
             if(k == 0)
                 mFftBuffer[0] = cplx.real();
             else if(k == StftHalfSize)
@@ -295,26 +291,22 @@ void PshifterState::process(const size_t samplesToDo,
         /* Apply an inverse FFT to get the time-domain signal, and accumulate
          * for the output with windowing.
          */
-        mFft.transform_ordered(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
+        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
             PFFFT_BACKWARD);
 
-        static constexpr auto scale = float{3.0f / OversampleFactor / StftSize};
-        std::ranges::transform(mFftBuffer, gWindow.mData, mFftBuffer.begin(),
-            [](const float a, const float w) noexcept { return w*a*scale; });
-
-        const auto accumrange = mOutputAccum | std::views::drop(mPos);
-        std::ranges::transform(accumrange, mFftBuffer, accumrange.begin(), std::plus{});
-        std::ranges::transform(mOutputAccum, mFftBuffer | std::views::drop(StftSize-mPos),
-            mOutputAccum.begin(), std::plus{});
+        static constexpr float scale{3.0f / OversampleFactor / StftSize};
+        for(size_t dst{mPos}, k{0u};dst < StftSize;++dst,++k)
+            mOutputAccum[dst] += gWindow.mData[k]*mFftBuffer[k] * scale;
+        for(size_t dst{0u}, k{StftSize-mPos};dst < mPos;++dst,++k)
+            mOutputAccum[dst] += gWindow.mData[k]*mFftBuffer[k] * scale;
 
         /* Copy out the accumulated result, then clear for the next iteration. */
-        const auto outrange = accumrange | std::views::take(StftStep);
-        std::ranges::copy(outrange, (mFIFO | std::views::drop(mPos)).begin());
-        std::ranges::fill(outrange, 0.0f);
+        std::copy_n(mOutputAccum.begin() + mPos, StftStep, mFIFO.begin() + mPos);
+        std::fill_n(mOutputAccum.begin() + mPos, StftStep, 0.0f);
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
+    MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
         std::max(samplesToDo, 512_uz), 0);
 }
 
@@ -326,8 +318,8 @@ struct PshifterStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto PshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+EffectStateFactory *PshifterStateFactory_getFactory()
 {
     static PshifterStateFactory PshifterFactory{};
-    return gsl::make_not_null(&PshifterFactory);
+    return &PshifterFactory;
 }

@@ -24,12 +24,12 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
-#include <span>
 #include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -45,7 +45,9 @@ struct BufferStorage;
 
 namespace {
 
-constexpr auto LowpassFreqRef = 5000.0f;
+using uint = unsigned int;
+
+constexpr float LowpassFreqRef{5000.0f};
 
 struct EchoState final : public EffectState {
     std::vector<float> mSampleBuffer;
@@ -68,10 +70,10 @@ struct EchoState final : public EffectState {
     alignas(16) std::array<FloatBufferLine,2> mTempBuffer{};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) override;
 };
 
 void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
@@ -80,33 +82,37 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    auto const maxlen = NextPowerOf2(float2uint(EchoMaxDelay*frequency + 0.5f) +
-        float2uint(EchoMaxLRDelay*frequency + 0.5f));
+    const uint maxlen{NextPowerOf2(float2uint(EchoMaxDelay*frequency + 0.5f) +
+        float2uint(EchoMaxLRDelay*frequency + 0.5f))};
     if(maxlen != mSampleBuffer.size())
         decltype(mSampleBuffer)(maxlen).swap(mSampleBuffer);
 
-    std::ranges::fill(mSampleBuffer, 0.0f);
-    mGains.fill(OutGains{});
+    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
+    for(auto &e : mGains)
+    {
+        std::fill(e.Current.begin(), e.Current.end(), 0.0f);
+        std::fill(e.Target.begin(), e.Target.end(), 0.0f);
+    }
 }
 
-void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
+void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<EchoProps>(*props_);
-    auto const device = al::get_not_null(context->mDevice);
-    auto const frequency = static_cast<float>(device->mSampleRate);
+    const DeviceBase *device{context->mDevice};
+    const auto frequency = static_cast<float>(device->mSampleRate);
 
-    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1_u32);
+    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
     mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];
 
-    const auto gainhf = std::max(1.0f - props.Damping, 0.0625f); /* Limit -24dB */
+    const float gainhf{std::max(1.0f - props.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
 
     mFeedGain = props.Feedback;
 
     /* Convert echo spread (where 0 = center, +/-1 = sides) to a 2D vector. */
-    const auto x = props.Spread; /* +x = left */
-    const auto z = std::sqrt(1.0f - x*x);
+    const float x{props.Spread}; /* +x = left */
+    const float z{std::sqrt(1.0f - x*x)};
 
     const auto coeffs0 = CalcAmbiCoeffs( x, 0.0f, z, 0.0f);
     const auto coeffs1 = CalcAmbiCoeffs(-x, 0.0f, z, 0.0f);
@@ -116,27 +122,25 @@ void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
     ComputePanGains(target.Main, coeffs1, slot->Gain, mGains[1].Target);
 }
 
-void EchoState::process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-    const std::span<FloatBufferLine> samplesOut)
+void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const auto delaybuf = std::span{mSampleBuffer};
-    const auto mask = delaybuf.size()-1;
-    auto offset = mOffset;
-    auto tap1 = offset - mDelayTap[0];
-    auto tap2 = offset - mDelayTap[1];
+    const auto delaybuf = al::span{mSampleBuffer};
+    const size_t mask{delaybuf.size()-1};
+    size_t offset{mOffset};
+    size_t tap1{offset - mDelayTap[0]};
+    size_t tap2{offset - mDelayTap[1]};
 
     ASSUME(samplesToDo > 0);
 
-    const auto filter = mFilter;
+    const BiquadFilter filter{mFilter};
     auto [z1, z2] = mFilter.getComponents();
-    for(auto i=0_uz;i < samplesToDo;)
+    for(size_t i{0u};i < samplesToDo;)
     {
         offset &= mask;
         tap1 &= mask;
         tap2 &= mask;
 
-        const auto max_offset = std::max(offset, std::max(tap1, tap2));
-        auto td = std::min(mask+1 - max_offset, samplesToDo-i);
+        size_t td{std::min(mask+1 - std::max(offset, std::max(tap1, tap2)), samplesToDo-i)};
         do {
             /* Feed the delay buffer's input first. */
             delaybuf[offset] = samplesIn[0][i];
@@ -146,7 +150,7 @@ void EchoState::process(const size_t samplesToDo, const std::span<const FloatBuf
              */
             mTempBuffer[0][i] = delaybuf[tap1++];
             mTempBuffer[1][i] = delaybuf[tap2++];
-            const auto feedb = mTempBuffer[1][i++];
+            const float feedb{mTempBuffer[1][i++]};
 
             /* Add feedback to the delay buffer with damping and attenuation. */
             delaybuf[offset++] += filter.processOne(feedb, z1, z2) * mFeedGain;
@@ -156,7 +160,7 @@ void EchoState::process(const size_t samplesToDo, const std::span<const FloatBuf
     mOffset = offset;
 
     for(size_t c{0};c < 2;c++)
-        MixSamples(std::span{mTempBuffer[c]}.first(samplesToDo), samplesOut, mGains[c].Current,
+        MixSamples(al::span{mTempBuffer[c]}.first(samplesToDo), samplesOut, mGains[c].Current,
             mGains[c].Target, samplesToDo, 0);
 }
 
@@ -168,8 +172,8 @@ struct EchoStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto EchoStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+EffectStateFactory *EchoStateFactory_getFactory()
 {
     static EchoStateFactory EchoFactory{};
-    return gsl::make_not_null(&EchoFactory);
+    return &EchoFactory;
 }

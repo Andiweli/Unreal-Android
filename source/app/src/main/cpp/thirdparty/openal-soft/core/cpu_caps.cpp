@@ -5,6 +5,7 @@
 #include "cpu_caps.h"
 
 #if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19
@@ -19,9 +20,7 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cctype>
-#include <ranges>
 #include <string>
 
 
@@ -30,21 +29,19 @@ namespace {
 #if defined(HAVE_GCC_GET_CPUID) \
     && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 using reg_type = unsigned int;
-inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
+inline std::array<reg_type,4> get_cpuid(unsigned int f)
 {
-    auto ret = std::array<reg_type,4>{};
+    std::array<reg_type,4> ret{};
     __get_cpuid(f, ret.data(), &ret[1], &ret[2], &ret[3]);
     return ret;
 }
 #define CAN_GET_CPUID
-
 #elif defined(HAVE_CPUID_INTRINSIC) \
     && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
-
 using reg_type = int;
-inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
+inline std::array<reg_type,4> get_cpuid(unsigned int f)
 {
-    auto ret = std::array<reg_type,4>{};
+    std::array<reg_type,4> ret{};
     (__cpuid)(ret.data(), f);
     return ret;
 }
@@ -53,32 +50,27 @@ inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
 
 } // namespace
 
-auto GetCPUInfo() -> std::optional<CPUInfo>
+std::optional<CPUInfo> GetCPUInfo()
 {
-    auto ret = CPUInfo{};
+    CPUInfo ret;
 
 #ifdef CAN_GET_CPUID
     auto cpuregs = get_cpuid(0);
     if(cpuregs[0] == 0)
         return std::nullopt;
 
-    const auto maxfunc = cpuregs[0];
+    const reg_type maxfunc{cpuregs[0]};
 
     cpuregs = get_cpuid(0x80000000);
-    const auto maxextfunc = cpuregs[0];
+    const reg_type maxextfunc{cpuregs[0]};
 
-    const auto as_chars4 = std::array{
-        std::bit_cast<std::array<char,4>>(cpuregs[1]),
-        std::bit_cast<std::array<char,4>>(cpuregs[3]),
-        std::bit_cast<std::array<char,4>>(cpuregs[2])};
-    auto all_chars12 = as_chars4 | std::views::join;
-    ret.mVendor.append(all_chars12.begin(), all_chars12.end());
-
-    /* Remove null chars and duplicate/unnecessary spaces. */
-    std::erase(ret.mVendor, '\0');
-    auto iter_end = std::ranges::unique(ret.mVendor, [](const char c0, const char c1)
-        { return std::isspace(c0) && std::isspace(c1); });
-    ret.mVendor.erase(iter_end.begin(), iter_end.end());
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[1]), 4);
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[3]), 4);
+    ret.mVendor.append(reinterpret_cast<char*>(&cpuregs[2]), 4);
+    auto iter_end = std::remove(ret.mVendor.begin(), ret.mVendor.end(), '\0');
+    iter_end = std::unique(ret.mVendor.begin(), iter_end,
+        [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
+    ret.mVendor.erase(iter_end, ret.mVendor.end());
     if(!ret.mVendor.empty() && std::isspace(ret.mVendor.back()))
         ret.mVendor.pop_back();
     if(!ret.mVendor.empty() && std::isspace(ret.mVendor.front()))
@@ -86,17 +78,16 @@ auto GetCPUInfo() -> std::optional<CPUInfo>
 
     if(maxextfunc >= 0x80000004)
     {
-        const auto as_chars16 = std::array{
-            std::bit_cast<std::array<char,16>>(get_cpuid(0x80000002)),
-            std::bit_cast<std::array<char,16>>(get_cpuid(0x80000003)),
-            std::bit_cast<std::array<char,16>>(get_cpuid(0x80000004))};
-        const auto all_chars48 = as_chars16 | std::views::join;
-        ret.mName.append(all_chars48.begin(), all_chars48.end());
-
-        std::erase(ret.mName, '\0');
-        iter_end = std::ranges::unique(ret.mName, [](const char c0, const char c1)
-            { return std::isspace(c0) && std::isspace(c1); });
-        ret.mName.erase(iter_end.begin(), iter_end.end());
+        cpuregs = get_cpuid(0x80000002);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        cpuregs = get_cpuid(0x80000003);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        cpuregs = get_cpuid(0x80000004);
+        ret.mName.append(reinterpret_cast<char*>(cpuregs.data()), 16);
+        iter_end = std::remove(ret.mName.begin(), ret.mName.end(), '\0');
+        iter_end = std::unique(ret.mName.begin(), iter_end,
+            [](auto&& c0, auto&& c1) { return std::isspace(c0) && std::isspace(c1); });
+        ret.mName.erase(iter_end, ret.mName.end());
         if(!ret.mName.empty() && std::isspace(ret.mName.back()))
             ret.mName.pop_back();
         if(!ret.mName.empty() && std::isspace(ret.mName.front()))

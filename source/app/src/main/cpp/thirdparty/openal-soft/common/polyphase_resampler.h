@@ -1,10 +1,12 @@
 #ifndef POLYPHASE_RESAMPLER_H
 #define POLYPHASE_RESAMPLER_H
 
-#include <span>
 #include <vector>
 
-#include "altypes.hpp"
+#include "alspan.h"
+
+
+using uint = unsigned int;
 
 /* This is a polyphase sinc-filtered resampler. It is built for very high
  * quality results, rather than real-time performance.
@@ -34,13 +36,13 @@
  */
 
 struct PPhaseResampler {
-    void init(u32 srcRate, u32 dstRate);
-    void process(std::span<const double> in, std::span<double> out) const;
+    void init(const uint srcRate, const uint dstRate);
+    void process(const al::span<const double> in, const al::span<double> out) const;
 
     explicit operator bool() const noexcept { return !mF.empty(); }
 
 private:
-    u32 mP{}, mQ{}, mM{}, mL{};
+    uint mP{}, mQ{}, mM{}, mL{};
     std::vector<double> mF;
 };
 

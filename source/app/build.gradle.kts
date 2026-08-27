@@ -7,8 +7,8 @@ plugins {
 
 val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
-val openAlSoftVersion = "1.25.1"
-val overlayRevision = "rev48-unreal205-mali-world-uv-precision-v24"
+val openAlSoftVersion = "1.24.3" // C++17: compatible with NDK r23/API16 and includes Android 16KB-page support
+val overlayRevision = "rev49-unified-normal-ouya-automotive-v1-signing-debugkey"
 val androidVersionName = "2.1.0"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
@@ -16,6 +16,7 @@ val downloadsDir = layout.buildDirectory.dir("downloads")
 val ue1Dir = nativeRoot.dir("UE1")
 val ue1PatchOverlayDir = layout.projectDirectory.dir("src/main/ue1_patch_overlay") // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
 val sdl2PatchOverlayDir = layout.projectDirectory.dir("src/main/sdl2_patch_overlay") // UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_OVERLAY_V210
+val sdlApi16PatchOverlayDir = layout.projectDirectory.dir("src/main/sdl_api16_patch_overlay") // UNREAL_ANDROID_API16_SDL_OVERLAY_V212
 val thirdpartyDir = nativeRoot.dir("thirdparty")
 val sdl2Dir = thirdpartyDir.dir("SDL2")
 val openalDir = thirdpartyDir.dir("openal-soft")
@@ -78,6 +79,16 @@ fun applyUE1PatchOverlayV125(root: File) {
 fun applySDL2PatchOverlayV210(root: File) {
     // UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_OVERLAY_V210
     val overlay = sdl2PatchOverlayDir.asFile
+    if (!overlay.isDirectory) return
+    copy {
+        from(overlay)
+        into(root)
+    }
+}
+
+fun applySDLApi16PatchOverlayV212(root: File) {
+    // UNREAL_ANDROID_API16_SDL_OVERLAY_V212
+    val overlay = sdlApi16PatchOverlayDir.asFile
     if (!overlay.isDirectory) return
     copy {
         from(overlay)
@@ -694,6 +705,7 @@ val prepareSources = tasks.register("prepareSources") {
         patchUE1Source(ue1Dir.asFile)
         applyUE1PatchOverlayV125(ue1Dir.asFile) // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
         applySDL2PatchOverlayV210(sdl2Dir.asFile) // UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_OVERLAY_V210
+        applySDLApi16PatchOverlayV212(sdl2Dir.asFile) // UNREAL_ANDROID_API16_SDL_OVERLAY_V212
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
         // ChromeOS FIX1 guards. Keep the original 2.0.5 source preparation revision;
         // the UE1 overlay is applied on every prepareSources run.
@@ -703,6 +715,21 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_FLOAT_V210")
         requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealSDLActivity.java").asFile, "UNREAL_ANDROID_CHROMEOS_MOUSE_ACTIVITY_ROUTE_V205F1")
         requirePatched(sdl2Dir.asFile.resolve("src/video/android/SDL_androidmouse.c"), "UNREAL_ANDROID_CHROMEOS_MOUSE_HIRES_EVENT_V210")
+        requirePatched(sdl2Dir.asFile.resolve("android-project/app/src/main/java/org/libsdl/app/SDLActivity.java"), "UNREAL_ANDROID_API16_SDL_HID_GUARD_V212")
+        requirePatched(sdl2Dir.asFile.resolve("android-project/app/src/main/java/org/libsdl/app/HIDDeviceManager.java"), "UNREAL_ANDROID_API16_HID_MANAGER_GUARD_V212")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealDataPaths.java").asFile, "UNREAL_ANDROID_API16_DATAPATHS_V212")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/MainActivity.java").asFile, "UNREAL_ANDROID_API16_ACTIVITY_V212")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealSDLActivity.java").asFile, "UNREAL_ANDROID_API16_ACTIVITY_V212")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealSDLActivity.java").asFile, "UNREAL_ANDROID_LIFECYCLE_PAUSE_V211")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/ChromeOSInputLogger.java").asFile, "UNREAL_ANDROID_API16_CHROMEOS_DIAG_V212")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_LIFECYCLE_PAUSE_V211")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_OUYA_960_FBO_V212")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLClient.cpp"), "UNREAL_ANDROID_OUYA_960_FBO_V212")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Inc/NSDLDrv.h"), "UNREAL_ANDROID_OUYA_960_FBO_V212")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealDataPaths.java").asFile, "UNREAL_ANDROID_OUYA_960_DEFAULT_V212")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/CMakeLists.txt"), "UNREAL_ANDROID_API16_SCRIPTVM_SAFE_FLAGS_V212")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/CMakeLists.txt"), "UNREAL_ANDROID_API16_ENGINE_EVENT_SAFE_FLAGS_V212")
+        requirePatched(layout.projectDirectory.file("src/main/cpp/CMakeLists.txt").asFile, "UNREAL_ANDROID_API16_NATIVE_COMPAT_V212")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_LEVELS_1_0_TO_3_0_V16")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_DPAD_LEFT_RIGHT_V17")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22")
@@ -718,6 +745,7 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrv.cpp"), "UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124")
         requirePatched(ue1Dir.asFile.resolve("Source/NOpenGLESDrv/NOpenGLESDrvPrivate.h"), "UNREAL_ANDROID_MALI_ENDPOLY_BOUNDS_V124")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_NULLSAFE_STRNCPY_PATCH")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_FLAVOR_DATA_FALLBACK_V212")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_APPFPRINTF_LOGCAT")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Inc/UnFile.h"), "UNREAL_ANDROID_NDK_MATH_DECLARATIONS_V2")
         requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnFile.cpp"), "UNREAL_ANDROID_NDK_GLOBAL_NEW_DELETE_V2")
@@ -786,29 +814,34 @@ android {
         buildConfig = true
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = file("E:/Development/Android/UE1/YOUR_KEYSTORE.jks")
-            storePassword = "DEIN_STORE_PASSWORT"
-            keyAlias = "DEIN_KEY_ALIAS"
-            keyPassword = "DEIN_KEY_PASSWORT"
-        }
-    }
-
     buildTypes {
+        getByName("debug") {
+            // Android Studio green Play button: use the ordinary runnable debug build by default.
+            isDefault = true
+            // Uses Android Studio/AGP's automatic debug signing:
+            // %USERPROFILE%\.android\debug.keystore
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
+        getByName("release") {
+            // Keep every locally produced APK/AAB on the same long-standing
+            // Android Studio debug certificate. No custom keystore/passwords required.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
         create("android8SignedDebug") {
             initWith(getByName("debug"))
 
-            // Deine bestehende Release-Signatur verwenden
-            signingConfig = signingConfigs.getByName("release")
+            // Same automatic Android Studio debug certificate as normalDebug.
+            signingConfig = signingConfigs.getByName("debug")
 
-            // Wichtig: Debug-Verhalten behalten
+            // Keep debug behavior.
             isDebuggable = true
             isJniDebuggable = true
             isMinifyEnabled = false
             isShrinkResources = false
 
-            // Kein Suffix, wenn diese APK die normale com.ast.unreal ersetzen soll
+            // No suffix: this variant can replace the normal com.ast.unreal install.
             applicationIdSuffix = null
             versionNameSuffix = "-Android8-Signed"
 
@@ -818,7 +851,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ast.unreal"
-        minSdk = 23
+        minSdk = 16
         targetSdk = 36
         versionCode = 6
         versionName = androidVersionName
@@ -830,8 +863,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += listOf(
-                    "-DANDROID_STL=c++_shared",
-                    "-DANDROID_PLATFORM=android-23"
+                    "-DANDROID_STL=c++_static"
                 )
                 cppFlags += listOf(
                     "-std=c++17",
@@ -843,7 +875,38 @@ android {
         }
     }
 
-    ndkVersion = "27.0.12077973"
+    flavorDimensions += "platform"
+    productFlavors {
+        create("normal") {
+            dimension = "platform"
+            isDefault = true
+            applicationId = "com.ast.unreal"
+            minSdk = 16
+            targetSdk = 36
+            versionCode = 6
+            versionName = androidVersionName
+            externalNativeBuild {
+                cmake {
+                    arguments += listOf("-DUNREAL_ANDROID_API16_COMPAT=ON", "-DUNREAL_ANDROID_AUTOMOTIVE=OFF")
+                }
+            }
+        }
+        create("automotive") {
+            dimension = "platform"
+            applicationId = "com.ast.unrealandroid"
+            minSdk = 23
+            targetSdk = 36
+            versionCode = 10
+            versionName = androidVersionName
+            externalNativeBuild {
+                cmake {
+                    arguments += listOf("-DUNREAL_ANDROID_API16_COMPAT=OFF", "-DUNREAL_ANDROID_AUTOMOTIVE=ON")
+                }
+            }
+        }
+    }
+
+    ndkVersion = "23.2.8568313"
 
     externalNativeBuild {
         cmake {
@@ -869,6 +932,22 @@ android {
         resources {
             excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
         }
+    }
+}
+
+// Keep Android Studio's green Play/Run path unambiguous.
+// `assembleDebug` is an aggregate task when multiple product flavors provide a
+// Debug variant. With automotiveDebug enabled, Studio can build both APKs and
+// then has no single Debug APK to deploy. Automotive is distributed/tested via
+// its release/signed variants, while normalDebug remains the only ordinary
+// Debug variant and therefore the default deployable Run target.
+androidComponents {
+    beforeVariants(
+        selector()
+            .withBuildType("debug")
+            .withFlavor("platform", "automotive")
+    ) { variantBuilder ->
+        variantBuilder.enable = false
     }
 }
 

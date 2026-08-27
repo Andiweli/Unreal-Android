@@ -13,6 +13,7 @@ IMPLEMENT_CLASS( UNSDLViewport );
 
 #if PLATFORM_ANDROID
 extern "C" int UE1AndroidShouldIgnoreEarlyQuit();
+extern "C" void UE1AndroidSetAudioSuspended( int Suspended ); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
 #endif
 
 
@@ -969,7 +970,7 @@ static FLOAT UE1AndroidGetConfiguredGammaModeValue()
 static UBOOL UE1AndroidIsFixedMenuResolution( INT X, INT Y )
 {
 	guard(UE1AndroidIsFixedMenuResolution);
-	return ( X == 1280 && Y == 720 ) || ( X == 1024 && Y == 768 );
+	return ( X == 1280 && Y == 720 ) || ( X == 1024 && Y == 768 ) || ( X == 960 && Y == 540 ); // UNREAL_ANDROID_OUYA_960_FBO_V212
 	unguard;
 }
 
@@ -1030,6 +1031,12 @@ static void UE1AndroidApplyConfiguredResolution( UNSDLClient* Client, SDL_Window
 			Y = 768;
 			return;
 		}
+		if( Client->AndroidResolutionMode == 3 )
+		{
+			X = 960;
+			Y = 540;
+			return;
+		}
 	}
 
 	INT NativeX = 0, NativeY = 0;
@@ -1049,6 +1056,7 @@ static const char* UE1AndroidResolutionModeName( INT Mode )
 	{
 		case 1: return "1280x720";
 		case 2: return "1024x768";
+		case 3: return "960x540";
 		default: return "Native";
 	}
 }
@@ -1061,6 +1069,8 @@ static INT UE1AndroidResolutionModeFromName( const char* Text, INT X, INT Y )
 		return 1;
 	if( X == 1024 && Y == 768 )
 		return 2;
+	if( X == 960 && Y == 540 )
+		return 3;
 	return 0;
 }
 
@@ -2997,6 +3007,16 @@ UBOOL UNSDLViewport::TickInput()
 	{
 		switch( Ev.type )
 		{
+#if PLATFORM_ANDROID // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+			case SDL_APP_WILLENTERBACKGROUND:
+				// Suspend OpenAL before SDL blocks the app thread in the background.
+				UE1AndroidSetAudioSuspended( 1 );
+				break;
+			case SDL_APP_DIDENTERFOREGROUND:
+				// Resume OpenAL from the UE1/SDL thread before normal ticking continues.
+				UE1AndroidSetAudioSuspended( 0 );
+				break;
+#endif
 			case SDL_QUIT:
 #if PLATFORM_ANDROID
 				if( UE1AndroidShouldIgnoreEarlyQuit() )
@@ -4453,6 +4473,11 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 		{
 			X = 1024;
 			Y = 768;
+		}
+		else if( Mode == 3 )
+		{
+			X = 960;
+			Y = 540;
 		}
 		else
 		{

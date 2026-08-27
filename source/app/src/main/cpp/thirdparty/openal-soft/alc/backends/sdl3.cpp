@@ -22,37 +22,42 @@
 
 #include "sdl3.h"
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <span>
+#include <functional>
 #include <string>
 #include <string_view>
-#include <utility>
 
-#include "alnumeric.h"
+#include "almalloc.h"
 #include "core/device.h"
 #include "core/logging.h"
-#include "gsl/gsl"
-#include "pragmadefs.h"
 
-DIAGNOSTIC_PUSH
-std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 #include "SDL3/SDL_audio.h"
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_stdinc.h"
-
-namespace {
-constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
-} /* namespace */
-DIAGNOSTIC_POP
+_Pragma("GCC diagnostic pop")
 
 
 namespace {
 
 using namespace std::string_view_literals;
 
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+_Pragma("GCC diagnostic pop")
+
+
 template<typename T>
-using unique_sdl_ptr = std::unique_ptr<T, decltype([](gsl::owner<T*> ptr) { SDL_free(ptr); })>;
+struct SdlDeleter {
+    /* NOLINTNEXTLINE(cppcoreguidelines-no-malloc) */
+    void operator()(gsl::owner<T*> ptr) const { SDL_free(ptr); }
+};
+template<typename T>
+using unique_sdl_ptr = std::unique_ptr<T,SdlDeleter<T>>;
 
 
 struct DeviceEntry {
@@ -60,7 +65,7 @@ struct DeviceEntry {
     SDL_AudioDeviceID mPhysDeviceID{};
 };
 
-auto gPlaybackDevices = std::vector<DeviceEntry>{};
+std::vector<DeviceEntry> gPlaybackDevices;
 
 void EnumeratePlaybackDevices()
 {
@@ -72,17 +77,18 @@ void EnumeratePlaybackDevices()
         return;
     }
 
-    auto devids = std::span{devicelist.get(), gsl::narrow<unsigned>(numdevs)};
+    auto devids = al::span{devicelist.get(), static_cast<uint>(numdevs)};
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());
-    std::ranges::transform(devids, std::back_inserter(newlist), [](SDL_AudioDeviceID const id)
-    {
-        auto *name = SDL_GetAudioDeviceName(id);
-        if(!name) return DeviceEntry{};
-        TRACE("Got device \"{}\", ID {}", name, id);
-        return DeviceEntry{name, id};
-    });
+    std::transform(devids.begin(), devids.end(), std::back_inserter(newlist),
+        [](SDL_AudioDeviceID id)
+        {
+            auto *name = SDL_GetAudioDeviceName(id);
+            if(!name) return DeviceEntry{};
+            TRACE("Got device \"{}\", ID {}", name, id);
+            return DeviceEntry{name, id};
+        });
 
     gPlaybackDevices.swap(newlist);
 }
@@ -91,9 +97,8 @@ void EnumeratePlaybackDevices()
 { return "Default Device"sv; }
 
 
-struct Sdl3Backend final : BackendBase {
-    explicit Sdl3Backend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+struct Sdl3Backend final : public BackendBase {
+    explicit Sdl3Backend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~Sdl3Backend() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
@@ -105,8 +110,8 @@ struct Sdl3Backend final : BackendBase {
 
     SDL_AudioDeviceID mDeviceID{0};
     SDL_AudioStream *mStream{nullptr};
-    u32 mNumChannels{0};
-    u32 mFrameSize{0};
+    uint mNumChannels{0};
+    uint mFrameSize{0};
     std::vector<std::byte> mBuffer;
 };
 
@@ -125,11 +130,14 @@ void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, 
     if(additional_amount <= 0)
         return;
 
-    const auto ulen = gsl::narrow_cast<unsigned int>(additional_amount);
+    const auto ulen = static_cast<unsigned int>(additional_amount);
+    assert((ulen % mFrameSize) == 0);
+
     if(ulen > mBuffer.size())
     {
         mBuffer.resize(ulen);
-        std::ranges::fill(mBuffer, (mDevice->FmtType==DevFmtUByte) ? std::byte{0x80}:std::byte{});
+        std::fill(mBuffer.begin(), mBuffer.end(), (mDevice->FmtType == DevFmtUByte)
+            ? std::byte{0x80} : std::byte{});
     }
 
     mDevice->renderSamples(mBuffer.data(), ulen / mFrameSize, mNumChannels);
@@ -149,8 +157,9 @@ void Sdl3Backend::open(std::string_view name)
         if(gPlaybackDevices.empty())
             EnumeratePlaybackDevices();
 
-        const auto iter = std::ranges::find(gPlaybackDevices, name, &DeviceEntry::mName);
-        if(iter == gPlaybackDevices.end())
+        const auto iter = std::find_if(gPlaybackDevices.cbegin(), gPlaybackDevices.cend(),
+            [name](const DeviceEntry &entry) { return name == entry.mName; });
+        if(iter == gPlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice, "No device named {}", name};
 
         mDeviceID = iter->mPhysDeviceID;
@@ -177,7 +186,7 @@ void Sdl3Backend::open(std::string_view name)
         mDevice->FmtType = devtype;
 
         if(have.freq >= int{MinOutputRate} && have.freq <= int{MaxOutputRate})
-            mDevice->mSampleRate = gsl::narrow_cast<u32>(have.freq);
+            mDevice->mSampleRate = static_cast<uint>(have.freq);
 
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
@@ -194,7 +203,7 @@ void Sdl3Backend::open(std::string_view name)
             mDevice->FmtChans = DevFmtMono;
         mDevice->mAmbiOrder = 0;
 
-        mNumChannels = gsl::narrow_cast<u32>(have.channels);
+        mNumChannels = static_cast<uint>(have.channels);
         mFrameSize = mDevice->bytesFromFmt() * mNumChannels;
 
         if(update_size >= 64)
@@ -202,8 +211,8 @@ void Sdl3Backend::open(std::string_view name)
             /* We have to assume the total buffer size is just twice the update
              * size. SDL doesn't tell us the full end-to-end buffer latency.
              */
-            mDevice->mUpdateSize = gsl::narrow_cast<u32>(update_size);
-            mDevice->mBufferSize = mDevice->mUpdateSize*2_u32;
+            mDevice->mUpdateSize = static_cast<uint>(update_size);
+            mDevice->mBufferSize = mDevice->mUpdateSize*2u;
         }
         else
             ERR("Invalid update size from SDL stream: {}", update_size);
@@ -235,7 +244,7 @@ auto Sdl3Backend::reset() -> bool
         ERR("Failed to get device format: {}", SDL_GetError());
 
     if(mDevice->Flags.test(FrequencyRequest) || want.freq < int{MinOutputRate})
-        want.freq = gsl::narrow_cast<int>(mDevice->mSampleRate);
+        want.freq = static_cast<int>(mDevice->mSampleRate);
     if(mDevice->Flags.test(SampleTypeRequest)
         || !(want.format == SDL_AUDIO_U8 || want.format == SDL_AUDIO_S8
              || want.format == SDL_AUDIO_S16 || want.format == SDL_AUDIO_S32
@@ -253,7 +262,8 @@ auto Sdl3Backend::reset() -> bool
         }
     }
     if(mDevice->Flags.test(ChannelsRequest) || want.channels < 1)
-        want.channels = al::saturate_cast<int>(mDevice->channelsFromFmt());
+        want.channels = static_cast<int>(std::min<uint>(mDevice->channelsFromFmt(),
+            std::numeric_limits<int>::max()));
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
     if(!mStream)
@@ -275,7 +285,7 @@ auto Sdl3Backend::reset() -> bool
             "Failed to get stream format: {}", SDL_GetError()};
 
     if(!mDevice->Flags.test(ChannelsRequest)
-        || (std::cmp_not_equal(have.channels, mDevice->channelsFromFmt())
+        || (static_cast<uint>(have.channels) != mDevice->channelsFromFmt()
             && !(mDevice->FmtChans == DevFmtStereo && have.channels >= 2)))
     {
         /* SDL guarantees these layouts for the given channel count. */
@@ -296,7 +306,7 @@ auto Sdl3Backend::reset() -> bool
                 "Unhandled SDL channel count: {}", have.channels};
         mDevice->mAmbiOrder = 0;
     }
-    mNumChannels = gsl::narrow_cast<u32>(have.channels);
+    mNumChannels = static_cast<uint>(have.channels);
 
     switch(have.format)
     {
@@ -315,15 +325,16 @@ auto Sdl3Backend::reset() -> bool
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
-    mDevice->mSampleRate = gsl::narrow_cast<u32>(have.freq);
+    mDevice->mSampleRate = static_cast<uint>(have.freq);
 
     if(update_size >= 64)
     {
-        mDevice->mUpdateSize = gsl::narrow_cast<u32>(update_size);
-        mDevice->mBufferSize = mDevice->mUpdateSize * 2_u32;
+        mDevice->mUpdateSize = static_cast<uint>(update_size);
+        mDevice->mBufferSize = mDevice->mUpdateSize*2u;
 
-        mBuffer.resize(usize{mDevice->mUpdateSize} * mFrameSize);
-        std::ranges::fill(mBuffer, mDevice->FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});
+        mBuffer.resize(size_t{mDevice->mUpdateSize} * mFrameSize);
+        std::fill(mBuffer.begin(), mBuffer.end(), (mDevice->FmtType == DevFmtUByte)
+            ? std::byte{0x80} : std::byte{});
     }
     else
         ERR("Invalid update size from SDL stream: {}", update_size);
@@ -355,10 +366,10 @@ auto SDL3BackendFactory::init() -> bool
     return true;
 }
 
-auto SDL3BackendFactory::querySupport(BackendType const type) -> bool
+auto SDL3BackendFactory::querySupport(BackendType type) -> bool
 { return type == BackendType::Playback; }
 
-auto SDL3BackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
+auto SDL3BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     auto outnames = std::vector<std::string>{};
 
@@ -368,13 +379,13 @@ auto SDL3BackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     EnumeratePlaybackDevices();
     outnames.reserve(gPlaybackDevices.size()+1);
     outnames.emplace_back(getDefaultDeviceName());
-    std::ranges::transform(gPlaybackDevices, std::back_inserter(outnames), &DeviceEntry::mName);
+    std::transform(gPlaybackDevices.begin(), gPlaybackDevices.end(), std::back_inserter(outnames),
+        std::mem_fn(&DeviceEntry::mName));
 
     return outnames;
 }
 
-auto SDL3BackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto SDL3BackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl3Backend{device}};

@@ -6,7 +6,7 @@
 #include "makemhr.h"
 
 
-auto LoadSofaFile(std::string_view filename, unsigned numThreads, unsigned fftSize,
-    unsigned truncSize, unsigned outRate, ChannelModeT chanMode, HrirDataT *hData) -> bool;
+bool LoadSofaFile(const std::string_view filename, const uint numThreads, const uint fftSize,
+    const uint truncSize, const uint outRate, const ChannelModeT chanMode, HrirDataT *hData);
 
 #endif /* LOADSOFA_H */

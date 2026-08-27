@@ -9,7 +9,6 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
-#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -20,25 +19,26 @@
 
 namespace {
 
-consteval auto genDefaultProps() noexcept -> EffectProps
+constexpr EffectProps genDefaultProps() noexcept
 {
-    return AutowahProps{
-        .AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME,
-        .ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME,
-        .Resonance = AL_AUTOWAH_DEFAULT_RESONANCE,
-        .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN};
+    AutowahProps props{};
+    props.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+    props.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+    props.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+    props.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+    return props;
 }
 
 } // namespace
 
-constinit const EffectProps AutowahEffectProps(genDefaultProps());
+const EffectProps AutowahEffectProps{genDefaultProps()};
 
-void AutowahEffectHandler::SetParami(al::Context *context, AutowahProps&, ALenum param, int)
+void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
-void AutowahEffectHandler::SetParamiv(al::Context *context, AutowahProps&, ALenum param, const int*)
+void AutowahEffectHandler::SetParamiv(ALCcontext *context, AutowahProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
 
-void AutowahEffectHandler::SetParamf(al::Context *context, AutowahProps &props, ALenum param, float val)
+void AutowahEffectHandler::SetParamf(ALCcontext *context, AutowahProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -70,15 +70,15 @@ void AutowahEffectHandler::SetParamf(al::Context *context, AutowahProps &props, 
     context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
         as_unsigned(param));
 }
-void AutowahEffectHandler::SetParamfv(al::Context *context, AutowahProps &props,  ALenum param, const float *vals)
+void AutowahEffectHandler::SetParamfv(ALCcontext *context, AutowahProps &props,  ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void AutowahEffectHandler::GetParami(al::Context *context, const AutowahProps&, ALenum param, int*)
+void AutowahEffectHandler::GetParami(ALCcontext *context, const AutowahProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
-void AutowahEffectHandler::GetParamiv(al::Context *context, const AutowahProps&, ALenum param, int*)
+void AutowahEffectHandler::GetParamiv(ALCcontext *context, const AutowahProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
 
-void AutowahEffectHandler::GetParamf(al::Context *context, const AutowahProps &props, ALenum param, float *val)
+void AutowahEffectHandler::GetParamf(ALCcontext *context, const AutowahProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -91,7 +91,7 @@ void AutowahEffectHandler::GetParamf(al::Context *context, const AutowahProps &p
     context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
         as_unsigned(param));
 }
-void AutowahEffectHandler::GetParamfv(al::Context *context, const AutowahProps &props, ALenum param, float *vals)
+void AutowahEffectHandler::GetParamfv(ALCcontext *context, const AutowahProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 #if ALSOFT_EAX
@@ -122,7 +122,7 @@ struct ReleaseTimeValidator {
 }; // ReleaseTimeValidator
 
 struct ResonanceValidator {
-    void operator()(eax_long const lResonance) const
+    void operator()(long lResonance) const
     {
         eax_validate_range<AutowahCommitter::Exception>(
             "Resonance",
@@ -133,7 +133,7 @@ struct ResonanceValidator {
 }; // ResonanceValidator
 
 struct PeakLevelValidator {
-    void operator()(eax_long const lPeakLevel) const
+    void operator()(long lPeakLevel) const
     {
         eax_validate_range<AutowahCommitter::Exception>(
             "Peak Level",
@@ -155,37 +155,49 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct AutowahCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
+template<>
+struct AutowahCommitter::Exception : public EaxException
+{
+    explicit Exception(const char *message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
     { }
 };
 
-template<> [[noreturn]]
-void AutowahCommitter::fail(const std::string_view message) { throw Exception{message}; }
+template<>
+[[noreturn]] void AutowahCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
 
-auto EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props) const -> bool
+bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
 {
     if(auto *cur = std::get_if<EAXAUTOWAHPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
-    mAlProps = AutowahProps{
-        .AttackTime = props.flAttackTime,
-        .ReleaseTime = props.flReleaseTime,
-        .Resonance = level_mb_to_gain(gsl::narrow_cast<float>(props.lResonance)),
-        .PeakGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lPeakLevel))};
+    mAlProps = [&]{
+        AutowahProps ret{};
+        ret.AttackTime = props.flAttackTime;
+        ret.ReleaseTime = props.flReleaseTime;
+        ret.Resonance = level_mb_to_gain(static_cast<float>(props.lResonance));
+        ret.PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel));
+        return ret;
+    }();
 
     return true;
 }
 
 void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props = EAXAUTOWAHPROPERTIES{
-        .flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME,
-        .flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME,
-        .lResonance = EAXAUTOWAH_DEFAULTRESONANCE,
-        .lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL};
+    static constexpr EAXAUTOWAHPROPERTIES defprops{[]
+    {
+        EAXAUTOWAHPROPERTIES ret{};
+        ret.flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME;
+        ret.flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME;
+        ret.lResonance = EAXAUTOWAH_DEFAULTRESONANCE;
+        ret.lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props)
@@ -193,11 +205,11 @@ void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &p
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;
-    case EAXAUTOWAH_ALLPARAMETERS: call.store(props); break;
-    case EAXAUTOWAH_ATTACKTIME: call.store(props.flAttackTime); break;
-    case EAXAUTOWAH_RELEASETIME: call.store(props.flReleaseTime); break;
-    case EAXAUTOWAH_RESONANCE: call.store(props.lResonance); break;
-    case EAXAUTOWAH_PEAKLEVEL: call.store(props.lPeakLevel); break;
+    case EAXAUTOWAH_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXAUTOWAH_ATTACKTIME: call.set_value<Exception>(props.flAttackTime); break;
+    case EAXAUTOWAH_RELEASETIME: call.set_value<Exception>(props.flReleaseTime); break;
+    case EAXAUTOWAH_RESONANCE: call.set_value<Exception>(props.lResonance); break;
+    case EAXAUTOWAH_PEAKLEVEL: call.set_value<Exception>(props.lPeakLevel); break;
     default: fail_unknown_property_id();
     }
 }

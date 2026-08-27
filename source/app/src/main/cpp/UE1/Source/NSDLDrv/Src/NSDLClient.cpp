@@ -361,7 +361,7 @@ UBOOL UNSDLClient::Exec( const char* Cmd, FOutputDevice* Out )
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 		// Clean v83: expose only the deterministic Android resolution choices.
 		// Native uses the actual drawable, 1280x720/1024x768 use the GLES FBO path.
-		Result = "Native 1280x720 1024x768 "; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83
+		Result = "Native 1280x720 1024x768 960x540 "; // UE1_ANDROID_RESOLUTION_MENU_NATIVE_FIXED_CLEAN_V83 UNREAL_ANDROID_OUYA_960_FBO_V212
 #else
 		GetDisplayResolutions();
 		for( INT i=0; i<DisplayResolutions.Num(); ++i )

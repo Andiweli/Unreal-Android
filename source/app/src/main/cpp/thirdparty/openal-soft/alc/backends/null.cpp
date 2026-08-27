@@ -25,6 +25,8 @@
 #include <exception>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
+#include <cstring>
 #include <thread>
 
 #include "althrd_setname.h"
@@ -42,14 +44,13 @@ using namespace std::string_view_literals;
 [[nodiscard]] constexpr auto GetDeviceName() noexcept { return "No Output"sv; }
 
 
-struct NullBackend final : BackendBase {
-    explicit NullBackend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+struct NullBackend final : public BackendBase {
+    explicit NullBackend(DeviceBase *device) noexcept : BackendBase{device} { }
 
-    void mixerProc() const;
+    int mixerProc();
 
     void open(std::string_view name) override;
-    auto reset() -> bool override;
+    bool reset() override;
     void start() override;
     void stop() override;
 
@@ -57,14 +58,14 @@ struct NullBackend final : BackendBase {
     std::thread mThread;
 };
 
-void NullBackend::mixerProc() const
+int NullBackend::mixerProc()
 {
-    auto const restTime = milliseconds{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
+    const milliseconds restTime{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    auto done = 0_i64;
+    int64_t done{0};
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -72,7 +73,7 @@ void NullBackend::mixerProc() const
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        const auto avail = i64{std::chrono::duration_cast<seconds>((now-start)
+        const auto avail = int64_t{std::chrono::duration_cast<seconds>((now-start)
             * mDevice->mSampleRate).count()};
         if(avail-done < mDevice->mUpdateSize)
         {
@@ -92,11 +93,13 @@ void NullBackend::mixerProc() const
          */
         if(done >= mDevice->mSampleRate)
         {
-            const auto s = seconds{done/mDevice->mSampleRate};
+            seconds s{done/mDevice->mSampleRate};
             start += s;
             done -= mDevice->mSampleRate*s.count();
         }
     }
+
+    return 0;
 }
 
 
@@ -111,7 +114,7 @@ void NullBackend::open(std::string_view name)
     mDeviceName = name;
 }
 
-auto NullBackend::reset() -> bool
+bool NullBackend::reset()
 {
     setDefaultWFXChannelOrder();
     return true;
@@ -139,13 +142,13 @@ void NullBackend::stop()
 } // namespace
 
 
-auto NullBackendFactory::init() -> bool
+bool NullBackendFactory::init()
 { return true; }
 
-auto NullBackendFactory::querySupport(BackendType const type) -> bool
+bool NullBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback); }
 
-auto NullBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
+auto NullBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
@@ -158,15 +161,14 @@ auto NullBackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return {};
 }
 
-auto NullBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+BackendPtr NullBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {
     if(type == BackendType::Playback)
         return BackendPtr{new NullBackend{device}};
     return nullptr;
 }
 
-auto NullBackendFactory::getFactory() -> BackendFactory&
+BackendFactory &NullBackendFactory::getFactory()
 {
     static NullBackendFactory factory{};
     return factory;

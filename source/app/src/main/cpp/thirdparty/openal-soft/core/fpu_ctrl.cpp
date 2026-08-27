@@ -15,8 +15,8 @@
 
 #if HAVE_SSE && !defined(_MM_DENORMALS_ZERO_MASK)
 /* Some headers seem to be missing these? */
-#define _MM_DENORMALS_ZERO_MASK 0x0040u  /* NOLINT(*-reserved-identifier) */
-#define _MM_DENORMALS_ZERO_ON 0x0040u  /* NOLINT(*-reserved-identifier) */
+#define _MM_DENORMALS_ZERO_MASK 0x0040u
+#define _MM_DENORMALS_ZERO_ON 0x0040u
 #endif
 
 #if !HAVE_SSE_INTRINSICS && HAVE_SSE
@@ -29,20 +29,19 @@ namespace {
 [[gnu::target("sse")]]
 #endif
 [[maybe_unused]]
-auto disable_denormals() -> unsigned int
+void disable_denormals(unsigned int *state [[maybe_unused]])
 {
 #if HAVE_SSE_INTRINSICS
-    const auto state = _mm_getcsr();
-    auto sseState = state;
+    *state = _mm_getcsr();
+    unsigned int sseState{*state};
     sseState &= ~(_MM_FLUSH_ZERO_MASK | _MM_DENORMALS_ZERO_MASK);
     sseState |= _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON;
     _mm_setcsr(sseState);
-    return state;
 
 #elif HAVE_SSE
 
-    const auto state = _mm_getcsr();
-    auto sseState = state;
+    *state = _mm_getcsr();
+    unsigned int sseState{*state};
     sseState &= ~_MM_FLUSH_ZERO_MASK;
     sseState |= _MM_FLUSH_ZERO_ON;
     if((CPUCapFlags&CPU_CAP_SSE2))
@@ -51,11 +50,6 @@ auto disable_denormals() -> unsigned int
         sseState |= _MM_DENORMALS_ZERO_ON;
     }
     _mm_setcsr(sseState);
-    return state;
-
-#else
-
-    return 0u;
 #endif
 }
 
@@ -73,19 +67,16 @@ void reset_fpu(unsigned int state [[maybe_unused]])
 } // namespace
 
 
-auto FPUCtl::Set() noexcept -> unsigned int
+unsigned int FPUCtl::Set() noexcept
 {
+    unsigned int state{};
 #if HAVE_SSE_INTRINSICS
-    return disable_denormals();
-
-#else
-
-#if HAVE_SSE
+    disable_denormals(&state);
+#elif HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return disable_denormals();
+        disable_denormals(&state);
 #endif
-    return 0u;
-#endif
+    return state;
 }
 
 void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept

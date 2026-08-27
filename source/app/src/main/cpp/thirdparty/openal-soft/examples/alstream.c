@@ -126,8 +126,7 @@ static void DeletePlayer(StreamPlayer *player)
  * it will be closed first. */
 static int OpenPlayerFile(StreamPlayer *player, const char *filename)
 {
-    int byteblockalign = 0;
-    int splblockalign = 0;
+    int byteblockalign=0, splblockalign=0;
 
     ClosePlayerFile(player);
 
@@ -385,8 +384,7 @@ static int StartPlayer(StreamPlayer *player)
 
 static int UpdatePlayer(StreamPlayer *player)
 {
-    ALint processed;
-    ALint state;
+    ALint processed, state;
 
     /* Get relevant source info */
     alGetSourcei(player->source, AL_SOURCE_STATE, &state);

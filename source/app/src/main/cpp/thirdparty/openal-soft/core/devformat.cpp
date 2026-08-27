@@ -9,7 +9,7 @@ namespace {
 using namespace std::string_view_literals;
 } // namespace
 
-auto BytesFromDevFmt(DevFmtType const type) noexcept -> u32
+uint BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -23,7 +23,7 @@ auto BytesFromDevFmt(DevFmtType const type) noexcept -> u32
     }
     return 0;
 }
-auto ChannelsFromDevFmt(DevFmtChannels const chans, u32 const ambiorder) noexcept -> u32
+uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -41,7 +41,7 @@ auto ChannelsFromDevFmt(DevFmtChannels const chans, u32 const ambiorder) noexcep
     return 0;
 }
 
-auto DevFmtTypeString(DevFmtType const type) noexcept -> std::string_view
+auto DevFmtTypeString(DevFmtType type) noexcept -> std::string_view
 {
     switch(type)
     {
@@ -55,7 +55,7 @@ auto DevFmtTypeString(DevFmtType const type) noexcept -> std::string_view
     }
     return "(unknown type)"sv;
 }
-auto DevFmtChannelsString(DevFmtChannels const chans) noexcept -> std::string_view
+auto DevFmtChannelsString(DevFmtChannels chans) noexcept -> std::string_view
 {
     switch(chans)
     {

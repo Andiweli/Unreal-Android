@@ -13,6 +13,9 @@ Revision history:
 #include <stdio.h>
 #include <string.h>
 #include <float.h> // UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
+#if defined(__ANDROID__)
+#include <sys/system_properties.h> // UNREAL_ANDROID_OUYA_CANVAS_SCALE_RUNTIME_V214
+#endif
 #endif
 #ifdef PLATFORM_ANDROID // UE1_ANDROID_AUDIOVIDEO_MENU_DRAW_FIX
 // UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14
@@ -65,8 +68,52 @@ static UBOOL AndroidCanvasActiveMenuIs( UCanvas* Canvas, const char* ClassName )
 
 
 #ifdef PLATFORM_ANDROID // UNREAL_ANDROID_CANVAS_UI_SCALE_HELPER
+// OUYA 1.3.0 used a 1:1 canvas scale. The unified build must detect it at
+// runtime because the same normal flavor is also used on modern Android.
+// UNREAL_ANDROID_OUYA_CANVAS_SCALE_RUNTIME_V214
+static UBOOL AndroidCanvasPropertyContainsOuyaV214( const char* Property )
+{
+#if defined(__ANDROID__)
+	char Value[PROP_VALUE_MAX];
+	Value[0] = 0;
+	if( __system_property_get( Property, Value ) <= 0 || !Value[0] )
+		return false;
+
+	const INT ValueLen = appStrlen( Value );
+	for( INT i=0; i+4<=ValueLen; ++i )
+		if( appStrnicmp( Value+i, "ouya", 4 ) == 0 )
+			return true;
+#endif
+	return false;
+}
+
+static UBOOL AndroidCanvasIsOuyaV214()
+{
+	static INT Cached = -1;
+	if( Cached < 0 )
+	{
+		Cached =
+			AndroidCanvasPropertyContainsOuyaV214( "ro.product.manufacturer" ) ||
+			AndroidCanvasPropertyContainsOuyaV214( "ro.product.model" ) ||
+			AndroidCanvasPropertyContainsOuyaV214( "ro.product.device" ) ||
+			AndroidCanvasPropertyContainsOuyaV214( "ro.product.name" );
+	}
+	return Cached != 0;
+}
+
 static FLOAT AndroidCanvasScale()
 {
+	if( AndroidCanvasIsOuyaV214() )
+	{
+		static UBOOL LoggedOuyaScale = 0;
+		if( !LoggedOuyaScale )
+		{
+			debugf( NAME_Log, "UNREAL_ANDROID_OUYA_CANVAS_SCALE_RUNTIME_V214 forced UI scale 1.0" );
+			LoggedOuyaScale = 1;
+		}
+		return 1.0f;
+	}
+
 	static FLOAT Scale = -1.0f;
 	if( Scale < 0.0f )
 	{

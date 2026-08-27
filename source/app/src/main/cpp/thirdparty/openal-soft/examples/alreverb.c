@@ -155,8 +155,7 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES *reverb)
  */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err;
-    ALenum format;
+    ALenum err, format;
     ALuint buffer;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -241,10 +240,7 @@ static ALuint LoadSound(const char *filename)
 int main(int argc, char **argv)
 {
     EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
-    ALuint source;
-    ALuint buffer;
-    ALuint effect;
-    ALuint slot;
+    ALuint source, buffer, effect, slot;
     ALenum state;
 
     /* Print out usage if no arguments were specified */

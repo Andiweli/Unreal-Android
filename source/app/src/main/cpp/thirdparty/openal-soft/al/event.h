@@ -1,11 +1,9 @@
 #ifndef AL_EVENT_H
 #define AL_EVENT_H
 
-namespace al {
-struct Context;
-} // namespace al
+struct ALCcontext;
 
-void StartEventThrd(al::Context *ctx);
-void StopEventThrd(al::Context *ctx);
+void StartEventThrd(ALCcontext *ctx);
+void StopEventThrd(ALCcontext *ctx);
 
 #endif

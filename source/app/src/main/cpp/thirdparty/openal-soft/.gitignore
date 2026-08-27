@@ -8,8 +8,3 @@ win64build
 
 ## qt-creator
 CMakeLists.txt.user*
-
-## CLion
-.idea
-
-__pycache__/

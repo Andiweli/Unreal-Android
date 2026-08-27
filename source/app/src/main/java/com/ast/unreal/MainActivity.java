@@ -11,8 +11,6 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -23,6 +21,8 @@ import java.io.File;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
+    // UNREAL_ANDROID_API16_ACTIVITY_V212: keep the launcher class loadable on Android 4.1/API 16.
+
     private static final int REQ_LEGACY_STORAGE = 2001;
     private static final int REQ_SELECT_UNREAL_FOLDER = 3001;
     private static final int REQ_SELECT_UNREAL_ZIP = 3002;
@@ -89,31 +89,42 @@ public class MainActivity extends Activity {
     }
 
     private void hideSystemUi() {
-        Window w = getWindow();
-        View decor = w.getDecorView();
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = decor.getWindowInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
-        } else {
-            decor.setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_FULLSCREEN |
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            );
+        View decor = getWindow().getDecorView();
+        // These flags are integer constants and are harmless on pre-KitKat devices;
+        // they also keep the API-16 path free of references to WindowInsets classes.
+        decor.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        );
+        if (Build.VERSION.SDK_INT >= 30) Api30SystemUi.hide(decor);
+    }
+
+    @android.annotation.TargetApi(30)
+    private static final class Api30SystemUi {
+        private Api30SystemUi() {}
+        static void hide(View decor) {
+            android.view.WindowInsetsController controller = decor.getWindowInsetsController();
+            if (controller == null) return;
+            controller.hide(android.view.WindowInsets.Type.statusBars() | android.view.WindowInsets.Type.navigationBars());
+            controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         }
     }
 
     private Locale currentLocale() {
-        if (Build.VERSION.SDK_INT >= 24) {
-            return getResources().getConfiguration().getLocales().get(0);
-        }
+        if (Build.VERSION.SDK_INT >= 24) return Api24Locale.current(getResources().getConfiguration());
         return getResources().getConfiguration().locale;
+    }
+
+    @android.annotation.TargetApi(24)
+    private static final class Api24Locale {
+        private Api24Locale() {}
+        static Locale current(android.content.res.Configuration configuration) {
+            return configuration.getLocales().get(0);
+        }
     }
 
     private boolean isGermanUi() {
@@ -215,11 +226,18 @@ public class MainActivity extends Activity {
     }
 
     private void openUnrealFolderPicker() {
+        if (Build.VERSION.SDK_INT < 21) {
+            lastImportMessage = t(
+                    "Dieser Android-Stand bietet keinen systemeigenen Ordnerauswahldialog. Kopiere den Ordner 'Unreal' auf USB/SD oder in den angezeigten App-Ordner und wähle 'Erneut prüfen'.",
+                    "This Android version has no system folder picker. Copy the 'Unreal' folder to USB/SD or into the shown app folder and choose 'Check again'.");
+            showMissingDataScreen();
+            return;
+        }
         try {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION |
-                    Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+            Intent intent = new Intent("android.intent.action.OPEN_DOCUMENT_TREE");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (Build.VERSION.SDK_INT >= 19) intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            if (Build.VERSION.SDK_INT >= 21) intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
             startActivityForResult(intent, REQ_SELECT_UNREAL_FOLDER);
         } catch (ActivityNotFoundException ex) {
             lastImportMessage = t(
@@ -231,11 +249,13 @@ public class MainActivity extends Activity {
 
     private void openUnrealZipPicker() {
         try {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            String action = Build.VERSION.SDK_INT >= 19 ? "android.intent.action.OPEN_DOCUMENT" : Intent.ACTION_GET_CONTENT;
+            Intent intent = new Intent(action);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (Build.VERSION.SDK_INT >= 19) intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
             Intent chooser = Intent.createChooser(intent, t("Unreal-ZIP auswählen", "Select Unreal ZIP file"));
             startActivityForResult(chooser, REQ_SELECT_UNREAL_ZIP);
         } catch (ActivityNotFoundException ex) {
@@ -268,10 +288,19 @@ public class MainActivity extends Activity {
     }
 
     private void takePersistableReadPermission(Uri uri) {
+        if (Build.VERSION.SDK_INT < 19) return;
         try {
-            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Api19Storage.takePersistableReadPermission(getContentResolver(), uri);
         } catch (Throwable t) {
             android.util.Log.w(UnrealDataPaths.TAG_IMPORT, "Could not persist read permission for " + uri + ": " + t);
+        }
+    }
+
+    @android.annotation.TargetApi(19)
+    private static final class Api19Storage {
+        private Api19Storage() {}
+        static void takePersistableReadPermission(android.content.ContentResolver resolver, Uri uri) {
+            resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
     }
 

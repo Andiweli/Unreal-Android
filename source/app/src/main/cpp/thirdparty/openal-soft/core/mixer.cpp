@@ -5,18 +5,24 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 #include <utility>
 
+#include "alnumbers.h"
 #include "core/ambidefs.h"
 #include "device.h"
 #include "mixer/defs.h"
 
+struct CTag;
 
-auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread)
-    -> std::array<float,MaxAmbiChannels>
+
+MixerOutFunc MixSamplesOut{Mix_<CTag>};
+MixerOneFunc MixSamplesOne{Mix_<CTag>};
+
+
+std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, const float x,
+    const float spread)
 {
-    auto coeffs = CalcAmbiCoeffs(y, z, x);
+    std::array<float,MaxAmbiChannels> coeffs{CalcAmbiCoeffs(y, z, x)};
 
     if(spread > 0.0f)
     {
@@ -44,16 +50,14 @@ auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
          * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
          * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
-        const auto ca = std::cos(spread * 0.5f);
+        const float ca{std::cos(spread * 0.5f)};
         /* Increase the source volume by up to +3dB for a full spread. */
-        const auto scale = std::sqrt(1.0f + std::numbers::inv_pi_v<float>*0.5f*spread);
-        const auto caca = ca*ca;
+        const float scale{std::sqrt(1.0f + al::numbers::inv_pi_v<float>/2.0f*spread)};
 
-        const auto ZH0_norm = scale;
-        const auto ZH1_norm = scale * 0.5f * (ca+1.0f);
-        const auto ZH2_norm = scale * 0.5f * ((ca+1.0f)*ca);
-        const auto ZH3_norm = scale * 0.125f * ((ca+1.0f)*(5.0f*caca - 1.0f));
-        const auto ZH4_norm = scale * 0.125f * ((ca+1.0f)*(7.0f*caca - 3.0f)*ca);
+        const float ZH0_norm{scale};
+        const float ZH1_norm{scale * 0.5f * (ca+1.f)};
+        const float ZH2_norm{scale * 0.5f * (ca+1.f)*ca};
+        const float ZH3_norm{scale * 0.125f * (ca+1.f)*(5.f*ca*ca-1.f)};
 
         /* Zeroth-order */
         coeffs[0]  *= ZH0_norm;
@@ -75,28 +79,18 @@ auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
         coeffs[13] *= ZH3_norm;
         coeffs[14] *= ZH3_norm;
         coeffs[15] *= ZH3_norm;
-        /* Fourth-order */
-        coeffs[16] *= ZH4_norm;
-        coeffs[17] *= ZH4_norm;
-        coeffs[18] *= ZH4_norm;
-        coeffs[19] *= ZH4_norm;
-        coeffs[20] *= ZH4_norm;
-        coeffs[21] *= ZH4_norm;
-        coeffs[22] *= ZH4_norm;
-        coeffs[23] *= ZH4_norm;
-        coeffs[24] *= ZH4_norm;
     }
 
     return coeffs;
 }
 
-void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
-    const float ingain, const std::span<float,MaxAmbiChannels> gains)
+void ComputePanGains(const MixParams *mix, const al::span<const float,MaxAmbiChannels> coeffs,
+    const float ingain, const al::span<float,MaxAmbiChannels> gains)
 {
-    auto ambimap = std::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
+    auto ambimap = al::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 
-    const auto iter = std::ranges::transform(ambimap, gains.begin(),
+    auto iter = std::transform(ambimap.begin(), ambimap.end(), gains.begin(),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> float
         { return chanmap.Scale * coeffs[chanmap.Index] * ingain; });
-    std::fill(iter.out, gains.end(), 0.0f);
+    std::fill(iter, gains.end(), 0.0f);
 }

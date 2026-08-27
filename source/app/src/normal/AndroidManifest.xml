@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:largeHeap="true">
+        <activity android:name="com.ast.unreal.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="tv.ouya.intent.category.GAME" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

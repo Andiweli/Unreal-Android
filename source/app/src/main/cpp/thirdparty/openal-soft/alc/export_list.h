@@ -3,9 +3,6 @@
 
 #include "config.h"
 
-#include <array>
-#include <string_view>
-
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
@@ -18,12 +15,12 @@
 
 
 struct FuncExport {
-    std::string_view funcName;
+    const char *funcName;
     void *address;
 };
-#define DECL(x) FuncExport{#x, reinterpret_cast<void*>(&x)}
-inline const auto alcFunctions = std::to_array({
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+#define DECL(x) FuncExport{#x, reinterpret_cast<void*>(x)}
+/* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
+inline const FuncExport alcFunctions[]{
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -245,7 +242,7 @@ inline const auto alcFunctions = std::to_array({
 
     DECL(alGetErrorDirect),
     DECL(alIsExtensionPresentDirect),
-    DECL(alGetProcAddressDirect),
+    DECL(alGetProcAddress),
     DECL(alGetEnumValueDirect),
 
     DECL(alListeneriDirect),
@@ -381,9 +378,9 @@ inline const auto alcFunctions = std::to_array({
 
     /* Extra functions */
     DECL(alsoft_set_log_callback),
-});
+};
 #if ALSOFT_EAX
-inline const auto eaxFunctions = std::array{
+inline const std::array eaxFunctions{
     DECL(EAXGet),
     DECL(EAXSet),
     DECL(EAXGetBufferMode),
@@ -393,17 +390,18 @@ inline const auto eaxFunctions = std::array{
     DECL(EAXSetDirect),
     DECL(EAXGetBufferModeDirect),
     DECL(EAXSetBufferModeDirect),
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 };
 #endif
 #undef DECL
 
 struct EnumExport {
-    std::string_view enumName;
+    const char *enumName;
     int value;
 };
 #define DECL(x) EnumExport{#x, (x)}
-inline constexpr auto alcEnumerations = std::to_array({
+/* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
+inline const EnumExport alcEnumerations[]{
+    DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
 
@@ -504,7 +502,7 @@ inline constexpr auto alcEnumerations = std::to_array({
     DECL(ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT),
 
 
-    EnumExport{ "AL_INVALID", -1 }, /* Deprecated enum */
+    DECL(AL_INVALID),
     DECL(AL_NONE),
     DECL(AL_FALSE),
     DECL(AL_TRUE),
@@ -870,6 +868,7 @@ inline constexpr auto alcEnumerations = std::to_array({
     DECL(AL_UNPACK_AMBISONIC_ORDER_SOFT),
 
     DECL(AL_EFFECT_CONVOLUTION_SOFT),
+    DECL(AL_EFFECTSLOT_STATE_SOFT),
 
     DECL(AL_DONT_CARE_EXT),
     DECL(AL_DEBUG_OUTPUT_EXT),
@@ -911,9 +910,9 @@ inline constexpr auto alcEnumerations = std::to_array({
     DECL(AL_PAN_SOFT),
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
-});
+};
 #if ALSOFT_EAX
-inline constexpr auto eaxEnumerations = std::array{
+inline const std::array eaxEnumerations{
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
     DECL(AL_STORAGE_AUTOMATIC),

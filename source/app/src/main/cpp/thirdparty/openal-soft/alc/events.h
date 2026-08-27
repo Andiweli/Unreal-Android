@@ -9,11 +9,10 @@
 #include <optional>
 #include <string_view>
 
-#include "altypes.hpp"
 
 namespace alc {
 
-enum class EventType : u8 {
+enum class EventType : uint8_t {
     DefaultDeviceChanged,
     DeviceAdded,
     DeviceRemoved,

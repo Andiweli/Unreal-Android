@@ -9,7 +9,8 @@
 
 struct DeviceBase;
 
-struct PipeWireBackendFactory final : BackendFactory {
+struct PipeWireBackendFactory final : public BackendFactory {
+public:
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -18,7 +19,7 @@ struct PipeWireBackendFactory final : BackendFactory {
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
-    auto createBackend(gsl::not_null<DeviceBase*> device, BackendType type) -> BackendPtr final;
+    auto createBackend(DeviceBase *device, BackendType type) -> BackendPtr final;
 
     static auto getFactory() -> BackendFactory&;
 };

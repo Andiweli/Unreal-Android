@@ -6,31 +6,30 @@
 #include <utility>
 #include <vector>
 
-#include "alnumeric.h"
-#include "opthelpers.h"
+using uint = unsigned int;
 
 
 /* Somewhat arbitrary. Avoid letting it get out of control if the app enables
  * logging but never reads it.
  */
-inline constexpr auto MaxDebugLoggedMessages = 64_u8;
-inline constexpr auto MaxDebugMessageLength = 1024_u16;
-inline constexpr auto MaxDebugGroupDepth = 64_u8;
-inline constexpr auto MaxObjectLabelLength = 1024_u16;
+inline constexpr std::uint8_t MaxDebugLoggedMessages{64};
+inline constexpr std::uint16_t MaxDebugMessageLength{1024};
+inline constexpr std::uint8_t MaxDebugGroupDepth{64};
+inline constexpr std::uint16_t MaxObjectLabelLength{1024};
 
 
-inline constexpr auto DebugSourceBase = 0_u32;
-enum class DebugSource : u8 {
+inline constexpr uint DebugSourceBase{0};
+enum class DebugSource : std::uint8_t {
     API = 0,
     System,
     ThirdParty,
     Application,
     Other,
 };
-inline constexpr auto DebugSourceCount = 5_u32;
+inline constexpr uint DebugSourceCount{5};
 
-inline constexpr auto DebugTypeBase = DebugSourceBase + DebugSourceCount;
-enum class DebugType : u8 {
+inline constexpr uint DebugTypeBase{DebugSourceBase + DebugSourceCount};
+enum class DebugType : std::uint8_t {
     Error = 0,
     DeprecatedBehavior,
     UndefinedBehavior,
@@ -41,31 +40,31 @@ enum class DebugType : u8 {
     PopGroup,
     Other,
 };
-inline constexpr auto DebugTypeCount = 9_u32;
+inline constexpr uint DebugTypeCount{9};
 
-inline constexpr auto DebugSeverityBase = DebugTypeBase + DebugTypeCount;
-enum class DebugSeverity : u8 {
+inline constexpr uint DebugSeverityBase{DebugTypeBase + DebugTypeCount};
+enum class DebugSeverity : std::uint8_t {
     High = 0,
     Medium,
     Low,
     Notification,
 };
-inline constexpr auto DebugSeverityCount = 4_u32;
+inline constexpr uint DebugSeverityCount{4};
 
 struct DebugGroup {
-    u32 const mId;
-    DebugSource const mSource;
+    const uint mId;
+    const DebugSource mSource;
     std::string mMessage;
-    std::vector<u32> mFilters;
-    std::vector<u64> mIdFilters;
+    std::vector<uint> mFilters;
+    std::vector<std::uint64_t> mIdFilters;
 
     template<typename T>
-    DebugGroup(DebugSource const source, u32 const id, T&& message)
+    DebugGroup(DebugSource source, uint id, T&& message)
         : mId{id}, mSource{source}, mMessage{std::forward<T>(message)}
     { }
     DebugGroup(const DebugGroup&) = default;
     DebugGroup(DebugGroup&&) = default;
-    NOINLINE ~DebugGroup() = default;
+    ~DebugGroup();
 };
 
 #endif /* AL_DEBUG_H */

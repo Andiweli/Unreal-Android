@@ -6,8 +6,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Build;
-import android.provider.DocumentsContract;
-import android.provider.DocumentsContract.Document;
 import android.util.Log;
 
 import java.io.File;
@@ -15,18 +13,20 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.lang.reflect.Method;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 final class UnrealDataPaths {
+    // UNREAL_ANDROID_API16_DATAPATHS_V212: no java.nio.file / direct DocumentsContract references.
+
     static final String TAG_STARTUP = "UE1Startup";
     static final String TAG_CONFIG = "UE1Config";
     static final String TAG_IMPORT = "UE1Import";
@@ -41,11 +41,19 @@ final class UnrealDataPaths {
     static boolean isGermanLocale(Context context) {
         Locale locale;
         if (Build.VERSION.SDK_INT >= 24) {
-            locale = context.getResources().getConfiguration().getLocales().get(0);
+            locale = Api24Locale.current(context.getResources().getConfiguration());
         } else {
             locale = context.getResources().getConfiguration().locale;
         }
         return locale != null && "de".equalsIgnoreCase(locale.getLanguage());
+    }
+
+    @android.annotation.TargetApi(24)
+    private static final class Api24Locale {
+        private Api24Locale() {}
+        static Locale current(android.content.res.Configuration configuration) {
+            return configuration.getLocales().get(0);
+        }
     }
 
     static String tr(Context context, String de, String en) {
@@ -78,6 +86,11 @@ final class UnrealDataPaths {
         }
     }
 
+    private static final String SAF_MIME_TYPE_DIR = "vnd.android.document/directory";
+    private static final String SAF_COL_DOCUMENT_ID = "document_id";
+    private static final String SAF_COL_DISPLAY_NAME = "_display_name";
+    private static final String SAF_COL_MIME_TYPE = "mime_type";
+
     private static final class SafNode {
         final String docId;
         final String name;
@@ -90,7 +103,7 @@ final class UnrealDataPaths {
         }
 
         boolean isDirectory() {
-            return Document.MIME_TYPE_DIR.equals(mimeType);
+            return SAF_MIME_TYPE_DIR.equals(mimeType);
         }
     }
 
@@ -139,7 +152,7 @@ final class UnrealDataPaths {
         HashSet<String> seen = new HashSet<>();
 
         addCandidate(out, seen, primaryAppRoot(context));
-        File[] appExternalDirs = context.getExternalFilesDirs(null);
+        File[] appExternalDirs = externalFilesDirsCompat(context);
         if (appExternalDirs != null) {
             for (File appDir : appExternalDirs) {
                 if (appDir == null) continue;
@@ -184,6 +197,45 @@ final class UnrealDataPaths {
             }
         }
         return out;
+    }
+
+    private static File[] externalFilesDirsCompat(Context context) {
+        if (context == null) return null;
+        if (Build.VERSION.SDK_INT >= 19) {
+            try {
+                Method method = Context.class.getMethod("getExternalFilesDirs", String.class);
+                Object result = method.invoke(context, new Object[] { null });
+                if (result instanceof File[]) return (File[]) result;
+            } catch (Throwable ignored) {}
+        }
+        File single = context.getExternalFilesDir(null);
+        return single != null ? new File[] { single } : null;
+    }
+
+    private static String readUtf8(File file) throws IOException {
+        FileInputStream in = new FileInputStream(file);
+        ByteArrayOutputStream out = new ByteArrayOutputStream((int) Math.min(Math.max(file.length(), 32L), 1024L * 1024L));
+        try {
+            byte[] buf = new byte[8192];
+            int read;
+            while ((read = in.read(buf)) != -1) out.write(buf, 0, read);
+            return new String(out.toByteArray(), "UTF-8");
+        } finally {
+            try { in.close(); } catch (Throwable ignored) {}
+            try { out.close(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static void writeUtf8(File file, String text) throws IOException {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+        FileOutputStream out = new FileOutputStream(file);
+        try {
+            out.write((text != null ? text : "").getBytes("UTF-8"));
+            out.flush();
+        } finally {
+            try { out.close(); } catch (Throwable ignored) {}
+        }
     }
 
     private static File storageRootFromExternalFilesDir(File appDir) {
@@ -294,14 +346,14 @@ final class UnrealDataPaths {
     private static void patchPackageName(File file) {
         if (!file.isFile()) return;
         try {
-            String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            String text = readUtf8(file);
             String patched = text
                     .replace("UnrealShare.SinglePlayer", "UnrealI.SinglePlayer")
                     .replace("UnrealShare.DeathMatchGame", "UnrealI.DeathMatchGame")
                     .replace("DefaultGame=UnrealShare.", "DefaultGame=UnrealI.")
                     .replace("DefaultServerGame=UnrealShare.", "DefaultServerGame=UnrealI.");
             if (!patched.equals(text)) {
-                Files.write(file.toPath(), patched.getBytes(StandardCharsets.UTF_8));
+                writeUtf8(file, patched);
                 Log.i(TAG_CONFIG, "Patched retail v200 config package names: " + file.getAbsolutePath());
             }
         } catch (IOException ex) {
@@ -319,6 +371,7 @@ final class UnrealDataPaths {
                     "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n[Engine.Input]\n");
             ensureConfigFile(systemDir, "Unreal.ini", new String[] { "Default.ini", "Unreal.ini.default" }, "");
             ensureAndroidControllerDirectPatch(systemDir);
+            applyOuyaResolutionDefaultOnceV212(systemDir); // UNREAL_ANDROID_OUYA_960_DEFAULT_V212
             Log.i(TAG_CONFIG, "Config root: " + root.getAbsolutePath());
             Log.i(TAG_CONFIG, "User.ini: " + new File(systemDir, "User.ini").getAbsolutePath());
         } catch (Throwable t) {
@@ -326,6 +379,65 @@ final class UnrealDataPaths {
         }
     }
 
+
+    private static boolean isOuyaDeviceV212() {
+        String fingerprint = ((Build.MANUFACTURER != null ? Build.MANUFACTURER : "") + " "
+                + (Build.MODEL != null ? Build.MODEL : "") + " "
+                + (Build.DEVICE != null ? Build.DEVICE : "") + " "
+                + (Build.PRODUCT != null ? Build.PRODUCT : "")).toLowerCase(Locale.US);
+        return fingerprint.contains("ouya");
+    }
+
+    private static String getIniValue(String text, String section, String key) {
+        if (text == null) return null;
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        java.util.regex.Pattern sectionPattern = java.util.regex.Pattern.compile("(?im)^\\[" + java.util.regex.Pattern.quote(section) + "\\]\\s*$");
+        java.util.regex.Matcher sectionMatcher = sectionPattern.matcher(normalized);
+        if (!sectionMatcher.find()) return null;
+        int sectionStart = sectionMatcher.end();
+        java.util.regex.Pattern nextSectionPattern = java.util.regex.Pattern.compile("(?m)^\\[[^\\]]+\\]\\s*$");
+        java.util.regex.Matcher nextSectionMatcher = nextSectionPattern.matcher(normalized);
+        int sectionEnd = nextSectionMatcher.find(sectionStart) ? nextSectionMatcher.start() : normalized.length();
+        String body = normalized.substring(sectionStart, sectionEnd);
+        java.util.regex.Pattern keyPattern = java.util.regex.Pattern.compile("(?im)^" + java.util.regex.Pattern.quote(key) + "\\s*=\\s*(.*?)\\s*$");
+        java.util.regex.Matcher keyMatcher = keyPattern.matcher(body);
+        return keyMatcher.find() ? keyMatcher.group(1).trim() : null;
+    }
+
+    private static void resetOuyaResolutionDefaultAfterImportV212(File root) {
+        if (root == null || !isOuyaDeviceV212()) return;
+        File systemDir = new File(root, "System");
+        File marker = new File(systemDir, ".unreal-ouya-resolution-v212");
+        if (marker.exists() && !marker.delete()) {
+            Log.w(TAG_CONFIG, "Could not reset OUYA resolution initialization marker after import");
+        }
+        applyOuyaResolutionDefaultOnceV212(systemDir);
+    }
+
+    private static void applyOuyaResolutionDefaultOnceV212(File systemDir) {
+        // Preserve the OUYA branch's proven 960x540 default, but only once.
+        // Afterwards the in-game resolution menu remains authoritative.
+        if (systemDir == null || !isOuyaDeviceV212()) return;
+        File marker = new File(systemDir, ".unreal-ouya-resolution-v212");
+        if (marker.isFile()) return;
+        try {
+            for (String name : new String[] { "Unreal.ini", "Default.ini" }) {
+                File file = new File(systemDir, name);
+                if (!file.isFile()) continue;
+                String text = readUtf8(file);
+                String current = getIniValue(text, "NSDLDrv.NSDLClient", "AndroidResolutionMode");
+                // Do not overwrite an explicit 1280x720/1024x768/960x540 user choice.
+                if (current == null || current.length() == 0 || "0".equals(current)) {
+                    String patched = setIniValue(text, "NSDLDrv.NSDLClient", "AndroidResolutionMode", "3");
+                    if (!patched.equals(text)) writeUtf8(file, patched);
+                }
+            }
+            writeUtf8(marker, "UNREAL_ANDROID_OUYA_960_DEFAULT_V212\n");
+            Log.i(TAG_CONFIG, "OUYA detected: initialized modern FBO resolution to 960x540 once");
+        } catch (Throwable t) {
+            Log.w(TAG_CONFIG, "Could not initialize OUYA 960x540 default: " + t);
+        }
+    }
 
     private static void ensureAndroidControllerDirectPatch(File systemDir) {
         // UNREAL_ANDROID_CONFIG_PRESERVE_V139
@@ -341,7 +453,7 @@ final class UnrealDataPaths {
     private static void patchNsdlControllerDefaults(File file) {
         if (file == null || !file.isFile()) return;
         try {
-            String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            String text = readUtf8(file);
             String patched = text;
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "UseJoystick", "True");
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeController", "True");
@@ -356,7 +468,7 @@ final class UnrealDataPaths {
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleXYZ", "100.0");
             patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleRUV", "100.0");
             if (!patched.equals(text)) {
-                Files.write(file.toPath(), patched.getBytes(StandardCharsets.UTF_8));
+                writeUtf8(file, patched);
                 Log.i(TAG_CONFIG, "Patched Android controller defaults: " + file.getAbsolutePath());
             }
         } catch (IOException ex) {
@@ -368,7 +480,7 @@ final class UnrealDataPaths {
         if (file == null) return;
         try {
             String text = file.isFile()
-                    ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
+                    ? readUtf8(file)
                     : "[DefaultPlayer]\nName=Player\nClass=UnrealShare.MaleOne\n\n";
             if (text.contains("UNREAL_ANDROID_CONTROLLER_DIRECT_V122")
                     || hasAnyEngineInputBindings(text)
@@ -418,7 +530,7 @@ final class UnrealDataPaths {
                     "UnknownDA=MoveForward\n" +
                     "UnknownDF=MoveBackward\n" +
                     "UnknownEA=LookDown\n";
-            Files.write(file.toPath(), (text + block).getBytes(StandardCharsets.UTF_8));
+            writeUtf8(file, text + block);
             Log.i(TAG_CONFIG, "Appended Android controller input fallbacks: " + file.getAbsolutePath());
         } catch (IOException ex) {
             Log.w(TAG_CONFIG, "Could not append controller input fallbacks in " + file.getAbsolutePath() + ": " + ex);
@@ -527,8 +639,13 @@ final class UnrealDataPaths {
 
     static ImportResult importUnrealFolderFromSaf(Context context, Uri treeUri) {
         if (treeUri == null) return ImportResult.fail(tr(context, "Kein Ordner ausgewählt.", "No folder selected."));
+        if (Build.VERSION.SDK_INT < 21) {
+            return ImportResult.fail(tr(context,
+                    "Dieser Android-Stand bietet keinen systemeigenen Ordnerimport. Bitte den Unreal-Ordner auf USB/SD oder in den App-Ordner kopieren.",
+                    "This Android version has no system folder import. Please copy the Unreal folder to USB/SD or into the app folder."));
+        }
         try {
-            String selectedDocId = DocumentsContract.getTreeDocumentId(treeUri);
+            String selectedDocId = safGetTreeDocumentId(treeUri);
             if (selectedDocId == null || selectedDocId.length() == 0) return ImportResult.fail(tr(context, "Der ausgewählte Ordner konnte nicht gelesen werden.", "The selected folder could not be read."));
 
             String unrealDocId = findSafUnrealRootDocId(context, treeUri, selectedDocId);
@@ -543,6 +660,7 @@ final class UnrealDataPaths {
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
             ensureAndroidControllerDirectPatch(new File(target, "System"));
+            resetOuyaResolutionDefaultAfterImportV212(target);
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context, "Der Ordner wurde kopiert, aber danach fehlen weiterhin Pflichtdateien in ", "The folder was copied, but required files are still missing in ") + target.getAbsolutePath());
@@ -568,6 +686,7 @@ final class UnrealDataPaths {
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
             ensureAndroidControllerDirectPatch(new File(target, "System"));
+            resetOuyaResolutionDefaultAfterImportV212(target);
 
             if (!hasRequiredData(target, true)) {
                 return ImportResult.fail(tr(context, "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ", "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());
@@ -576,6 +695,27 @@ final class UnrealDataPaths {
         } catch (Throwable t) {
             return ImportResult.fail(tr(context, "Import aus der ZIP-Datei fehlgeschlagen.", "Import from the ZIP file failed."), t);
         }
+    }
+
+    private static String safGetTreeDocumentId(Uri treeUri) throws Exception {
+        Class<?> cls = Class.forName("android.provider.DocumentsContract");
+        Method method = cls.getMethod("getTreeDocumentId", Uri.class);
+        Object result = method.invoke(null, treeUri);
+        return result instanceof String ? (String) result : null;
+    }
+
+    private static Uri safBuildChildDocumentsUriUsingTree(Uri treeUri, String parentDocId) throws Exception {
+        Class<?> cls = Class.forName("android.provider.DocumentsContract");
+        Method method = cls.getMethod("buildChildDocumentsUriUsingTree", Uri.class, String.class);
+        Object result = method.invoke(null, treeUri, parentDocId);
+        return result instanceof Uri ? (Uri) result : null;
+    }
+
+    private static Uri safBuildDocumentUriUsingTree(Uri treeUri, String docId) throws Exception {
+        Class<?> cls = Class.forName("android.provider.DocumentsContract");
+        Method method = cls.getMethod("buildDocumentUriUsingTree", Uri.class, String.class);
+        Object result = method.invoke(null, treeUri, docId);
+        return result instanceof Uri ? (Uri) result : null;
     }
 
     private static String findSafUnrealRootDocId(Context context, Uri treeUri, String selectedDocId) {
@@ -617,14 +757,14 @@ final class UnrealDataPaths {
 
     private static List<SafNode> listSafChildren(Context context, Uri treeUri, String parentDocId) {
         ArrayList<SafNode> out = new ArrayList<>();
+        if (Build.VERSION.SDK_INT < 21) return out;
         ContentResolver resolver = context.getContentResolver();
-        Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
-        String[] projection = new String[] {
-                Document.COLUMN_DOCUMENT_ID,
-                Document.COLUMN_DISPLAY_NAME,
-                Document.COLUMN_MIME_TYPE
-        };
-        try (Cursor cursor = resolver.query(childrenUri, projection, null, null, null)) {
+        Cursor cursor = null;
+        try {
+            Uri childrenUri = safBuildChildDocumentsUriUsingTree(treeUri, parentDocId);
+            if (childrenUri == null) return out;
+            String[] projection = new String[] { SAF_COL_DOCUMENT_ID, SAF_COL_DISPLAY_NAME, SAF_COL_MIME_TYPE };
+            cursor = resolver.query(childrenUri, projection, null, null, null);
             if (cursor == null) return out;
             while (cursor.moveToNext()) {
                 String docId = cursor.getString(0);
@@ -635,6 +775,8 @@ final class UnrealDataPaths {
             }
         } catch (Throwable t) {
             Log.w(TAG_IMPORT, "Could not list SAF children for doc=" + parentDocId + ": " + t);
+        } finally {
+            if (cursor != null) try { cursor.close(); } catch (Throwable ignored) {}
         }
         return out;
     }
@@ -648,12 +790,23 @@ final class UnrealDataPaths {
             if (child.isDirectory()) {
                 copySafTree(context, treeUri, child.docId, out);
             } else {
-                Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, child.docId);
-                File parent = out.getParentFile();
-                if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
-                try (InputStream in = context.getContentResolver().openInputStream(fileUri); FileOutputStream fos = new FileOutputStream(out)) {
+                InputStream in = null;
+                FileOutputStream fos = null;
+                try {
+                    Uri fileUri = safBuildDocumentUriUsingTree(treeUri, child.docId);
+                    if (fileUri == null) throw new IOException("Could not build SAF file URI for " + child.name);
+                    File parent = out.getParentFile();
+                    if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Could not create " + parent.getAbsolutePath());
+                    in = context.getContentResolver().openInputStream(fileUri);
                     if (in == null) throw new IOException("Could not open SAF file " + child.name);
+                    fos = new FileOutputStream(out);
                     copyStream(in, fos);
+                } catch (Exception ex) {
+                    if (ex instanceof IOException) throw (IOException) ex;
+                    throw new IOException("Could not copy SAF file " + child.name + ": " + ex);
+                } finally {
+                    if (in != null) try { in.close(); } catch (Throwable ignored) {}
+                    if (fos != null) try { fos.close(); } catch (Throwable ignored) {}
                 }
             }
         }

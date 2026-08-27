@@ -34,6 +34,54 @@ void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus
 } // extern "C"
+
+#include <cstdio>
+#include <string>
+#include <string_view>
+
+#include "alspan.h"
+#include "fmt/core.h"
+
+int InitAL(al::span<std::string_view> &args)
+{
+    ALCdevice *device{};
+
+    /* Open and initialize a device */
+    if(args.size() > 1 && args[0] == "-device")
+    {
+        device = alcOpenDevice(std::string{args[1]}.c_str());
+        if(!device)
+            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
+        args = args.subspan(2);
+    }
+    if(!device)
+        device = alcOpenDevice(nullptr);
+    if(!device)
+    {
+        fmt::println(stderr, "Could not open a device!");
+        return 1;
+    }
+
+    ALCcontext *ctx{alcCreateContext(device, nullptr)};
+    if(!ctx || alcMakeContextCurrent(ctx) == ALC_FALSE)
+    {
+        if(ctx)
+            alcDestroyContext(ctx);
+        alcCloseDevice(device);
+        fmt::println(stderr, "Could not set a context!");
+        return 1;
+    }
+
+    const ALCchar *name{};
+    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
+        name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+    if(!name || alcGetError(device) != AL_NO_ERROR)
+        name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+    fmt::println("Opened \"{}\"", name);
+
+    return 0;
+}
+
 #endif
 
 #endif /* ALHELPERS_H */

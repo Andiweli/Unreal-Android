@@ -333,7 +333,13 @@ CORE_API void appAndroidInitFileSystem()
 		Base = SDL_AndroidGetInternalStoragePath();
 	}
 	if( !Base || !Base[0] )
+	{
+#if UNREAL_ANDROID_AUTOMOTIVE // UNREAL_ANDROID_FLAVOR_DATA_FALLBACK_V212
+		Base = "/storage/emulated/0/Android/data/com.ast.unrealandroid/files";
+#else
 		Base = "/storage/emulated/0/Android/data/com.ast.unreal/files";
+#endif
+	}
 
 	appStrncpy( GAndroidExternalFilesDir, Base, sizeof(GAndroidExternalFilesDir) - 1 );
 	GAndroidExternalFilesDir[sizeof(GAndroidExternalFilesDir) - 1] = 0;

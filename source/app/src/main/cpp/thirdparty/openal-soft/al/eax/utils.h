@@ -3,7 +3,8 @@
 
 #include <string_view>
 
-#include "alformat.hpp"
+#include "fmt/core.h"
+#include "opthelpers.h"
 
 
 struct EaxAlLowPassParam {
@@ -17,12 +18,12 @@ template<typename TException, typename TValue>
 void eax_validate_range(std::string_view value_name, const TValue& value, const TValue& min_value,
     const TValue& max_value)
 {
-    if(value >= min_value && value <= max_value) [[likely]]
+    if(value >= min_value && value <= max_value) LIKELY
         return;
 
-    const auto message = al::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
+    const auto message = fmt::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
         value, min_value, max_value);
-    throw TException{message};
+    throw TException{message.c_str()};
 }
 
 #endif // !EAX_UTILS_INCLUDED

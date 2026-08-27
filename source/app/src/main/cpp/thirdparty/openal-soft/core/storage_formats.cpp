@@ -10,7 +10,7 @@ namespace {
 using namespace std::string_view_literals;
 } // namespace
 
-auto NameFromFormat(FmtType const type) noexcept -> std::string_view
+auto NameFromFormat(FmtType type) noexcept -> std::string_view
 {
     switch(type)
     {
@@ -27,7 +27,7 @@ auto NameFromFormat(FmtType const type) noexcept -> std::string_view
     return "<internal error>"sv;
 }
 
-auto NameFromFormat(FmtChannels const channels) noexcept -> std::string_view
+auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view
 {
     switch(channels)
     {
@@ -44,11 +44,12 @@ auto NameFromFormat(FmtChannels const channels) noexcept -> std::string_view
     case FmtUHJ3: return "UHJ3"sv;
     case FmtUHJ4: return "UHJ4"sv;
     case FmtSuperStereo: return "Super Stereo"sv;
+    case FmtMonoDup: return "Mono (dup)"sv;
     }
     return "<internal error>"sv;
 }
 
-auto BytesFromFmt(FmtType const type) noexcept -> u32
+uint BytesFromFmt(FmtType type) noexcept
 {
     switch(type)
     {
@@ -65,7 +66,7 @@ auto BytesFromFmt(FmtType const type) noexcept -> u32
     return 0;
 }
 
-auto ChannelsFromFmt(FmtChannels const chans, u32 const ambiorder) noexcept -> u32
+uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
 {
     switch(chans)
     {
@@ -82,6 +83,7 @@ auto ChannelsFromFmt(FmtChannels const chans, u32 const ambiorder) noexcept -> u
     case FmtUHJ3: return 3;
     case FmtUHJ4: return 4;
     case FmtSuperStereo: return 2;
+    case FmtMonoDup: return 1;
     }
     return 0;
 }

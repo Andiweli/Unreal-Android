@@ -3,16 +3,17 @@
 
 #include <array>
 #include <cstddef>
-#include <span>
 #include <variant>
 
+#include "alspan.h"
 #include "core/bufferline.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 
 struct BufferStorage;
 struct ContextBase;
 struct DeviceBase;
-struct EffectSlotBase;
+struct EffectSlot;
 struct MixParams;
 struct RealMixParams;
 
@@ -193,18 +194,17 @@ struct EffectTarget {
     RealMixParams *RealOut;
 };
 
-struct EffectState : public al::intrusive_ref<EffectState> {
-    std::span<FloatBufferLine> mOutTarget;
+struct SIMDALIGN EffectState : public al::intrusive_ref<EffectState> {
+    al::span<FloatBufferLine> mOutTarget;
 
 
     virtual ~EffectState() = default;
 
     virtual void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) = 0;
-    virtual void update(const ContextBase *context, const EffectSlotBase *slot,
+    virtual void update(const ContextBase *context, const EffectSlot *slot,
         const EffectProps *props, const EffectTarget target) = 0;
-    virtual void process(const size_t samplesToDo,
-        const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) = 0;
+    virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
+        const al::span<FloatBufferLine> samplesOut) = 0;
 };
 
 

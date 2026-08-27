@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -37,7 +36,7 @@ import java.util.Locale;
 public final class ChromeOSInputLogger {
     private static final Object LOCK = new Object();
     private static final String FILE_NAME = "Unreal_ChromeOS_Input.log";
-    private static final String DOCUMENTS_RELATIVE = Environment.DIRECTORY_DOCUMENTS + "/Unreal/";
+    private static final String DOCUMENTS_RELATIVE = "Documents/Unreal/"; // API16-safe literal
     private static final String DOWNLOADS_RELATIVE = Environment.DIRECTORY_DOWNLOADS + "/Unreal/";
     private static final int MAX_LINES = 20000;
 
@@ -66,8 +65,7 @@ public final class ChromeOSInputLogger {
             Throwable documentsFailure = null;
             if (Build.VERSION.SDK_INT >= 29) {
                 try {
-                    Uri filesCollection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-                    if (openMediaStoreFileLocked(filesCollection, DOCUMENTS_RELATIVE)) {
+                    if (Api29MediaStore.openDocuments()) {
                         displayLocation = "Documents/Unreal/" + FILE_NAME;
                     }
                 } catch (Throwable t) {
@@ -76,7 +74,7 @@ public final class ChromeOSInputLogger {
 
                 if (writer == null) {
                     try {
-                        if (openMediaStoreFileLocked(MediaStore.Downloads.EXTERNAL_CONTENT_URI, DOWNLOADS_RELATIVE)) {
+                        if (Api29MediaStore.openDownloads()) {
                             displayLocation = "Downloads/Unreal/" + FILE_NAME;
                         }
                     } catch (Throwable ignored) {
@@ -86,12 +84,12 @@ public final class ChromeOSInputLogger {
 
             if (writer == null) {
                 try {
-                    File base = appContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+                    File base = appContext.getExternalFilesDir("Documents");
                     if (base != null) {
                         File dir = new File(base, "Unreal");
                         if (!dir.exists()) dir.mkdirs();
                         File file = new File(dir, FILE_NAME);
-                        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, false), StandardCharsets.UTF_8));
+                        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, false), "UTF-8"));
                         displayLocation = file.getAbsolutePath() + " (fallback; app-specific)";
                     }
                 } catch (Throwable ignored) {
@@ -122,54 +120,67 @@ public final class ChromeOSInputLogger {
         }
     }
 
-    private static boolean openMediaStoreFileLocked(Uri collection, String relativePath) throws Exception {
-        ContentResolver resolver = appContext.getContentResolver();
-        Uri oldUri = findExistingLocked(resolver, collection, relativePath);
-        if (oldUri != null) {
+    @android.annotation.TargetApi(29)
+    private static final class Api29MediaStore {
+        private Api29MediaStore() {}
+
+        static boolean openDocuments() throws Exception {
+            return openFile(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), DOCUMENTS_RELATIVE);
+        }
+
+        static boolean openDownloads() throws Exception {
+            return openFile(MediaStore.Downloads.EXTERNAL_CONTENT_URI, DOWNLOADS_RELATIVE);
+        }
+
+        private static boolean openFile(Uri collection, String relativePath) throws Exception {
+            ContentResolver resolver = appContext.getContentResolver();
+            Uri oldUri = findExisting(resolver, collection, relativePath);
+            if (oldUri != null) {
+                try {
+                    resolver.delete(oldUri, null, null);
+                } catch (Throwable ignored) {
+                }
+            }
+
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, FILE_NAME);
+            values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
+            Uri created = resolver.insert(collection, values);
+            if (created == null) return false;
+
+            OutputStream output = resolver.openOutputStream(created, "wt");
+            if (output == null) {
+                try {
+                    resolver.delete(created, null, null);
+                } catch (Throwable ignored) {
+                }
+                return false;
+            }
+
+            logUri = created;
+            writer = new BufferedWriter(new OutputStreamWriter(output, "UTF-8"));
+            return true;
+        }
+
+        private static Uri findExisting(ContentResolver resolver, Uri collection, String relativePath) {
+            Cursor cursor = null;
             try {
-                resolver.delete(oldUri, null, null);
+                String[] projection = new String[] { MediaStore.MediaColumns._ID };
+                String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=? AND "
+                        + MediaStore.MediaColumns.RELATIVE_PATH + "=?";
+                String[] args = new String[] { FILE_NAME, relativePath };
+                cursor = resolver.query(collection, projection, selection, args, null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    long id = cursor.getLong(0);
+                    return Uri.withAppendedPath(collection, Long.toString(id));
+                }
             } catch (Throwable ignored) {
+            } finally {
+                if (cursor != null) cursor.close();
             }
+            return null;
         }
-
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, FILE_NAME);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-        values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
-        Uri created = resolver.insert(collection, values);
-        if (created == null) return false;
-
-        OutputStream output = resolver.openOutputStream(created, "wt");
-        if (output == null) {
-            try {
-                resolver.delete(created, null, null);
-            } catch (Throwable ignored) {
-            }
-            return false;
-        }
-
-        logUri = created;
-        writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-        return true;
-    }
-
-    private static Uri findExistingLocked(ContentResolver resolver, Uri collection, String relativePath) {
-        Cursor cursor = null;
-        try {
-            String[] projection = new String[] { MediaStore.MediaColumns._ID };
-            String selection = MediaStore.MediaColumns.DISPLAY_NAME + "=? AND "
-                    + MediaStore.MediaColumns.RELATIVE_PATH + "=?";
-            String[] args = new String[] { FILE_NAME, relativePath };
-            cursor = resolver.query(collection, projection, selection, args, null);
-            if (cursor != null && cursor.moveToFirst()) {
-                long id = cursor.getLong(0);
-                return Uri.withAppendedPath(collection, Long.toString(id));
-            }
-        } catch (Throwable ignored) {
-        } finally {
-            if (cursor != null) cursor.close();
-        }
-        return null;
     }
 
     public static String getDisplayLocation() {
@@ -225,8 +236,8 @@ public final class ChromeOSInputLogger {
                 + " source=0x" + Integer.toHexString(event.getSource()) + "[" + sourceNames(event.getSource()) + "]"
                 + " deviceId=" + event.getDeviceId()
                 + " device=" + deviceName(device)
-                + " vendor=" + (device != null ? device.getVendorId() : 0)
-                + " product=" + (device != null ? device.getProductId() : 0)
+                + " vendor=" + (device != null ? inputDeviceVendorIdV212(device) : 0)
+                + " product=" + (device != null ? inputDeviceProductIdV212(device) : 0)
                 + " meta=0x" + Integer.toHexString(event.getMetaState())
                 + " flags=0x" + Integer.toHexString(event.getFlags())
                 + " unicode=" + event.getUnicodeChar();
@@ -253,7 +264,7 @@ public final class ChromeOSInputLogger {
         boolean captured = false;
         if (Build.VERSION.SDK_INT >= 26 && targetView != null) {
             try {
-                captured = targetView.hasPointerCapture();
+                captured = Api26View.hasPointerCapture(targetView);
             } catch (Throwable ignored) {
             }
         }
@@ -265,8 +276,8 @@ public final class ChromeOSInputLogger {
                 + " tool=" + toolTypeName(toolType)
                 + " deviceId=" + event.getDeviceId()
                 + " device=" + deviceName(device)
-                + " vendor=" + (device != null ? device.getVendorId() : 0)
-                + " product=" + (device != null ? device.getProductId() : 0)
+                + " vendor=" + (device != null ? inputDeviceVendorIdV212(device) : 0)
+                + " product=" + (device != null ? inputDeviceProductIdV212(device) : 0)
                 + " x=" + f(event.getX(0))
                 + " y=" + f(event.getY(0))
                 + " relX=" + f(event.getAxisValue(MotionEvent.AXIS_RELATIVE_X))
@@ -282,7 +293,7 @@ public final class ChromeOSInputLogger {
         boolean actual = false;
         if (Build.VERSION.SDK_INT >= 26 && view != null) {
             try {
-                actual = view.hasPointerCapture();
+                actual = Api26View.hasPointerCapture(view);
             } catch (Throwable ignored) {
             }
         }
@@ -299,8 +310,8 @@ public final class ChromeOSInputLogger {
                 if (d == null) continue;
                 rawLocked("DEVICE id=" + id
                         + " name=" + deviceName(d)
-                        + " vendor=" + d.getVendorId()
-                        + " product=" + d.getProductId()
+                        + " vendor=" + inputDeviceVendorIdV212(d)
+                        + " product=" + inputDeviceProductIdV212(d)
                         + " sources=0x" + Integer.toHexString(d.getSources())
                         + "[" + sourceNames(d.getSources()) + "]"
                         + " keyboardType=" + d.getKeyboardType()
@@ -309,6 +320,28 @@ public final class ChromeOSInputLogger {
         } catch (Throwable t) {
             rawLocked("Input device enumeration failed: " + t.getClass().getSimpleName() + ": " + safeMessage(t));
         }
+    }
+
+    // UNREAL_ANDROID_API16_CHROMEOS_DIAG_V212
+    private static int inputDeviceVendorIdV212(InputDevice device) {
+        return device != null && Build.VERSION.SDK_INT >= 19 ? Api19Input.vendorId(device) : 0;
+    }
+
+    private static int inputDeviceProductIdV212(InputDevice device) {
+        return device != null && Build.VERSION.SDK_INT >= 19 ? Api19Input.productId(device) : 0;
+    }
+
+    @android.annotation.TargetApi(19)
+    private static final class Api19Input {
+        private Api19Input() {}
+        static int vendorId(InputDevice device) { return device.getVendorId(); }
+        static int productId(InputDevice device) { return device.getProductId(); }
+    }
+
+    @android.annotation.TargetApi(26)
+    private static final class Api26View {
+        private Api26View() {}
+        static boolean hasPointerCapture(View view) { return view.hasPointerCapture(); }
     }
 
     private static void rawLocked(String text) {

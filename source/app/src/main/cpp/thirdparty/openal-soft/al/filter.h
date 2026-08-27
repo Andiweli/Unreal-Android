@@ -8,81 +8,75 @@
 #include <variant>
 
 #include "AL/al.h"
+#include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "gsl/gsl"
 
-namespace al {
-struct Context;
-struct Filter;
-} // namespace al
+struct ALfilter;
 
 
-inline constexpr auto LowPassFreqRef = 5000.0f;
-inline constexpr auto HighPassFreqRef = 250.0f;
+inline constexpr float LowPassFreqRef{5000.0f};
+inline constexpr float HighPassFreqRef{250.0f};
 
 template<typename T>
 struct FilterTable {
-    static void setParami(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, i32);
-    static void setParamiv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, i32 const*);
-    static void setParamf(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, f32);
-    static void setParamfv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, f32 const*);
+    static void setParami(ALCcontext*, ALfilter*, ALenum, int);
+    static void setParamiv(ALCcontext*, ALfilter*, ALenum, const int*);
+    static void setParamf(ALCcontext*, ALfilter*, ALenum, float);
+    static void setParamfv(ALCcontext*, ALfilter*, ALenum, const float*);
 
-    static void getParami(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, i32*);
-    static void getParamiv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, i32*);
-    static void getParamf(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, f32*);
-    static void getParamfv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, f32*);
+    static void getParami(ALCcontext*, const ALfilter*, ALenum, int*);
+    static void getParamiv(ALCcontext*, const ALfilter*, ALenum, int*);
+    static void getParamf(ALCcontext*, const ALfilter*, ALenum, float*);
+    static void getParamfv(ALCcontext*, const ALfilter*, ALenum, float*);
 
 private:
     FilterTable() = default;
     friend T;
 };
 
-struct NullFilterTable : FilterTable<NullFilterTable> { };
-struct LowpassFilterTable : FilterTable<LowpassFilterTable> { };
-struct HighpassFilterTable : FilterTable<HighpassFilterTable> { };
-struct BandpassFilterTable : FilterTable<BandpassFilterTable> { };
+struct NullFilterTable : public FilterTable<NullFilterTable> { };
+struct LowpassFilterTable : public FilterTable<LowpassFilterTable> { };
+struct HighpassFilterTable : public FilterTable<HighpassFilterTable> { };
+struct BandpassFilterTable : public FilterTable<BandpassFilterTable> { };
 
-namespace al {
 
-struct Filter {
-    ALenum mType{AL_FILTER_NULL};
+struct ALfilter {
+    ALenum type{AL_FILTER_NULL};
 
-    f32 mGain{1.0f};
-    f32 mGainHF{1.0f};
-    f32 mHFReference{LowPassFreqRef};
-    f32 mGainLF{1.0f};
-    f32 mLFReference{HighPassFreqRef};
+    float Gain{1.0f};
+    float GainHF{1.0f};
+    float HFReference{LowPassFreqRef};
+    float GainLF{1.0f};
+    float LFReference{HighPassFreqRef};
 
     using TableTypes = std::variant<NullFilterTable,LowpassFilterTable,HighpassFilterTable,
         BandpassFilterTable>;
     TableTypes mTypeVariant;
 
     /* Self ID */
-    u32 mId{0};
+    ALuint id{0};
 
-    static void SetName(gsl::not_null<Context*> context, u32 id, std::string_view name);
+    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };
 
-} /* namespace al */
-
 struct FilterSubList {
-    u64 mFreeMask{~0_u64};
-    gsl::owner<std::array<al::Filter,64>*> mFilters{nullptr};
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALfilter,64>*> Filters{nullptr};
 
     FilterSubList() noexcept = default;
     FilterSubList(const FilterSubList&) = delete;
-    FilterSubList(FilterSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mFilters{rhs.mFilters}
-    { rhs.mFreeMask = ~0_u64; rhs.mFilters = nullptr; }
+    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
+    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
     ~FilterSubList();
 
     FilterSubList& operator=(const FilterSubList&) = delete;
     FilterSubList& operator=(FilterSubList&& rhs) noexcept
-    { std::swap(mFreeMask, rhs.mFreeMask); std::swap(mFilters, rhs.mFilters); return *this; }
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
 };
 
 #endif

@@ -20,25 +20,26 @@ namespace {
 static_assert(EchoMaxDelay >= AL_ECHO_MAX_DELAY, "Echo max delay too short");
 static_assert(EchoMaxLRDelay >= AL_ECHO_MAX_LRDELAY, "Echo max left-right delay too short");
 
-consteval auto genDefaultProps() noexcept -> EffectProps
+constexpr EffectProps genDefaultProps() noexcept
 {
-    return EchoProps{
-        .Delay    = AL_ECHO_DEFAULT_DELAY,
-        .LRDelay  = AL_ECHO_DEFAULT_LRDELAY,
-        .Damping  = AL_ECHO_DEFAULT_DAMPING,
-        .Feedback = AL_ECHO_DEFAULT_FEEDBACK,
-        .Spread   = AL_ECHO_DEFAULT_SPREAD};
+    EchoProps props{};
+    props.Delay    = AL_ECHO_DEFAULT_DELAY;
+    props.LRDelay  = AL_ECHO_DEFAULT_LRDELAY;
+    props.Damping  = AL_ECHO_DEFAULT_DAMPING;
+    props.Feedback = AL_ECHO_DEFAULT_FEEDBACK;
+    props.Spread   = AL_ECHO_DEFAULT_SPREAD;
+    return props;
 }
 
 } // namespace
 
-constinit const EffectProps EchoEffectProps(genDefaultProps());
+const EffectProps EchoEffectProps{genDefaultProps()};
 
-void EchoEffectHandler::SetParami(al::Context *context, EchoProps&, ALenum param, int)
+void EchoEffectHandler::SetParami(ALCcontext *context, EchoProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::SetParamiv(al::Context *context, EchoProps&, ALenum param, const int*)
+void EchoEffectHandler::SetParamiv(ALCcontext *context, EchoProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer-vector property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::SetParamf(al::Context *context, EchoProps &props, ALenum param, float val)
+void EchoEffectHandler::SetParamf(ALCcontext *context, EchoProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -76,14 +77,14 @@ void EchoEffectHandler::SetParamf(al::Context *context, EchoProps &props, ALenum
     context->throw_error(AL_INVALID_ENUM, "Invalid echo float property {:#04x}",
         as_unsigned(param));
 }
-void EchoEffectHandler::SetParamfv(al::Context *context, EchoProps &props, ALenum param, const float *vals)
+void EchoEffectHandler::SetParamfv(ALCcontext *context, EchoProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void EchoEffectHandler::GetParami(al::Context *context, const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParami(ALCcontext *context, const EchoProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::GetParamiv(al::Context *context, const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParamiv(ALCcontext *context, const EchoProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer-vector property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::GetParamf(al::Context *context, const EchoProps &props, ALenum param, float *val)
+void EchoEffectHandler::GetParamf(ALCcontext *context, const EchoProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -97,7 +98,7 @@ void EchoEffectHandler::GetParamf(al::Context *context, const EchoProps &props, 
     context->throw_error(AL_INVALID_ENUM, "Invalid echo float property {:#04x}",
         as_unsigned(param));
 }
-void EchoEffectHandler::GetParamfv(al::Context *context, const EchoProps &props, ALenum param, float *vals)
+void EchoEffectHandler::GetParamfv(ALCcontext *context, const EchoProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
@@ -107,7 +108,7 @@ namespace {
 using EchoCommitter = EaxCommitter<EaxEchoCommitter>;
 
 struct DelayValidator {
-    void operator()(f32 const flDelay) const
+    void operator()(float flDelay) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Delay",
@@ -118,7 +119,7 @@ struct DelayValidator {
 }; // DelayValidator
 
 struct LrDelayValidator {
-    void operator()(f32 const flLRDelay) const
+    void operator()(float flLRDelay) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "LR Delay",
@@ -129,7 +130,7 @@ struct LrDelayValidator {
 }; // LrDelayValidator
 
 struct DampingValidator {
-    void operator()(f32 const flDamping) const
+    void operator()(float flDamping) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Damping",
@@ -140,7 +141,7 @@ struct DampingValidator {
 }; // DampingValidator
 
 struct FeedbackValidator {
-    void operator()(f32 const flFeedback) const
+    void operator()(float flFeedback) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Feedback",
@@ -151,7 +152,7 @@ struct FeedbackValidator {
 }; // FeedbackValidator
 
 struct SpreadValidator {
-    void operator()(f32 const flSpread) const
+    void operator()(float flSpread) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Spread",
@@ -174,40 +175,50 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EchoCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_ECHO_EFFECT", message}
+template<>
+struct EchoCommitter::Exception : public EaxException {
+    explicit Exception(const char* message) : EaxException{"EAX_ECHO_EFFECT", message}
     { }
 };
 
-template<> [[noreturn]]
-void EchoCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+template<>
+[[noreturn]] void EchoCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
 
-auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
+bool EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props)
 {
     if(auto *cur = std::get_if<EAXECHOPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
-    mAlProps = EchoProps{
-        .Delay = props.flDelay,
-        .LRDelay = props.flLRDelay,
-        .Damping = props.flDamping,
-        .Feedback = props.flFeedback,
-        .Spread = props.flSpread};
+    mAlProps = [&]{
+        EchoProps ret{};
+        ret.Delay = props.flDelay;
+        ret.LRDelay = props.flLRDelay;
+        ret.Damping = props.flDamping;
+        ret.Feedback = props.flFeedback;
+        ret.Spread = props.flSpread;
+        return ret;
+    }();
 
     return true;
 }
 
 void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props = EAXECHOPROPERTIES{
-        .flDelay = EAXECHO_DEFAULTDELAY,
-        .flLRDelay = EAXECHO_DEFAULTLRDELAY,
-        .flDamping = EAXECHO_DEFAULTDAMPING,
-        .flFeedback = EAXECHO_DEFAULTFEEDBACK,
-        .flSpread = EAXECHO_DEFAULTSPREAD};
+    static constexpr EAXECHOPROPERTIES defprops{[]
+    {
+        EAXECHOPROPERTIES ret{};
+        ret.flDelay = EAXECHO_DEFAULTDELAY;
+        ret.flLRDelay = EAXECHO_DEFAULTLRDELAY;
+        ret.flDamping = EAXECHO_DEFAULTDAMPING;
+        ret.flFeedback = EAXECHO_DEFAULTFEEDBACK;
+        ret.flSpread = EAXECHO_DEFAULTSPREAD;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
@@ -215,12 +226,12 @@ void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;
-    case EAXECHO_ALLPARAMETERS: call.store(props); break;
-    case EAXECHO_DELAY: call.store(props.flDelay); break;
-    case EAXECHO_LRDELAY: call.store(props.flLRDelay); break;
-    case EAXECHO_DAMPING: call.store(props.flDamping); break;
-    case EAXECHO_FEEDBACK: call.store(props.flFeedback); break;
-    case EAXECHO_SPREAD: call.store(props.flSpread); break;
+    case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
+    case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
+    case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
+    case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
+    case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
     default: fail_unknown_property_id();
     }
 }

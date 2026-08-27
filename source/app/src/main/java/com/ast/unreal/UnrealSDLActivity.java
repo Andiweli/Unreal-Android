@@ -11,8 +11,6 @@ import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
 import java.io.File;
@@ -20,6 +18,8 @@ import java.io.File;
 import org.libsdl.app.SDLActivity;
 
 public class UnrealSDLActivity extends SDLActivity implements InputManager.InputDeviceListener {
+    // UNREAL_ANDROID_API16_ACTIVITY_V212: isolate post-API16 framework calls behind SDK-specific helpers.
+
     private static final String TAG = "UE1Controller";
 
     private File selectedRoot;
@@ -135,6 +135,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     protected String[] getLibraries() {
+        // libc++ is linked statically (UNREAL_ANDROID_STATIC_LIBCXX_V212), so there is no
+        // separate libc++_shared.so to load on API 16 or on 16KB-page devices.
         return new String[] { "SDL2", "openal", "Unreal" };
     }
 
@@ -153,16 +155,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().getDecorView().setBackgroundColor(Color.BLACK);
-        getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Color.TRANSPARENT);
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            getWindow().setDecorFitsSystemWindows(false);
-        }
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
-            WindowManager.LayoutParams attrs = getWindow().getAttributes();
-            attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            getWindow().setAttributes(attrs);
-        }
+        if (android.os.Build.VERSION.SDK_INT >= 21) Api21Window.makeBarsTransparent(getWindow());
+        if (android.os.Build.VERSION.SDK_INT >= 28) Api28Window.enableShortEdgeCutout(getWindow());
+        if (android.os.Build.VERSION.SDK_INT >= 30) Api30Window.disableDecorFitting(getWindow());
         hideSystemUi();
         selectedRoot = selectedRootFromIntentOrScan();
         UnrealDataPaths.ensureWritableConfigFiles(this, selectedRoot); // UNREAL_ANDROID_CONFIG_BOOTSTRAP_REV31_PATH_FALLBACK_MORE_ROOTS
@@ -187,6 +182,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             inputManager.unregisterInputDeviceListener(this);
             inputManager = null;
         }
+        if (touchOverlayViewV124 != null) {
+            touchOverlayViewV124.onHostPauseV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        }
         super.onDestroy();
 
         // UE1 and several of its static native subsystems are not designed to execute
@@ -202,6 +200,12 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     protected void onPause() {
+        // Stop the Java overlay timer and release any held virtual controls immediately.
+        // The actual UE1/OpenAL pause follows SDL's lifecycle in native code; on Android
+        // 7+ SDL intentionally performs the native pause from onStop().
+        if (touchOverlayViewV124 != null) {
+            touchOverlayViewV124.onHostPauseV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        }
         resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
         super.onPause();
     }
@@ -213,6 +217,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         hideSystemUi();
         scheduleImmersiveRefresh();
         installUnrealTouchOverlayV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+        if (touchOverlayViewV124 != null) {
+            touchOverlayViewV124.onHostResumeV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        }
     }
 
     @Override
@@ -363,8 +370,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                     }
                     boolean consumed = nativeAndroidControllerKey(
                             event.getDeviceId(),
-                            device.getVendorId(),
-                            device.getProductId(),
+                            inputDeviceVendorIdV212(device),
+                            inputDeviceProductIdV212(device),
                             event.getKeyCode(),
                             event.getScanCode(),
                             event.getAction(),
@@ -400,7 +407,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         if (android.os.Build.VERSION.SDK_INT < 26) return false;
         try {
             View content = SDLActivity.getContentView();
-            return content != null && content.hasPointerCapture();
+            return content != null && Api26View.hasPointerCapture(content);
         } catch (Throwable ignored) {
             return false;
         }
@@ -462,8 +469,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 try {
                     boolean consumed = nativeAndroidControllerMotion(
                             event.getDeviceId(),
-                            device.getVendorId(),
-                            device.getProductId(),
+                            inputDeviceVendorIdV212(device),
+                            inputDeviceProductIdV212(device),
                             event.getSource(),
                             device.getName(),
                             event.getAxisValue(MotionEvent.AXIS_X),
@@ -531,8 +538,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         try {
             nativeAndroidControllerDeviceChanged(
                     device.getId(),
-                    device.getVendorId(),
-                    device.getProductId(),
+                    inputDeviceVendorIdV212(device),
+                    inputDeviceProductIdV212(device),
                     device.getSources(),
                     device.getName(),
                     eventType);
@@ -574,8 +581,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private boolean sendNativeKeyTapV124(KeyEvent event) {
         InputDevice device = event != null ? event.getDevice() : null;
         int deviceId = event != null ? event.getDeviceId() : -124;
-        int vendorId = device != null ? device.getVendorId() : 0;
-        int productId = device != null ? device.getProductId() : 0;
+        int vendorId = device != null ? inputDeviceVendorIdV212(device) : 0;
+        int productId = device != null ? inputDeviceProductIdV212(device) : 0;
         int source = event != null ? event.getSource() : InputDevice.SOURCE_GAMEPAD;
         String name = device != null ? device.getName() : "UnrealTouchStart";
         int keyCode = event != null ? event.getKeyCode() : KeyEvent.KEYCODE_MENU;
@@ -801,15 +808,43 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 overlay uses stable left-stick + UT99 right-half FPS look + grey smaller DPAD");
             android.util.Log.i(TAG, "UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V136 repaired: second right-half touch uses native direct Fire while regular overlay buttons keep their own direct paths");
             android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138 consumes all overlay touches while Touch Controls is FALSE");
-            postDelayed(redrawRunnable, 66L);
+            startRedrawLoopV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
         }
+
+        private boolean redrawLoopActiveV211; // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
 
         private final Runnable redrawRunnable = new Runnable() {
             @Override public void run() {
+                if (!redrawLoopActiveV211) return;
                 invalidate();
                 postDelayed(this, 66L);
             }
         };
+
+        private void startRedrawLoopV211() {
+            if (redrawLoopActiveV211) return;
+            redrawLoopActiveV211 = true;
+            removeCallbacks(redrawRunnable);
+            postDelayed(redrawRunnable, 66L);
+        }
+
+        private void stopRedrawLoopV211() {
+            redrawLoopActiveV211 = false;
+            removeCallbacks(redrawRunnable);
+        }
+
+        void onHostPauseV211() {
+            // Release held virtual buttons/sticks before the SDL thread is suspended,
+            // then stop the 15 Hz redraw/config polling loop while the app is hidden.
+            releaseAll();
+            roles.clear();
+            stopRedrawLoopV211();
+        }
+
+        void onHostResumeV211() {
+            startRedrawLoopV211();
+            invalidate();
+        }
 
         private android.graphics.Bitmap loadIcon(String assetPath) {
             try {
@@ -1269,21 +1304,61 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         );
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = decor.getWindowInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
-        } else {
-            decor.setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_FULLSCREEN |
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            );
+        if (android.os.Build.VERSION.SDK_INT >= 30) Api30Window.hideSystemBars(decor);
+    }
+
+    private static int inputDeviceVendorIdV212(InputDevice device) {
+        return device != null && android.os.Build.VERSION.SDK_INT >= 19 ? Api19Input.vendorId(device) : 0;
+    }
+
+    private static int inputDeviceProductIdV212(InputDevice device) {
+        return device != null && android.os.Build.VERSION.SDK_INT >= 19 ? Api19Input.productId(device) : 0;
+    }
+
+    @android.annotation.TargetApi(19)
+    private static final class Api19Input {
+        private Api19Input() {}
+        static int vendorId(InputDevice device) { return device.getVendorId(); }
+        static int productId(InputDevice device) { return device.getProductId(); }
+    }
+
+    @android.annotation.TargetApi(21)
+    private static final class Api21Window {
+        private Api21Window() {}
+        static void makeBarsTransparent(android.view.Window window) {
+            window.setStatusBarColor(Color.TRANSPARENT);
+            window.setNavigationBarColor(Color.TRANSPARENT);
         }
     }
+
+    @android.annotation.TargetApi(26)
+    private static final class Api26View {
+        private Api26View() {}
+        static boolean hasPointerCapture(View view) { return view.hasPointerCapture(); }
+    }
+
+    @android.annotation.TargetApi(28)
+    private static final class Api28Window {
+        private Api28Window() {}
+        static void enableShortEdgeCutout(android.view.Window window) {
+            WindowManager.LayoutParams attrs = window.getAttributes();
+            attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            window.setAttributes(attrs);
+        }
+    }
+
+    @android.annotation.TargetApi(30)
+    private static final class Api30Window {
+        private Api30Window() {}
+        static void disableDecorFitting(android.view.Window window) {
+            window.setDecorFitsSystemWindows(false);
+        }
+        static void hideSystemBars(View decor) {
+            android.view.WindowInsetsController controller = decor.getWindowInsetsController();
+            if (controller == null) return;
+            controller.hide(android.view.WindowInsets.Type.statusBars() | android.view.WindowInsets.Type.navigationBars());
+            controller.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+    }
+
 }
