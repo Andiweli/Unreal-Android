@@ -47,13 +47,12 @@
  
 ## ◈ Features
 
-- Android support for newer Android devices up to Android 16.
-- OUYA (Android 4.x) legacy support - with a lower internal render resolution for better performance on legacy hardware.
+- Android support from Android 4.x (OUYA) up to Android 16.
 - Improved Game Data Import – Unreal data can be imported via folder or ZIP selection and automatically installs to the app's data folder.
-- Android 8+ Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
+- Android Storage Access Fixed – SAF support added for modern Android versions where direct SD/file access is restricted.
 - Legacy storage behavior friendly for old sideload devices (place game data on your microSD/Unreal folder).
 - Local WiFi multiplayer and botmatches are available.
-- Added touch controls for use without a controller.
+- Added touch controls featuring *RetroTouch* for use without a controller.
 - Added keyboard support (tested with Chromebook)
 
 > [!NOTE]
