@@ -22,6 +22,8 @@ extern "C" void UE1AndroidSetAudioSuspended( int Suspended ); // UNREAL_ANDROID_
 // MotionEvent input, C++ normalizes it to the old stable UE1 Joy* keys. SDL stays
 // available as fallback when AndroidNativeController=False. ANDROID_NATIVE_CONTROLLER_BACKEND_V93 ANDROID_NATIVE_CONTROLLER_LINEAR_AXIS_RAMP_V97 ANDROID_NATIVE_CONTROLLER_LEFT_STICK_ANALOG_AXIS_V98 ANDROID_NATIVE_CONTROLLER_LEFTY_DIRECTION_SENSITIVITY_V99 ANDROID_NATIVE_CONTROLLER_LEFT_STICK_SMOOTHER_LINEAR_V100
 static volatile INT GAndroidNativeControllerRuntimeEnabled = 1;
+static volatile INT GAndroidRetroTouchTouchModeRequestedV218 = 1; // UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
+static INT GAndroidRetroTouchTouchModeAppliedV218 = -1; // UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
 static const INT GAndroidNativeControllerQueueSize = 256;
 static const SWORD GAndroidNativeAxisReleaseThreshold = 4096;
 
@@ -68,29 +70,70 @@ static UBOOL GAndroidNativeDirectStrafeLeft = 0; // UNREAL_ANDROID_CONTROLLER_DI
 static UBOOL GAndroidNativeDirectStrafeRight = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 static UBOOL GAndroidNativeDirectFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 static UBOOL GAndroidNativeDirectAltFire = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
-static UBOOL GAndroidTouchDirectFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static UBOOL GAndroidTouchDirectAltFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static UBOOL GAndroidTouchDirectJumpV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static UBOOL GAndroidTouchDirectCrouchV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static UBOOL GAndroidTouchDirectNextV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
 static INT GAndroidNativeDirectMoveForwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectMoveBackwardKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectStrafeLeftKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectStrafeRightKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 static INT GAndroidNativeDirectAltFireKey = IK_None; // UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
-static INT GAndroidTouchDirectFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static INT GAndroidTouchDirectAltFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static INT GAndroidTouchDirectJumpKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static INT GAndroidTouchDirectCrouchKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static INT GAndroidTouchDirectNextKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-static FString GAndroidTouchDirectNextSavedBindingV139; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
-static UBOOL GAndroidTouchDirectNextHasSavedBindingV139 = 0; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
 static UBOOL GAndroidNativeDirectResetPending = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
-static volatile INT GAndroidTouchMenuVisibleV124 = 0; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-static FLOAT GAndroidTouchLookXV124 = 0.0f; // UNREAL_ANDROID_TOUCH_OVERLAY_V125 / UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
-static FLOAT GAndroidTouchLookYV124 = 0.0f; // UNREAL_ANDROID_TOUCH_OVERLAY_V125 / UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
-static FLOAT GAndroidTouchLookNextLogV131 = 0.0f; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131 / UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132
+// UNREAL_ANDROID_RETROTOUCH_V215
+enum EAndroidRetroTouchActionV215
+{
+	ART_FireV215 = 0,
+	ART_AltFireV215,
+	ART_JumpV215,
+	ART_DuckV215,
+	ART_InventoryActivateV215,
+	ART_InventoryNextV215,
+	ART_InventoryPreviousV215,
+	ART_CenterViewV215,
+	ART_WalkingV215,
+	ART_NextWeaponV215,
+	ART_MoveForwardV215,
+	ART_MoveBackwardV215,
+	ART_StrafeLeftV215,
+	ART_StrafeRightV215,
+	ART_StrafeModifierV215,
+	ART_TurnLeftV215,
+	ART_TurnRightV215,
+	ART_MouseLookV215,
+	ART_LookUpV215,
+	ART_LookDownV215,
+	ART_CountV215
+};
+
+static const INT GAndroidRetroTouchCodesV215[ART_CountV215] =
+{
+	920101, 920102, 920103, 920104, 920105,
+	920106, 920107, 920108, 920109, 920110,
+	920111, 920112, 920113, 920114, 920115,
+	920116, 920117, 920118, 920119, 920120
+};
+
+static const INT GAndroidRetroTouchTempKeysV215[ART_CountV215] =
+{
+	IK_UnknownB9, IK_UnknownC1, IK_UnknownC2, IK_UnknownC3, IK_UnknownC4,
+	IK_UnknownC5, IK_UnknownC6, IK_UnknownC7, IK_UnknownEB, IK_Unknown10E,
+	IK_UnknownF4, IK_UnknownF5, IK_NoName, IK_PA1, IK_OEMClear,
+	IK_UnknownA4, IK_UnknownA5, IK_UnknownA6, IK_UnknownA7, IK_UnknownA8
+};
+
+static const char* GAndroidRetroTouchAliasesV215[ART_CountV215] =
+{
+	"Fire", "AltFire", "Jump", "Duck", "InventoryActivate",
+	"InventoryNext", "InventoryPrevious", "CenterView", "Walking", "NextWeapon",
+	"MoveForward", "MoveBackward", "StrafeLeft", "StrafeRight", "Strafe",
+	"TurnLeft", "TurnRight", "Look", "LookUp", "LookDown"
+};
+
+static UBOOL GAndroidRetroTouchPressedV215[ART_CountV215];
+static FString GAndroidRetroTouchSavedBindingV215[ART_CountV215];
+static UBOOL GAndroidRetroTouchHasSavedBindingV215[ART_CountV215];
+static volatile INT GAndroidRetroTouchUiModeV215 = 2; // 0 gameplay, 1 navigation, 2 blocked/off, 3 intro tap
+static FLOAT GAndroidRetroTouchLookXV215 = 0.0f;
+static FLOAT GAndroidRetroTouchLookYV215 = 0.0f;
+static FLOAT GAndroidRetroTouchLookNextLogV215 = 0.0f;
 
 // UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_FLOAT_V210
 // Private SDL2 Android event carrying ChromeOS relative mouse deltas as 20.12
@@ -179,18 +222,6 @@ static void UE1AndroidNativeControllerResetState()
 	GAndroidNativeRightStickActive[0] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	GAndroidNativeRightStickActive[1] = 0; // ANDROID_RIGHT_STICK_JITTER_HYSTERESIS_V120
 	GAndroidNativeDirectResetPending = 1; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
-	GAndroidTouchDirectFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectAltFireV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectJumpV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectCrouchV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectNextV136 = 0; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectAltFireKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectJumpKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectCrouchKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectNextKeyV136 = IK_None; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	GAndroidTouchDirectNextSavedBindingV139 = ""; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
-	GAndroidTouchDirectNextHasSavedBindingV139 = 0; // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
 	GAndroidToggleL3HeldV21 = 0; // UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
 	GAndroidPendingGameplayTogglesV22 = 0; // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
 	appMemset( GAndroidToggleFaceDownV21, 0, sizeof(GAndroidToggleFaceDownV21) );
@@ -199,8 +230,26 @@ static void UE1AndroidNativeControllerResetState()
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
-	GAndroidNativeControllerQueueHead = 0;
-	GAndroidNativeControllerQueueCount = 0;
+	GAndroidRetroTouchLookXV215 = 0.0f; // UNREAL_ANDROID_RETROTOUCH_V215
+	GAndroidRetroTouchLookYV215 = 0.0f; // UNREAL_ANDROID_RETROTOUCH_V215
+	// UNREAL_ANDROID_RETROTOUCH_NO_CONTROLLER_V216:
+	// Keep already queued RetroTouch releases when Android resets the physical
+	// controller debounce state on pause/focus changes.  Dropping those releases
+	// can leave a semantic Fire/Move binding latched after resume.
+	INT RetroTouchKeepCountV216 = 0;
+	for( INT QueueIndexV216=0; QueueIndexV216<GAndroidNativeControllerQueueCount; ++QueueIndexV216 )
+	{
+		const INT SourceIndexV216 = ( GAndroidNativeControllerQueueHead + QueueIndexV216 ) % GAndroidNativeControllerQueueSize;
+		if( GAndroidNativeControllerQueue[SourceIndexV216].DeviceId == -215 )
+		{
+			// Compact toward the existing ring-buffer head. The destination is never
+			// ahead of the current source, so wrapped queues are safe in-place.
+			const INT DestIndexV216 = ( GAndroidNativeControllerQueueHead + RetroTouchKeepCountV216 ) % GAndroidNativeControllerQueueSize;
+			GAndroidNativeControllerQueue[DestIndexV216] = GAndroidNativeControllerQueue[SourceIndexV216];
+			RetroTouchKeepCountV216++;
+		}
+	}
+	GAndroidNativeControllerQueueCount = RetroTouchKeepCountV216;
 	if( Mutex )
 		SDL_UnlockMutex( Mutex );
 }
@@ -436,71 +485,140 @@ static INT UE1AndroidNativeDirectChooseKeyV123( UNSDLViewport* Viewport, INT Fri
 	return UE1AndroidNativeDirectKeyHasBindingV123( Viewport, FriendlyKey ) ? FriendlyKey : FallbackKey;
 }
 
-static void UE1AndroidTouchDirectSemanticPressV138( UNSDLViewport* Viewport, INT TempKey, const char* Alias, UBOOL& OldState, UBOOL NewState )
+static void UE1AndroidRetroTouchSemanticPressV215( UNSDLViewport* Viewport, INT ActionIndex, UBOOL NewState )
 {
-	// UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
-	// On-screen Jump/Duck are semantic touch UI actions, not physical Joy1/Joy2.
-	// v136 could trigger a remapped Joy1/Joy2 action, and v137 tried to scan the
-	// user's binding table which could steal/break LJoyLeft.  Use a private
-	// temporary input key and feed the intended alias directly for this session.
-	if( !Viewport || !Viewport->Input || !Alias || TempKey <= 0 || TempKey >= IK_MAX )
+	// UNREAL_ANDROID_RETROTOUCH_V215
+	// RetroTouch actions are semantic game actions, not physical controller buttons.
+	// Temporarily bind an otherwise-unused UE1 key to the requested action, then restore
+	// the user's original binding on release. This makes touch independent of remapped
+	// keyboard/controller keys and keeps Customize Controls authoritative for hardware.
+	if( !Viewport || !Viewport->Input || ActionIndex < 0 || ActionIndex >= ART_CountV215 )
 		return;
 
+	UBOOL& OldState = GAndroidRetroTouchPressedV215[ActionIndex];
 	if( OldState == NewState )
 		return;
 
-	Viewport->Input->Bindings[TempKey] = Alias;
-	Viewport->CauseInputEvent( TempKey, NewState ? IST_Press : IST_Release );
-	OldState = NewState;
-
-	if( !NewState )
-		Viewport->Input->Bindings[TempKey] = "";
-}
-
-
-static void UE1AndroidTouchDirectSemanticPressPreserveV139( UNSDLViewport* Viewport, INT TempKey, const char* Alias, UBOOL& OldState, UBOOL NewState, FString& SavedBinding, UBOOL& bHasSavedBinding )
-{
-	// UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
-	// The on-screen Next Weapon button is a semantic UI action.  It must always
-	// execute NextWeapon and must not reuse Joy11/RJoy/shoulder bindings, because
-	// users may have remapped those physical buttons to Fire or something else.
-	// Use a temporary binding only for the duration of this touch and restore the
-	// user's original binding afterwards so reinstalls/updates never rewrite it.
-	if( !Viewport || !Viewport->Input || !Alias || TempKey <= 0 || TempKey >= IK_MAX )
-		return;
-
-	if( OldState == NewState )
+	const INT TempKey = GAndroidRetroTouchTempKeysV215[ActionIndex];
+	if( TempKey <= 0 || TempKey >= IK_MAX )
 		return;
 
 	if( NewState )
 	{
-		SavedBinding = Viewport->Input->Bindings[TempKey];
-		bHasSavedBinding = 1;
-		Viewport->Input->Bindings[TempKey] = Alias;
+		GAndroidRetroTouchSavedBindingV215[ActionIndex] = Viewport->Input->Bindings[TempKey];
+		GAndroidRetroTouchHasSavedBindingV215[ActionIndex] = 1;
+		Viewport->Input->Bindings[TempKey] = GAndroidRetroTouchAliasesV215[ActionIndex];
 		Viewport->CauseInputEvent( TempKey, IST_Press );
 		OldState = 1;
 	}
 	else
 	{
-		Viewport->Input->Bindings[TempKey] = Alias;
+		Viewport->Input->Bindings[TempKey] = GAndroidRetroTouchAliasesV215[ActionIndex];
 		Viewport->CauseInputEvent( TempKey, IST_Release );
-		if( bHasSavedBinding )
-			Viewport->Input->Bindings[TempKey] = SavedBinding;
+		if( GAndroidRetroTouchHasSavedBindingV215[ActionIndex] )
+			Viewport->Input->Bindings[TempKey] = GAndroidRetroTouchSavedBindingV215[ActionIndex];
 		else
 			Viewport->Input->Bindings[TempKey] = "";
-		SavedBinding = "";
-		bHasSavedBinding = 0;
+		GAndroidRetroTouchSavedBindingV215[ActionIndex] = "";
+		GAndroidRetroTouchHasSavedBindingV215[ActionIndex] = 0;
 		OldState = 0;
 	}
+}
+
+static INT UE1AndroidRetroTouchActionIndexV215( INT KeyCode )
+{
+	for( INT i=0; i<ART_CountV215; ++i )
+		if( GAndroidRetroTouchCodesV215[i] == KeyCode )
+			return i;
+	return INDEX_NONE;
+}
+
+static void UE1AndroidRetroTouchReleaseAllV215( UNSDLViewport* Viewport )
+{
+	for( INT i=0; i<ART_CountV215; ++i )
+		if( GAndroidRetroTouchPressedV215[i] )
+			UE1AndroidRetroTouchSemanticPressV215( Viewport, i, 0 );
+}
+
+// UNREAL_ANDROID_RETROTOUCH_RESET_API_V221 UNREAL_ANDROID_RETROTOUCH_RESET_DIRECT_V222
+// UInput::ResetInput() has already cleared UE1's KeyDownTable and CPF_Input fields when
+// UpdateInput(1) arrives. Do not synthesize Release events here: just restore the temporary
+// semantic bindings and forget the native held state synchronously. RetroTouch beta.3 then
+// clears its own pointer/button state on Android's UI thread through the direct callback below.
+static void UE1AndroidRetroTouchForgetAfterEngineResetV222( UNSDLViewport* Viewport )
+{
+	if( !Viewport || !Viewport->Input )
+		return;
+
+	for( INT i=0; i<ART_CountV215; ++i )
+	{
+		const INT TempKey = GAndroidRetroTouchTempKeysV215[i];
+		if( TempKey > 0 && TempKey < IK_MAX )
+		{
+			if( GAndroidRetroTouchHasSavedBindingV215[i] )
+				Viewport->Input->Bindings[TempKey] = GAndroidRetroTouchSavedBindingV215[i];
+			else if( GAndroidRetroTouchPressedV215[i] )
+				Viewport->Input->Bindings[TempKey] = "";
+		}
+		GAndroidRetroTouchPressedV215[i] = 0;
+		GAndroidRetroTouchSavedBindingV215[i] = "";
+		GAndroidRetroTouchHasSavedBindingV215[i] = 0;
+	}
+}
+
+static void UE1AndroidRetroTouchNotifyEngineResetV222()
+{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	JNIEnv* Env = (JNIEnv*)SDL_AndroidGetJNIEnv();
+	if( !Env )
+		return;
+
+	jobject Activity = (jobject)SDL_AndroidGetActivity();
+	if( !Activity )
+		return;
+
+	jclass ActivityClass = Env->GetObjectClass( Activity );
+	if( ActivityClass )
+	{
+		jmethodID Method = Env->GetMethodID( ActivityClass, "onNativeRetroTouchInputResetV222", "()V" );
+		if( Method )
+			Env->CallVoidMethod( Activity, Method );
+
+		if( Env->ExceptionCheck() )
+		{
+			Env->ExceptionClear();
+			__android_log_print( ANDROID_LOG_WARN, "UE1Controller", "UNREAL_ANDROID_RETROTOUCH_RESET_DIRECT_V222 Java reset callback failed" );
+		}
+		Env->DeleteLocalRef( ActivityClass );
+	}
+	Env->DeleteLocalRef( Activity );
+#endif
+}
+
+static UBOOL UE1AndroidRetroTouchActionHandleV215( UNSDLViewport* Viewport, INT KeyCode, UBOOL bPressed, UBOOL bIsInUI, UBOOL bIsKeyMenuing )
+{
+	// UNREAL_ANDROID_RETROTOUCH_V215
+	const INT ActionIndex = UE1AndroidRetroTouchActionIndexV215( KeyCode );
+	if( ActionIndex == INDEX_NONE )
+		return 0;
+
+	// Gameplay actions must never leak into menus or Customize Controls. A release is
+	// still applied so entering a menu while holding FIRE/MOVE cannot leave stale input.
+	if( bIsInUI || bIsKeyMenuing )
+	{
+		if( GAndroidRetroTouchPressedV215[ActionIndex] )
+			UE1AndroidRetroTouchSemanticPressV215( Viewport, ActionIndex, 0 );
+		return 1;
+	}
+
+	UE1AndroidRetroTouchSemanticPressV215( Viewport, ActionIndex, bPressed );
+	return 1;
 }
 
 static void UE1AndroidNativeDirectPressMappedV123( UNSDLViewport* Viewport, INT FriendlyKey, INT FallbackKey, UBOOL& OldState, INT& OldKey, UBOOL NewState )
 {
 	// UNREAL_ANDROID_CONTROLLER_CUSTOMIZE_FIX_V123
 	// Keep the reliable UT99-like digital Direct mode, but respect user remaps.
-	// Example: if the user captures left-stick-up for MoveForward, Unreal stores
-	// UnknownDA/LJoyUp=MoveForward and removes W=MoveForward. Sending W would then
-	// do nothing. Sending LJoyUp keeps full-speed movement and the custom binding.
 	if( !Viewport )
 		return;
 
@@ -531,53 +649,7 @@ static void UE1AndroidNativeDirectReleaseGameplayV122( UNSDLViewport* Viewport )
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_UnknownD9, IK_D,          GAndroidNativeDirectStrafeRight,  GAndroidNativeDirectStrafeRightKey,  0 );
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13,     IK_LeftMouse,  GAndroidNativeDirectFire,         GAndroidNativeDirectFireKey,         0 );
 	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12,     IK_RightMouse, GAndroidNativeDirectAltFire,      GAndroidNativeDirectAltFireKey,      0 );
-	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13,     IK_LeftMouse,       GAndroidTouchDirectFireV136,    GAndroidTouchDirectFireKeyV136,    0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12,     IK_RightMouse,      GAndroidTouchDirectAltFireV136, GAndroidTouchDirectAltFireKeyV136, 0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_UnknownEB,  "Jump", GAndroidTouchDirectJumpV136,   0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
-	UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_Unknown10E, "Duck", GAndroidTouchDirectCrouchV136, 0 ); // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138
-	UE1AndroidTouchDirectSemanticPressPreserveV139( Viewport, IK_MouseWheelDown, "NextWeapon", GAndroidTouchDirectNextV136, 0, GAndroidTouchDirectNextSavedBindingV139, GAndroidTouchDirectNextHasSavedBindingV139 ); // UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139
-}
-
-static UBOOL UE1AndroidTouchButtonDirectHandleV136( UNSDLViewport* Viewport, INT KeyCode, UBOOL bPressed, UBOOL bIsInUI, UBOOL bIsKeyMenuing )
-{
-	// UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-	// Java overlay uses artificial KeyCodes for gameplay buttons.  Handling them
-	// here avoids fragile Android KeyEvent/gamepad binding paths and mirrors the
-	// existing direct trigger bridge: use the friendly controller binding when it
-	// exists, otherwise fall back to the classic PC key/mouse binding.
-	if( KeyCode != 910105 && KeyCode != 910104 && KeyCode != 910096 && KeyCode != 910097 && KeyCode != 910103 )
-		return 0;
-
-	if( ( bIsInUI || bIsKeyMenuing ) && bPressed )
-		return 1;
-
-	const char* Label = "unknown";
-	switch( KeyCode )
-	{
-		case 910105:
-			Label = "fire";
-			UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy13, IK_LeftMouse, GAndroidTouchDirectFireV136, GAndroidTouchDirectFireKeyV136, bPressed );
-			break;
-		case 910104:
-			Label = "altfire";
-			UE1AndroidNativeDirectPressMappedV123( Viewport, IK_Joy12, IK_RightMouse, GAndroidTouchDirectAltFireV136, GAndroidTouchDirectAltFireKeyV136, bPressed );
-			break;
-		case 910096:
-			Label = "jump";
-			UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_UnknownEB, "Jump", GAndroidTouchDirectJumpV136, bPressed );
-			break;
-		case 910097:
-			Label = "crouch";
-			UE1AndroidTouchDirectSemanticPressV138( Viewport, IK_Unknown10E, "Duck", GAndroidTouchDirectCrouchV136, bPressed );
-			break;
-		case 910103:
-			Label = "next";
-			UE1AndroidTouchDirectSemanticPressPreserveV139( Viewport, IK_MouseWheelDown, "NextWeapon", GAndroidTouchDirectNextV136, bPressed, GAndroidTouchDirectNextSavedBindingV139, GAndroidTouchDirectNextHasSavedBindingV139 );
-			break;
-	}
-
-	__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V139 %s %s", Label, bPressed ? "down" : "up" );
-	return 1;
+	UE1AndroidRetroTouchReleaseAllV215( Viewport ); // UNREAL_ANDROID_RETROTOUCH_V215
 }
 
 static FLOAT UE1AndroidNativeLinearRampV97( FLOAT T )
@@ -769,7 +841,13 @@ extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nati
 extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidControllerKey(
 	JNIEnv* Env, jclass, jint DeviceId, jint VendorId, jint ProductId, jint KeyCode, jint ScanCode, jint Action, jint RepeatCount, jint Source, jstring DeviceName )
 {
-	if( !GAndroidNativeControllerRuntimeEnabled )
+	// UNREAL_ANDROID_RETROTOUCH_NO_CONTROLLER_V216:
+	// RetroTouch uses the private synthetic device id -215.  Its events must stay
+	// available even when no physical AndroidNativeController exists; otherwise the
+	// MENU button, menu DPad and OK/Back all disappear functionally on touch-only
+	// phones/Automotive devices.  Real controller events still obey the runtime gate.
+	const UBOOL bRetroTouchV216 = DeviceId == -215;
+	if( !GAndroidNativeControllerRuntimeEnabled && !bRetroTouchV216 )
 		return JNI_FALSE;
 	if( Action != 0 && Action != 1 ) // KeyEvent.ACTION_DOWN / ACTION_UP
 		return JNI_FALSE;
@@ -834,44 +912,37 @@ extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAn
 	UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_NATIVE_RESET_V92
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidIsMenuV124( JNIEnv*, jclass )
+extern "C" JNIEXPORT jint JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeRetroTouchUiModeV215( JNIEnv*, jclass )
 {
-	// UNREAL_ANDROID_TOUCH_OVERLAY_V125
-	return GAndroidTouchMenuVisibleV124 ? JNI_TRUE : JNI_FALSE;
+	// UNREAL_ANDROID_RETROTOUCH_V215
+	return (jint)GAndroidRetroTouchUiModeV215;
 }
 
-static void UE1AndroidTouchLookPushUT99V131( FLOAT X, FLOAT Y )
+extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeRetroTouchSetTouchModeV218( JNIEnv*, jclass, jboolean TouchMode )
 {
-	// UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
-	// UT99 import: right display half is relative FPS swipe-look.  Java sends
-	// tiny per-move deltas; native accumulates them and TickInput consumes once.
+	// UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
+	// Java owns physical GAMEPAD/JOYSTICK discovery. Only publish the requested mode here;
+	// TickInput applies config changes on the UE1 thread because GConfigCache is not UI-thread safe.
+	GAndroidRetroTouchTouchModeRequestedV218 = TouchMode ? 1 : 0;
+}
+
+static void UE1AndroidRetroTouchLookPushV215( FLOAT X, FLOAT Y )
+{
+	// UNREAL_ANDROID_RETROTOUCH_V215
+	// RetroTouch sends relative look deltas. Java converts its normalized deltas back
+	// to the proven v134 pixel-gain scale before they reach this accumulator.
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
-	GAndroidTouchLookXV124 = Clamp( GAndroidTouchLookXV124 + X, -2.0f, 2.0f );
-	GAndroidTouchLookYV124 = Clamp( GAndroidTouchLookYV124 + Y, -2.0f, 2.0f );
+	GAndroidRetroTouchLookXV215 = Clamp( GAndroidRetroTouchLookXV215 + X, -2.0f, 2.0f );
+	GAndroidRetroTouchLookYV215 = Clamp( GAndroidRetroTouchLookYV215 + Y, -2.0f, 2.0f );
 	if( Mutex )
 		SDL_UnlockMutex( Mutex );
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidTouchLookV101( JNIEnv*, jclass, jfloat X, jfloat Y )
+extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeRetroTouchLookV215( JNIEnv*, jclass, jfloat X, jfloat Y )
 {
-	UE1AndroidTouchLookPushUT99V131( (FLOAT)X, (FLOAT)Y ); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131
-}
-
-extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidTouchLookV124( JNIEnv*, jclass, jfloat X, jfloat Y )
-{
-	UE1AndroidTouchLookPushUT99V131( (FLOAT)X, (FLOAT)Y ); // UNREAL_ANDROID_TOUCH_OVERLAY_V125 fallback
-}
-
-extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAndroidTouchLookV131( JNIEnv*, jclass, jfloat X, jfloat Y )
-{
-	UE1AndroidTouchLookPushUT99V131( (FLOAT)X, (FLOAT)Y ); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131 explicit alias
-}
-
-extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_GameActivity_nativeAndroidTouchLookV101( JNIEnv*, jclass, jfloat X, jfloat Y )
-{
-	UE1AndroidTouchLookPushUT99V131( (FLOAT)X, (FLOAT)Y ); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131 import alias
+	UE1AndroidRetroTouchLookPushV215( (FLOAT)X, (FLOAT)Y ); // UNREAL_ANDROID_RETROTOUCH_V215
 }
 
 static UBOOL UE1AndroidTouchControlsStringIsFalseV125( const char* Value )
@@ -2699,6 +2770,14 @@ void UNSDLViewport::UpdateInput( UBOOL Reset )
 		appMemset( (void*)JoyAxis, 0, sizeof(JoyAxis) );
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 		UE1AndroidNativeControllerResetState();
+
+		// UNREAL_ANDROID_RETROTOUCH_RESET_API_V221 UNREAL_ANDROID_RETROTOUCH_RESET_DIRECT_V222
+		// Reset both halves immediately. UInput has already cleared UE1's key/input tables,
+		// so forget the native semantic held state now and notify the Android Activity directly.
+		// The Java callback is posted onto the UI looper before later touch events, avoiding
+		// the old 150-ms polling race that could cancel a freshly pressed stick after respawn.
+		UE1AndroidRetroTouchForgetAfterEngineResetV222( this );
+		UE1AndroidRetroTouchNotifyEngineResetV222();
 #endif
 	}
 
@@ -2912,6 +2991,16 @@ UBOOL UNSDLViewport::TickInput()
 	const UBOOL bAndroidNativeController = Client && Client->UseJoystick && Client->AndroidNativeController;
 	const UBOOL bAndroidNativeDirectInput = bAndroidNativeController && Client && Client->AndroidNativeDirectInput; // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
 	GAndroidNativeControllerRuntimeEnabled = bAndroidNativeController ? 1 : 0;
+	// UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
+	// Keep OPTIONS -> Touch Controls and the persisted config synchronized with the real
+	// current input mode. This runs only on transitions, never every frame.
+	const INT AndroidRetroTouchRequestedV218 = GAndroidRetroTouchTouchModeRequestedV218 ? 1 : 0;
+	if( GAndroidRetroTouchTouchModeAppliedV218 != AndroidRetroTouchRequestedV218 )
+	{
+		UE1AndroidSetTouchControlsEnabledV125( AndroidRetroTouchRequestedV218 != 0 );
+		GAndroidRetroTouchTouchModeAppliedV218 = AndroidRetroTouchRequestedV218;
+		debugf( NAME_Log, "UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218 Touch Controls=%s", AndroidRetroTouchRequestedV218 ? "True" : "False" );
+	}
 	if( GAndroidNativeDirectResetPending )
 	{
 		UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
@@ -2946,17 +3035,39 @@ UBOOL UNSDLViewport::TickInput()
 		((UObject*)Console)->GetMainFrame() &&
 		((UObject*)Console)->GetMainFrame()->StateNode &&
 		((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "KeyMenuing";
-	const UBOOL bAndroidTouchAnyMenuV124 = Console &&
-		((UObject*)Console)->GetMainFrame() &&
-		((UObject*)Console)->GetMainFrame()->StateNode &&
-		(
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Menuing" ||
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "KeyMenuing" ||
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "MenuTyping" ||
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Typing" ||
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Console"
-		);
-	GAndroidTouchMenuVisibleV124 = bAndroidTouchAnyMenuV124 ? 1 : 0; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+	// UNREAL_ANDROID_RETROTOUCH_MENU_INTRO_V216 / UNREAL_ANDROID_RETROTOUCH_INTRO_TAP_V217 / UNREAL_ANDROID_RETROTOUCH_MENU_OBJECT_V219:
+	// UE1's normal/default Console state is literally named "Console"; it is NOT the
+	// opened text console.  More importantly, Console->Menuing and PlayerPawn::bShowMenu
+	// can survive a single-player load/checkpoint travel for a short time after the new
+	// level is already playable.  Using those stale flags as the authoritative overlay
+	// source leaves RetroTouch stuck in NAVIGATION after a checkpoint reload.  The HUD's
+	// actual MainMenu object is the reliable menu lifetime: it exists while a real menu is
+	// active and disappears with that menu/travel.  Typing/key-capture still wins first.
+	INT AndroidRetroTouchUiModeV215 = 0; // ordinary gameplay
+	const UBOOL bAndroidRetroTouchIntroV217 = Actor && Actor->Level && Actor->Level->Game &&
+		appStricmp( Actor->Level->Game->GetClassName(), "Intro" ) == 0;
+	const UBOOL bAndroidRetroTouchRealMenuV219 = Actor && Actor->myHUD && Actor->myHUD->MainMenu;
+	if( Console && ((UObject*)Console)->GetMainFrame() && ((UObject*)Console)->GetMainFrame()->StateNode )
+	{
+		const FName RetroTouchStateV215 = ((UObject*)Console)->GetMainFrame()->StateNode->GetFName();
+		if( RetroTouchStateV215 == "KeyMenuing" || RetroTouchStateV215 == "MenuTyping" || RetroTouchStateV215 == "Typing" )
+			AndroidRetroTouchUiModeV215 = 2; // blocked/off while capturing/typing
+		else if( bAndroidRetroTouchRealMenuV219 )
+			AndroidRetroTouchUiModeV215 = 1; // navigation: DPad + OK + Back
+		else if( bAndroidRetroTouchIntroV217 )
+			AndroidRetroTouchUiModeV215 = 3; // invisible full-screen touch -> Escape/Menu
+	}
+	else if( bAndroidRetroTouchRealMenuV219 )
+	{
+		AndroidRetroTouchUiModeV215 = 1; // navigation fallback
+	}
+	else if( bAndroidRetroTouchIntroV217 )
+	{
+		AndroidRetroTouchUiModeV215 = 3; // intro fallback before Console state is ready
+	}
+	GAndroidRetroTouchUiModeV215 = AndroidRetroTouchUiModeV215; // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_RETROTOUCH_MENU_INTRO_V216 UNREAL_ANDROID_RETROTOUCH_INTRO_TAP_V217
+	if( AndroidRetroTouchUiModeV215 != 0 )
+		UE1AndroidRetroTouchReleaseAllV215( this ); // menus/key-capture must never inherit held gameplay touch actions
 	if( bAndroidNativeController )
 	{
 		if( bAndroidNativeDirectInput && ( bAndroidNativeNormalMenu || bAndroidNativeKeyMenuing ) )
@@ -3321,14 +3432,17 @@ UBOOL UNSDLViewport::TickInput()
 		}
 	}
 
-	if( bAndroidNativeController )
+	// UNREAL_ANDROID_RETROTOUCH_NO_CONTROLLER_V216:
+	// Drain the shared JNI queue every tick.  RetroTouch is a touch input source and
+	// must not depend on a physical controller being enabled.  Non-RetroTouch events
+	// are still ignored below unless AndroidNativeController is active.
 	{
 		FAndroidNativeControllerEvent NativeEvents[128];
 		const INT NativeCount = UE1AndroidNativeControllerDrainEvents( NativeEvents, ARRAY_COUNT(NativeEvents) );
-		const UBOOL bIsInUI = Console &&
+		const UBOOL bIsInUI = ( Actor && Actor->bShowMenu ) || ( Console &&
 			((UObject*)Console)->GetMainFrame() &&
 			((UObject*)Console)->GetMainFrame()->StateNode &&
-			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Menuing";
+			((UObject*)Console)->GetMainFrame()->StateNode->GetFName() == "Menuing" ); // physical-controller legacy state only
 		const UBOOL bIsKeyMenuing = Console &&
 			((UObject*)Console)->GetMainFrame() &&
 			((UObject*)Console)->GetMainFrame()->StateNode &&
@@ -3337,12 +3451,21 @@ UBOOL UNSDLViewport::TickInput()
 		for( INT EventIndex=0; EventIndex<NativeCount; ++EventIndex )
 		{
 			const FAndroidNativeControllerEvent& NE = NativeEvents[EventIndex];
+			const UBOOL bRetroTouchEventV216 = NE.DeviceId == -215; // UNREAL_ANDROID_RETROTOUCH_NO_CONTROLLER_V216
+			const UBOOL bRetroTouchIsInUIV219 = AndroidRetroTouchUiModeV215 == 1; // UNREAL_ANDROID_RETROTOUCH_MENU_OBJECT_V219
+			const UBOOL bEventIsInUIV219 = bRetroTouchEventV216 ? bRetroTouchIsInUIV219 : bIsInUI;
+			if( !bRetroTouchEventV216 && !bAndroidNativeController )
+				continue;
+			if( bRetroTouchEventV216 && AndroidRetroTouchUiModeV215 == 2 )
+				continue; // never let stale virtual navigation become a Customize Controls/text key
+			if( bRetroTouchEventV216 && AndroidRetroTouchUiModeV215 == 3 && NE.KeyCode != 82 )
+				continue; // UNREAL_ANDROID_RETROTOUCH_INTRO_TAP_V217: intro accepts only Escape/Menu
 			if( NE.Type == 1 )
 			{
-				if( UE1AndroidTouchButtonDirectHandleV136( this, NE.KeyCode, NE.Action == 0, bIsInUI, bIsKeyMenuing ) )
+				if( bRetroTouchEventV216 && UE1AndroidRetroTouchActionHandleV215( this, NE.KeyCode, NE.Action == 0, bEventIsInUIV219, bIsKeyMenuing ) ) // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_RETROTOUCH_NO_CONTROLLER_V216
 					continue;
 
-				const BYTE Key = UE1AndroidNativeKeyCodeToUE1Key( NE.KeyCode, NE.ScanCode, bIsInUI );
+				const BYTE Key = UE1AndroidNativeKeyCodeToUE1Key( NE.KeyCode, NE.ScanCode, bEventIsInUIV219 );
 				if( NE.Action == 0 && NE.RepeatCount == 0 && ( Key == IK_Joy1 || Key == IK_Joy4 || Key == IK_Joy8 ) )
 					debugf( NAME_Log, "Android controller key code=%d scan=%d mappedKey=%d", NE.KeyCode, NE.ScanCode, (INT)Key ); // UNREAL_ANDROID_CONTROLLER_SEMANTIC_TOGGLES_V21
 				if( Key != IK_None && Key > 0 && Key < IK_MAX )
@@ -3367,7 +3490,7 @@ UBOOL UNSDLViewport::TickInput()
 						continue;
 					}
 
-					if( bIsInUI )
+					if( bEventIsInUIV219 )
 					{
 						// Normal UE1 menus are more reliable with discrete tap events.
 						// The stateful press/release path is still used for gameplay, but
@@ -3629,9 +3752,9 @@ UBOOL UNSDLViewport::TickInput()
 							GAndroidNativeHatPressed[HatAxis][DirIndex] = bNowPressed;
 							BYTE HatKey = IK_None;
 							if( HatAxis == 0 )
-								HatKey = Direction < 0 ? ( bIsInUI ? IK_Left : IK_JoyPovLeft ) : ( bIsInUI ? IK_Right : IK_JoyPovRight );
+								HatKey = Direction < 0 ? ( bEventIsInUIV219 ? IK_Left : IK_JoyPovLeft ) : ( bEventIsInUIV219 ? IK_Right : IK_JoyPovRight );
 							else
-								HatKey = Direction < 0 ? ( bIsInUI ? IK_Up : IK_JoyPovUp ) : ( bIsInUI ? IK_Down : IK_JoyPovDown );
+								HatKey = Direction < 0 ? ( bEventIsInUIV219 ? IK_Up : IK_JoyPovUp ) : ( bEventIsInUIV219 ? IK_Down : IK_JoyPovDown );
 							if( HatKey != IK_None )
 								CauseInputEvent( HatKey, bNowPressed ? IST_Press : IST_Release );
 						}
@@ -3768,34 +3891,31 @@ UBOOL UNSDLViewport::TickInput()
 	}
 #endif
 
-	// UNREAL_ANDROID_TOUCH_OVERLAY_V125:
-	// Consume relative swipe look after the physical right-stick path. Java v131
-	// only sends right-half look outside menus; native consumes every queued swipe.
+	// UNREAL_ANDROID_RETROTOUCH_V215:
+	// Consume RetroTouch relative swipe look after the physical right-stick path.
 	{
-		FLOAT TouchLookX = 0.0f;
-		FLOAT TouchLookY = 0.0f;
+		FLOAT RetroTouchLookX = 0.0f;
+		FLOAT RetroTouchLookY = 0.0f;
 		SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 		if( Mutex )
 			SDL_LockMutex( Mutex );
-		TouchLookX = GAndroidTouchLookXV124;
-		TouchLookY = GAndroidTouchLookYV124;
-		GAndroidTouchLookXV124 = 0.0f;
-		GAndroidTouchLookYV124 = 0.0f;
+		RetroTouchLookX = GAndroidRetroTouchLookXV215;
+		RetroTouchLookY = GAndroidRetroTouchLookYV215;
+		GAndroidRetroTouchLookXV215 = 0.0f;
+		GAndroidRetroTouchLookYV215 = 0.0f;
 		if( Mutex )
 			SDL_UnlockMutex( Mutex );
 
-		if( TouchLookX != 0.0f || TouchLookY != 0.0f )
+		if( RetroTouchLookX != 0.0f || RetroTouchLookY != 0.0f )
 		{
-			// UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131:
-			// Match the proven UT99 native side exactly: relative swipe units are
-			// converted to MouseX/MouseY once and then cleared.  Do not treat this
-			// as a held virtual right-stick, and do not keep rotating after movement stops.
-			const FLOAT DX = Clamp( TouchLookX * 42.0f, -180.0f, 180.0f );
-			const FLOAT DY = Clamp( -TouchLookY * 30.0f, -140.0f, 140.0f );
-			if( CurTime >= GAndroidTouchLookNextLogV131 )
+			// UNREAL_ANDROID_RETROTOUCH_V215: relative swipe units become exactly one
+			// MouseX/MouseY delta and are cleared immediately.
+			const FLOAT DX = Clamp( RetroTouchLookX * 42.0f, -180.0f, 180.0f );
+			const FLOAT DY = Clamp( -RetroTouchLookY * 30.0f, -140.0f, 140.0f );
+			if( CurTime >= GAndroidRetroTouchLookNextLogV215 )
 			{
-				GAndroidTouchLookNextLogV131 = CurTime + 1.2f;
-				__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132 consume tx=%.4f ty=%.4f dx=%.2f dy=%.2f", TouchLookX, TouchLookY, DX, DY );
+				GAndroidRetroTouchLookNextLogV215 = CurTime + 1.2f;
+				__android_log_print( ANDROID_LOG_INFO, "UE1Controller", "UNREAL_ANDROID_RETROTOUCH_V215 look tx=%.4f ty=%.4f dx=%.2f dy=%.2f", RetroTouchLookX, RetroTouchLookY, DX, DY );
 			}
 			if( Abs(DX) > 0.0001f )
 				CauseInputEvent( IK_MouseX, IST_Axis, DX );
@@ -4339,6 +4459,14 @@ UBOOL UNSDLViewport::Exec( const char* Cmd, FOutputDevice* Out )
 				Out->Log( *Input->Bindings[Key] );
 		}
 		return 1; // ANDROID_CONTROLLER_FRIENDLY_NAMES_CLEAN_V86
+	}
+
+	AndroidKeyCmd = Cmd;
+	if( ParseCommand( &AndroidKeyCmd, "ANDROIDRETROTOUCHACTIVE" ) )
+	{
+		if( Out )
+			Out->Log( GAndroidRetroTouchTouchModeRequestedV218 ? "True" : "False" );
+		return 1; // UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
 	}
 
 	AndroidKeyCmd = Cmd;

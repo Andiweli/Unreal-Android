@@ -9,7 +9,7 @@ val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.24.3" // C++17: compatible with NDK r23/API16 and includes Android 16KB-page support
 val overlayRevision = "rev49-unified-normal-ouya-automotive-v1-signing-debugkey"
-val androidVersionName = "2.1.0"
+val androidVersionName = "2.2.0"
 
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
@@ -706,7 +706,14 @@ val prepareSources = tasks.register("prepareSources") {
         applyUE1PatchOverlayV125(ue1Dir.asFile) // UNREAL_ANDROID_TOUCH_OVERLAY_SOURCE_OVERLAY_V125
         applySDL2PatchOverlayV210(sdl2Dir.asFile) // UNREAL_ANDROID_CHROMEOS_MOUSE_FRAMEPACED_OVERLAY_V210
         applySDLApi16PatchOverlayV212(sdl2Dir.asFile) // UNREAL_ANDROID_API16_SDL_OVERLAY_V212
-        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_OVERLAY_V125")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_RETROTOUCH_V215")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_RETROTOUCH_MENU_OBJECT_V219")
+        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_RETROTOUCH_RESET_API_V221")
+        requirePatched(ue1Dir.asFile.resolve("Source/Unreal/Classes/UnrealOptionsMenu.uc"), "UNREAL_ANDROID_RETROTOUCH_READONLY_V219")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealSDLActivity.java").asFile, "UNREAL_ANDROID_RETROTOUCH_V215")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealRetroTouchBridge.java").asFile, "UNREAL_ANDROID_RETROTOUCH_V215")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealSDLActivity.java").asFile, "UNREAL_ANDROID_RETROTOUCH_RESET_API_V221")
+        requirePatched(layout.projectDirectory.file("src/main/java/com/ast/unreal/UnrealRetroTouchBridge.java").asFile, "UNREAL_ANDROID_RETROTOUCH_RESET_API_V221")
         // ChromeOS FIX1 guards. Keep the original 2.0.5 source preparation revision;
         // the UE1 overlay is applied on every prepareSources run.
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CHROMEOS_MOUSE_CAPTURE_V205F1")
@@ -735,10 +742,6 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnActor.cpp"), "UNREAL_ANDROID_INFINITE_AMMO_FREEZE_V23")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnLevTic.cpp"), "UNREAL_ANDROID_INFINITE_AMMO_POST_TICK_V23")
-        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_RIGHT_LOOK_NATIVE_V131")
-        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132")
-        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V138")
-        requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_NEXT_SEMANTIC_V139")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_USEJOYSTICK_BRIDGE_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_TOUCH_CONTROLS_MENU_TEXT_V125")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnCanvas.cpp"), "UNREAL_ANDROID_CANVAS_NONFINITE_TILE_GUARD_V14")
@@ -853,7 +856,7 @@ android {
         applicationId = "com.ast.unreal"
         minSdk = 16
         targetSdk = 36
-        versionCode = 6
+        versionCode = 11
         versionName = androidVersionName
 
         ndk {
@@ -883,7 +886,7 @@ android {
             applicationId = "com.ast.unreal"
             minSdk = 16
             targetSdk = 36
-            versionCode = 6
+            versionCode = 11
             versionName = androidVersionName
             externalNativeBuild {
                 cmake {
@@ -896,7 +899,7 @@ android {
             applicationId = "com.ast.unrealandroid"
             minSdk = 23
             targetSdk = 36
-            versionCode = 10
+            versionCode = 11
             versionName = androidVersionName
             externalNativeBuild {
                 cmake {
@@ -933,6 +936,10 @@ android {
             excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
         }
     }
+}
+
+dependencies {
+    implementation(files("libs/retrotouch.aar")) // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_RETROTOUCH_BETA3_V221
 }
 
 // Keep Android Studio's green Play/Run path unambiguous.

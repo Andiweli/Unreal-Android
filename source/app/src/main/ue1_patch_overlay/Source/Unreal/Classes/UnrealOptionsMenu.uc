@@ -22,9 +22,11 @@ function bool ProcessYes()
 		PlayerOwner.ChangeAutoAim(0.93);
 	else if ( Selection == 2 )
 	{
-		// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
-		bTouchControls = True;
-		SaveConfig();
+		// UNREAL_ANDROID_RETROTOUCH_READONLY_V219: controller/touch detection owns this value.
+		// Do not play modify/enter sounds, mark config dirty, or pretend the status is actionable.
+		bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
+		bConfigChanged = false;
+		return false;
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = True;
@@ -46,9 +48,11 @@ function bool ProcessNo()
 		PlayerOwner.ChangeAutoAim(1);
 	else if ( Selection == 2 )
 	{
-		// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
-		bTouchControls = False;
-		SaveConfig();
+		// UNREAL_ANDROID_RETROTOUCH_READONLY_V219: controller/touch detection owns this value.
+		// Do not play modify/enter sounds, mark config dirty, or pretend the status is actionable.
+		bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
+		bConfigChanged = false;
+		return false;
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = False;
@@ -76,9 +80,11 @@ function bool ProcessLeft()
 	}
 	else if ( Selection == 2 )
 	{
-		// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
-		bTouchControls = !bTouchControls;
-		SaveConfig();
+		// UNREAL_ANDROID_RETROTOUCH_READONLY_V219: controller/touch detection owns this value.
+		// Do not play modify/enter sounds, mark config dirty, or pretend the status is actionable.
+		bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
+		bConfigChanged = false;
+		return false;
 	}
 	else if ( Selection == 3 )
 		PlayerOwner.UpdateSensitivity(FMax(1,PlayerOwner.MouseSensitivity - 1));
@@ -129,9 +135,11 @@ function bool ProcessRight()
 	}
 	else if ( Selection == 2 )
 	{
-		// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
-		bTouchControls = !bTouchControls;
-		SaveConfig();
+		// UNREAL_ANDROID_RETROTOUCH_READONLY_V219: controller/touch detection owns this value.
+		// Do not play modify/enter sounds, mark config dirty, or pretend the status is actionable.
+		bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
+		bConfigChanged = false;
+		return false;
 	}
 	else if ( Selection == 3 )
 		PlayerOwner.UpdateSensitivity(PlayerOwner.MouseSensitivity + 1);
@@ -184,9 +192,11 @@ function bool ProcessSelection()
 	}
 	else if ( Selection == 2 )
 	{
-		// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
-		bTouchControls = !bTouchControls;
-		SaveConfig();
+		// UNREAL_ANDROID_RETROTOUCH_READONLY_V219: controller/touch detection owns this value.
+		// Do not play modify/enter sounds, mark config dirty, or pretend the status is actionable.
+		bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
+		bConfigChanged = false;
+		return false;
 	}
 	else if ( Selection == 4 )
 		PlayerOwner.bInvertMouse = !PlayerOwner.bInvertMouse;
@@ -277,7 +287,8 @@ function DrawMenu(canvas Canvas)
 	// draw text
 	DrawList(Canvas, false, Spacing, StartX, StartY);  
 	MenuValues[1] = string( PlayerOwner.MyAutoAim < 1 );
-	// UNREAL_ANDROID_TOUCH_CONTROLS_MENU_V124
+	// UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218: live, controller-aware status.
+	bTouchControls = bool(PlayerOwner.ConsoleCommandResult("ANDROIDRETROTOUCHACTIVE"));
 	MenuValues[2] = string(bTouchControls);
 	MenuValues[3] = string(int(PlayerOwner.MouseSensitivity));
 	MenuValues[4] = string(PlayerOwner.bInvertMouse);
@@ -339,7 +350,7 @@ defaultproperties
 	 MenuList(14)="View Bob"
 	 MenuList(15)="Advanced Options"
      HelpMessage(1)="Enable or disable vertical aiming help."
-	 HelpMessage(2)="Enable or disable the on-screen touch controls overlay. Physical controllers remain available."
+	 HelpMessage(2)="Automatically enabled for touch input and disabled when a physical controller is connected."
      HelpMessage(3)="Adjust the mouse sensitivity, or how far you have to move the mouse to produce a given motion in the game."
      HelpMessage(4)="Invert the mouse X axis.  When true, pushing the mouse forward causes you to look down rather than up."
      HelpMessage(5)="If true, when you let go of the mouselook key the view will automatically center itself."

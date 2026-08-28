@@ -24,7 +24,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     private File selectedRoot;
     private InputManager inputManager;
-    private UnrealTouchOverlayViewV124 touchOverlayViewV124; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+    private UnrealRetroTouchBridge retroTouchBridgeV215; // UNREAL_ANDROID_RETROTOUCH_V215
+    private long retroTouchConfigReadMsV215;
+    private boolean retroTouchEnabledCacheV215 = true;
 
     // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
     // Detect L3+A/Y before SDL/UE1 translates or consumes controller bindings.
@@ -76,10 +78,13 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     private static native void nativeAndroidControllerReset(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
     private static native boolean nativeAndroidQueueGameplayToggleV22(int toggle); // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
     private static native void nativeAndroidSetAppVersionName(String versionName); // UNREAL_ANDROID_RUNTIME_VERSION_V141
-    private static native boolean nativeAndroidIsMenuV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-    private static native void nativeAndroidTouchLookV131(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131 explicit native path
-    private static native void nativeAndroidTouchLookV101(float x, float y); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129 fallback
-    private static native void nativeAndroidTouchLookV124(float x, float y); // UNREAL_ANDROID_TOUCH_OVERLAY_V125 fallback
+    static final int RETROTOUCH_UI_GAMEPLAY_V215 = 0;
+    static final int RETROTOUCH_UI_NAVIGATION_V215 = 1;
+    static final int RETROTOUCH_UI_BLOCKED_V215 = 2;
+    static final int RETROTOUCH_UI_INTRO_TAP_V217 = 3; // invisible full-screen tap -> Escape/Menu
+    private static native int nativeRetroTouchUiModeV215(); // UNREAL_ANDROID_RETROTOUCH_V215
+    private static native void nativeRetroTouchLookV215(float x, float y); // UNREAL_ANDROID_RETROTOUCH_V215
+    private static native void nativeRetroTouchSetTouchModeV218(boolean touchMode); // UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218
 
     private void resetAndroidNativeControllerState() {
         controllerToggleL3HeldV22 = false; // UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22
@@ -172,7 +177,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
         hideSystemUi();
         scheduleImmersiveRefresh();
-        installUnrealTouchOverlayV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+        installRetroTouchV215(); // UNREAL_ANDROID_RETROTOUCH_V215
     }
 
     @Override
@@ -182,8 +187,8 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             inputManager.unregisterInputDeviceListener(this);
             inputManager = null;
         }
-        if (touchOverlayViewV124 != null) {
-            touchOverlayViewV124.onHostPauseV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        if (retroTouchBridgeV215 != null) {
+            retroTouchBridgeV215.onHostDestroy(); // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
         }
         super.onDestroy();
 
@@ -200,11 +205,10 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
 
     @Override
     protected void onPause() {
-        // Stop the Java overlay timer and release any held virtual controls immediately.
-        // The actual UE1/OpenAL pause follows SDL's lifecycle in native code; on Android
-        // 7+ SDL intentionally performs the native pause from onStop().
-        if (touchOverlayViewV124 != null) {
-            touchOverlayViewV124.onHostPauseV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        // Release RetroTouch state before SDL/native pause. RetroTouch itself owns
+        // pointer tracking, while UE1 releases semantic actions on the next input tick.
+        if (retroTouchBridgeV215 != null) {
+            retroTouchBridgeV215.onHostPause(); // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
         }
         resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
         super.onPause();
@@ -216,9 +220,9 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
         hideSystemUi();
         scheduleImmersiveRefresh();
-        installUnrealTouchOverlayV124(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-        if (touchOverlayViewV124 != null) {
-            touchOverlayViewV124.onHostResumeV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+        installRetroTouchV215(); // UNREAL_ANDROID_RETROTOUCH_V215
+        if (retroTouchBridgeV215 != null) {
+            retroTouchBridgeV215.onHostResume(); // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
         }
     }
 
@@ -229,7 +233,7 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
             resetAndroidNativeControllerState(); // ANDROID_CONTROLLER_NATIVE_RESET_V88
             hideSystemUi();
             scheduleImmersiveRefresh();
-            bringTouchOverlayToFrontV125(); // UNREAL_ANDROID_TOUCH_OVERLAY_V125
+            bringRetroTouchToFrontV215(); // UNREAL_ANDROID_RETROTOUCH_V215
         }
     }
 
@@ -411,6 +415,17 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        // UNREAL_ANDROID_RETROTOUCH_INTRO_TAP_V217:
+        // During Unreal.Intro the RetroTouch view intentionally stays OFF so the Nali flyby is
+        // unobstructed. Intercept only that intro gesture here; all other touch events continue
+        // through RetroTouch/SDL normally.
+        if (retroTouchBridgeV215 != null && retroTouchBridgeV215.handleIntroTouchV217(event))
+            return true;
+        return super.dispatchTouchEvent(event);
     }
 
     @Override
@@ -616,105 +631,95 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
     }
 
 
-    // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-    private void installUnrealTouchOverlayV124() {
+    // UNREAL_ANDROID_RETROTOUCH_V215
+    private void installRetroTouchV215() {
         try {
-            if (touchOverlayViewV124 != null) {
-                bringTouchOverlayToFrontV125();
-                return;
+            if (retroTouchBridgeV215 == null) {
+                ensureRetroTouchConfigDefaultV215();
+                retroTouchBridgeV215 = new UnrealRetroTouchBridge(this);
+                android.view.ViewGroup.LayoutParams lp = new android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT);
+                if (mLayout != null) {
+                    mLayout.addView(retroTouchBridgeV215.getView(), lp);
+                } else {
+                    addContentView(retroTouchBridgeV215.getView(), lp);
+                }
+                android.util.Log.i(TAG, "UNREAL_ANDROID_RETROTOUCH_V215 installed in SDL root layout");
             }
-            ensureTouchControlsConfigDefaultV124();
-            touchOverlayViewV124 = new UnrealTouchOverlayViewV124(this);
-            android.view.ViewGroup.LayoutParams lp = new android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT);
-
-            // Add directly to SDLActivity's own root layout, above the SDL SurfaceView.
-            // addContentView() may end up below the Surface on some Android 8+ devices/ROMs.
-            if (mLayout != null) {
-                mLayout.addView(touchOverlayViewV124, lp);
-            } else {
-                addContentView(touchOverlayViewV124, lp);
-            }
-            bringTouchOverlayToFrontV125();
-            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 installed in SDL root layout");
+            bringRetroTouchToFrontV215();
         } catch (Throwable t) {
-            android.util.Log.e(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 install failed", t);
+            android.util.Log.e(TAG, "UNREAL_ANDROID_RETROTOUCH_V215 install failed", t);
         }
     }
 
-    // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-    private void bringTouchOverlayToFrontV125() {
-        if (touchOverlayViewV124 == null) return;
-        try {
-            touchOverlayViewV124.bringToFront();
-            if (android.os.Build.VERSION.SDK_INT >= 21) {
-                touchOverlayViewV124.setElevation(10000.0f);
-                touchOverlayViewV124.setTranslationZ(10000.0f);
-            }
-            touchOverlayViewV124.requestLayout();
-            touchOverlayViewV124.invalidate();
-        } catch (Throwable ignored) {
-        }
+    // UNREAL_ANDROID_RETROTOUCH_V215
+    private void bringRetroTouchToFrontV215() {
+        if (retroTouchBridgeV215 != null) retroTouchBridgeV215.bringToFront();
     }
 
-    private File unrealSystemDirV124() {
+    private File unrealSystemDirV215() {
         File root = selectedRootFromIntentOrScan();
-        if (root == null) return null;
-        return new File(root, "System");
+        return root == null ? null : new File(root, "System");
     }
 
-    private void ensureTouchControlsConfigDefaultV124() {
-        File systemDir = unrealSystemDirV124();
+    private void ensureRetroTouchConfigDefaultV215() {
+        File systemDir = unrealSystemDirV215();
         if (systemDir == null) return;
         File ini = new File(systemDir, "User.ini");
         try {
             if (!systemDir.exists()) systemDir.mkdirs();
-            String text = ini.exists() ? readSmallTextFileV124(ini) : "";
+            String text = ini.exists() ? readSmallTextFileV215(ini) : "";
             if (text.indexOf("bTouchControls=") < 0) {
                 java.io.FileWriter fw = new java.io.FileWriter(ini, true);
                 try {
-                    fw.write("\n; UNREAL_ANDROID_TOUCH_OVERLAY_V125 default enabled on first start\n");
+                    fw.write("\n; UNREAL_ANDROID_RETROTOUCH_V215 default enabled on first start\n");
                     fw.write("[Unreal.UnrealOptionsMenu]\n");
                     fw.write("bTouchControls=True\n");
                 } finally {
                     fw.close();
                 }
-                android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 default config appended to " + ini.getAbsolutePath());
+                android.util.Log.i(TAG, "UNREAL_ANDROID_RETROTOUCH_V215 default config appended to " + ini.getAbsolutePath());
             }
         } catch (Throwable t) {
-            android.util.Log.w(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 could not ensure default", t);
+            android.util.Log.w(TAG, "UNREAL_ANDROID_RETROTOUCH_V215 could not ensure default", t);
         }
     }
 
-    private String readSmallTextFileV124(File file) throws java.io.IOException {
+    private String readSmallTextFileV215(File file) throws java.io.IOException {
         java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(file));
         try {
             StringBuilder sb = new StringBuilder();
             String line;
             int lines = 0;
-            while ((line = br.readLine()) != null && lines++ < 4096) {
-                sb.append(line).append('\n');
-            }
+            while ((line = br.readLine()) != null && lines++ < 4096) sb.append(line).append('\n');
             return sb.toString();
         } finally {
             br.close();
         }
     }
 
-    private boolean readTouchControlsEnabledV124() {
-        File systemDir = unrealSystemDirV124();
+    boolean isRetroTouchEnabledV215() {
+        // Match the proven old overlay cadence: native menu state may be polled often,
+        // but INI files are disk I/O and must not be reopened every 150 ms on Tegra 3.
+        long now = android.os.SystemClock.uptimeMillis();
+        if (retroTouchConfigReadMsV215 != 0L && now - retroTouchConfigReadMsV215 < 900L)
+            return retroTouchEnabledCacheV215;
+        retroTouchConfigReadMsV215 = now;
+
+        File systemDir = unrealSystemDirV215();
         Boolean found = null;
         if (systemDir != null) {
-            found = readTouchControlsFlagV124(new File(systemDir, "User.ini"), found);
-            found = readTouchControlsFlagV124(new File(systemDir, "Unreal.ini"), found);
-            found = readTouchControlsFlagV124(new File(systemDir, "AndroidUI.ini"), found);
-            found = readTouchControlsFlagV124(new File(systemDir, "Default.ini"), found);
+            found = readRetroTouchFlagV215(new File(systemDir, "User.ini"), found);
+            found = readRetroTouchFlagV215(new File(systemDir, "Unreal.ini"), found);
+            found = readRetroTouchFlagV215(new File(systemDir, "AndroidUI.ini"), found);
+            found = readRetroTouchFlagV215(new File(systemDir, "Default.ini"), found);
         }
-        return found != null ? found.booleanValue() : true;
+        retroTouchEnabledCacheV215 = found != null ? found.booleanValue() : true;
+        return retroTouchEnabledCacheV215;
     }
 
-    private Boolean readTouchControlsFlagV124(File ini, Boolean current) {
+    private Boolean readRetroTouchFlagV215(File ini, Boolean current) {
         if (ini == null || !ini.exists()) return current;
         try {
             java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(ini));
@@ -731,19 +736,13 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
                         continue;
                     }
                     int eq = t.indexOf('=');
-                    if (eq > 0) {
-                        String key = t.substring(0, eq).trim();
-                        String value = t.substring(eq + 1).trim();
-                        if ((inSection && key.equalsIgnoreCase("bTouchControls")) || key.equalsIgnoreCase("bTouchControls")
-                                || (key.equalsIgnoreCase("UseJoystick") && found == null)) {
-                            // v125: old Unreal.u still uses the legacy Joystick row.  Treat its
-                            // saved UseJoystick value as Touch Controls only when bTouchControls
-                            // has not been written yet.
-                            found = !(value.equalsIgnoreCase("false")
-                                    || value.equals("0")
-                                    || value.equalsIgnoreCase("no")
-                                    || value.equalsIgnoreCase("off"));
-                        }
+                    if (eq <= 0) continue;
+                    String key = t.substring(0, eq).trim();
+                    String value = t.substring(eq + 1).trim();
+                    if ((inSection && key.equalsIgnoreCase("bTouchControls")) || key.equalsIgnoreCase("bTouchControls")
+                            || (key.equalsIgnoreCase("UseJoystick") && found == null)) {
+                        found = !(value.equalsIgnoreCase("false") || value.equals("0")
+                                || value.equalsIgnoreCase("no") || value.equalsIgnoreCase("off"));
                     }
                 }
                 return found;
@@ -755,535 +754,62 @@ public class UnrealSDLActivity extends SDLActivity implements InputManager.Input
         }
     }
 
-    private static float clampV124(float v, float lo, float hi) {
-        return v < lo ? lo : (v > hi ? hi : v);
+
+    boolean setRetroTouchInputModeV218(boolean touchMode) {
+        try {
+            nativeRetroTouchSetTouchModeV218(touchMode);
+            retroTouchEnabledCacheV215 = touchMode;
+            retroTouchConfigReadMsV215 = android.os.SystemClock.uptimeMillis();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
-    private static final class UnrealTouchOverlayViewV124 extends View {
-        private final UnrealSDLActivity activity;
-        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private final android.graphics.RectF rect = new android.graphics.RectF();
-        private final android.util.SparseArray<TouchRole> roles = new android.util.SparseArray<TouchRole>();
-        private final android.graphics.Bitmap iconFire;
-        private final android.graphics.Bitmap iconAltFire;
-        private final android.graphics.Bitmap iconJump;
-        private final android.graphics.Bitmap iconCrouch;
-        private final android.graphics.Bitmap iconNext;
-        private final android.graphics.Bitmap iconMenu;
-        private final android.graphics.Bitmap iconDpad;
-        private long lastConfigReadMs;
-        private long lastMenuReadMs;
-        private long rightLookLogNextMsV129; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V132
-        private long leftStickLogNextMsV132; // UNREAL_ANDROID_TOUCH_STICKS_RESTORE_V132
-        private boolean enabled = true;
-        private boolean menuVisible = false;
-        private float leftBaseX, leftBaseY, rightBaseX, rightBaseY, rightLastX, rightLastY, lx, ly, rx, ry; // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V131
-        private boolean fire, fireButton, altFire, jump, crouch, next, menu; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-        private int rightFireAssistCount = 0; // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-        private boolean dpadUp, dpadDown, dpadLeft, dpadRight, dpadCenter; // UNREAL_ANDROID_TOUCH_OVERLAY_V125
-        private static final int TOUCH_DIRECT_FIRE_V136 = 910105;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_ALT_FIRE_V136 = 910104; // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_JUMP_V136 = 910096;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_CROUCH_V136 = 910097;   // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private static final int TOUCH_DIRECT_NEXT_V136 = 910103;     // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136
-        private enum TouchRole { NONE, LEFT_STICK, RIGHT_LOOK, RIGHT_FIRE_ASSIST, FIRE, ALTFIRE, JUMP, CROUCH, NEXT, MENU, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, DPAD_CENTER }
-
-        UnrealTouchOverlayViewV124(UnrealSDLActivity activity) {
-            super(activity);
-            this.activity = activity;
-            setWillNotDraw(false);
-            setFocusable(false);
-            setFocusableInTouchMode(false);
-            setClickable(true);
-            if (android.os.Build.VERSION.SDK_INT >= 16) {
-                setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            }
-            iconFire = loadIcon("touch_overlay/fire.png");
-            iconAltFire = loadIcon("touch_overlay/alternate-fire.png");
-            iconJump = loadIcon("touch_overlay/jump.png");
-            iconCrouch = loadIcon("touch_overlay/crouch.png");
-            iconNext = loadIcon("touch_overlay/next-weapon.png");
-            iconMenu = loadIcon("touch_overlay/menu.png");
-            iconDpad = loadIcon("touch_overlay/dpad.png");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 overlay uses stable left-stick + UT99 right-half FPS look + grey smaller DPAD");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V136 repaired: second right-half touch uses native direct Fire while regular overlay buttons keep their own direct paths");
-            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138 consumes all overlay touches while Touch Controls is FALSE");
-            startRedrawLoopV211(); // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
+    int getRetroTouchUiModeV215() {
+        try {
+            return nativeRetroTouchUiModeV215();
+        } catch (Throwable ignored) {
+            return RETROTOUCH_UI_BLOCKED_V215;
         }
+    }
 
-        private boolean redrawLoopActiveV211; // UNREAL_ANDROID_LIFECYCLE_PAUSE_V211
-
-        private final Runnable redrawRunnable = new Runnable() {
+    // UNREAL_ANDROID_RETROTOUCH_RESET_API_V221 UNREAL_ANDROID_RETROTOUCH_RESET_DIRECT_V222
+    // Called by NSDLViewport synchronously with UInput::ResetInput(). SDL's game thread
+    // cannot mutate Android Views, so enqueue the reset immediately on the main looper.
+    // A Runnable posted now is ordered ahead of touch events that arrive afterwards.
+    public void onNativeRetroTouchInputResetV222() {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            if (retroTouchBridgeV215 != null) retroTouchBridgeV215.onEngineInputResetV222();
+            return;
+        }
+        runOnUiThread(new Runnable() {
             @Override public void run() {
-                if (!redrawLoopActiveV211) return;
-                invalidate();
-                postDelayed(this, 66L);
+                if (retroTouchBridgeV215 != null) retroTouchBridgeV215.onEngineInputResetV222();
             }
-        };
+        });
+    }
 
-        private void startRedrawLoopV211() {
-            if (redrawLoopActiveV211) return;
-            redrawLoopActiveV211 = true;
-            removeCallbacks(redrawRunnable);
-            postDelayed(redrawRunnable, 66L);
+    void pushRetroTouchLookV215(float x, float y) {
+        try {
+            nativeRetroTouchLookV215(x, y);
+        } catch (Throwable ignored) {
         }
+    }
 
-        private void stopRedrawLoopV211() {
-            redrawLoopActiveV211 = false;
-            removeCallbacks(redrawRunnable);
-        }
-
-        void onHostPauseV211() {
-            // Release held virtual buttons/sticks before the SDL thread is suspended,
-            // then stop the 15 Hz redraw/config polling loop while the app is hidden.
-            releaseAll();
-            roles.clear();
-            stopRedrawLoopV211();
-        }
-
-        void onHostResumeV211() {
-            startRedrawLoopV211();
-            invalidate();
-        }
-
-        private android.graphics.Bitmap loadIcon(String assetPath) {
-            try {
-                java.io.InputStream in = activity.getAssets().open(assetPath);
-                try {
-                    return android.graphics.BitmapFactory.decodeStream(in);
-                } finally {
-                    in.close();
-                }
-            } catch (Throwable t) {
-                android.util.Log.w(TAG, "UNREAL_ANDROID_TOUCH_OVERLAY_V125 missing icon " + assetPath, t);
-                return null;
-            }
-        }
-
-        private void refreshState() {
-            long now = android.os.SystemClock.uptimeMillis();
-            if (now - lastConfigReadMs > 900L) {
-                lastConfigReadMs = now;
-                enabled = activity.readTouchControlsEnabledV124();
-            }
-            if (now - lastMenuReadMs > 120L) {
-                lastMenuReadMs = now;
-                try {
-                    menuVisible = nativeAndroidIsMenuV124();
-                } catch (Throwable ignored) {
-                    menuVisible = false;
-                }
-            }
-        }
-
-        @Override protected void onDraw(android.graphics.Canvas canvas) {
-            super.onDraw(canvas);
-            refreshState();
-            if (!enabled || canvas == null) return;
-            float w = getWidth(), h = getHeight();
-            if (w <= 0 || h <= 0) return;
-            float s = Math.min(w, h);
-            float pad = Math.max(10f, s * 0.020f);
-            float r = Math.max(50f, s * 0.0705f);
-            float gap = Math.max(12f, s * 0.018f);
-
-            final int iconAlpha = 96; // v125: visible, but still translucent like UT99
-            float menuR = r * 0.72f;
-            float menuCx = pad + menuR;
-            float menuCy = pad + menuR;
-            drawIconButton(canvas, menuCx, menuCy, menuR, iconMenu, iconAlpha);
-
-            // Unreal needs menu navigation on touch.  Keep the DPAD directly under
-            // the menu icon, slightly smaller v134 size, with the same alpha.
-            float dpadR = menuR * 2.125f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: 15% smaller than v133
-            float dpadCx = pad + dpadR;
-            float dpadCy = menuCy + menuR + gap + dpadR;
-            drawIconButton(canvas, dpadCx, dpadCy, dpadR, iconDpad, iconAlpha);
-
-            float buttonUpShift = r + 10f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: v133 shift plus 10 px up
-            float actionY1 = h * 0.42f + r * 2.0f - buttonUpShift;
-            float actionY2 = actionY1 + r * 2.0f + gap;
-            float nextY = actionY1 - r * 2.0f - gap;
-            drawIconButton(canvas, w - pad - r, nextY, r, iconNext, iconAlpha);
-            drawIconButton(canvas, w - pad - r, actionY1, r, iconFire, iconAlpha);
-            drawIconButton(canvas, w - pad - r, actionY2, r, iconAltFire, iconAlpha);
-
-            float bottomY = h - pad - r - buttonUpShift;
-            float bottomShiftLeft = r;
-            drawIconButton(canvas, w - pad - r - bottomShiftLeft, bottomY, r, iconCrouch, iconAlpha);
-            drawIconButton(canvas, w - pad - r * 3.05f - gap - bottomShiftLeft, bottomY, r, iconJump, iconAlpha);
-        }
-
-        private void drawIconButton(android.graphics.Canvas canvas, float cx, float cy, float r, android.graphics.Bitmap icon, int iconAlpha) {
-            paint.setStyle(android.graphics.Paint.Style.FILL);
-            paint.setColor(0x06202020);
-            canvas.drawCircle(cx, cy, r, paint);
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
-            paint.setStrokeWidth(Math.max(2f, r * 0.055f));
-            paint.setColor(0x1AFFFFFF);
-            canvas.drawCircle(cx, cy, r, paint);
-            if (icon != null) {
-                float iconR = r * 0.64f;
-                rect.set(cx - iconR, cy - iconR, cx + iconR, cy + iconR);
-                paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setAlpha(iconAlpha);
-                canvas.drawBitmap(icon, null, rect, paint);
-                paint.setAlpha(255);
-            }
-        }
-
-        @Override public boolean onTouchEvent(MotionEvent event) {
-            if (event == null) return false;
-            refreshState();
-            if (!enabled) {
-                // UNREAL_ANDROID_TOUCH_DISABLE_GATE_V138
-                // When Touch Controls is OFF, the transparent overlay must still
-                // consume screen touches. Otherwise the SDL SurfaceView below can
-                // receive the same tap as a raw mouse/fire event.
-                releaseAll();
-                roles.clear();
-                return true;
-            }
-
-            int action = event.getActionMasked();
-            int index = event.getActionIndex();
-            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-                TouchRole role = resolveTouchRoleV135(event.getX(index), event.getY(index)); // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135
-                if (role == TouchRole.NONE) return false;
-                int pointerId = event.getPointerId(index);
-                roles.put(pointerId, role);
-                if (role == TouchRole.LEFT_STICK) {
-                    leftBaseX = event.getX(index);
-                    leftBaseY = event.getY(index);
-                } else if (role == TouchRole.RIGHT_LOOK) {
-                    rightBaseX = event.getX(index); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129
-                    rightBaseY = event.getY(index); // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129
-                    rightLastX = rightBaseX;
-                    rightLastY = rightBaseY;
-                }
-                if (role == TouchRole.RIGHT_FIRE_ASSIST) {
-                    addRightFireAssistV135();
-                } else {
-                    updateRole(role, event.getX(index), event.getY(index), true);
-                }
-                return true;
-            }
-            if (action == MotionEvent.ACTION_MOVE) {
-                boolean consumed = false;
-                for (int i = 0; i < event.getPointerCount(); ++i) {
-                    TouchRole role = roles.get(event.getPointerId(i));
-                    if (role != null && role != TouchRole.NONE) {
-                        if (role != TouchRole.RIGHT_FIRE_ASSIST) {
-                            updateRole(role, event.getX(i), event.getY(i), true);
-                        }
-                        consumed = true;
-                    }
-                }
-                return consumed;
-            }
-            if (action == MotionEvent.ACTION_CANCEL) {
-                releaseAll();
-                roles.clear();
-                return true;
-            }
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
-                int pointerId = event.getPointerId(index);
-                TouchRole role = roles.get(pointerId);
-                if (role != null && role != TouchRole.NONE) {
-                    if (role == TouchRole.RIGHT_FIRE_ASSIST) {
-                        removeRightFireAssistV135();
-                    } else {
-                        updateRole(role, event.getX(index), event.getY(index), false);
-                    }
-                    roles.remove(pointerId);
-                    return true;
-                }
-                roles.remove(pointerId);
-            }
-            return false;
-        }
-
-        private TouchRole hitRole(float x, float y) {
-            float w = getWidth(), h = getHeight(), s = Math.min(w, h);
-            float pad = Math.max(10f, s * 0.020f);
-            float r = Math.max(50f, s * 0.0705f);
-            float gap = Math.max(12f, s * 0.018f);
-            float menuR = r * 0.72f;
-            float menuCx = pad + menuR;
-            float menuCy = pad + menuR;
-            if (insideCircle(x, y, menuCx, menuCy, menuR * 1.35f)) return TouchRole.MENU;
-
-            float dpadR = menuR * 2.125f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: keep hitbox aligned with 15% smaller DPAD
-            float dpadCx = pad + dpadR;
-            float dpadCy = menuCy + menuR + gap + dpadR;
-            if (insideCircle(x, y, dpadCx, dpadCy, dpadR * 1.12f)) {
-                float dx = x - dpadCx;
-                float dy = y - dpadCy;
-                float dist = (float)Math.sqrt(dx * dx + dy * dy);
-                if (dist < dpadR * 0.30f) return TouchRole.DPAD_CENTER;
-                if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? TouchRole.DPAD_LEFT : TouchRole.DPAD_RIGHT;
-                return dy < 0 ? TouchRole.DPAD_UP : TouchRole.DPAD_DOWN;
-            }
-
-            float buttonUpShift = r + 10f; // UNREAL_ANDROID_TOUCH_LAYOUT_V134: keep hitboxes aligned with drawn buttons
-            float actionY1 = h * 0.42f + r * 2.0f - buttonUpShift;
-            float actionY2 = actionY1 + r * 2.0f + gap;
-            float nextY = actionY1 - r * 2.0f - gap;
-            if (insideCircle(x, y, w - pad - r, nextY, r * 1.35f)) return TouchRole.NEXT;
-            if (insideCircle(x, y, w - pad - r, actionY1, r * 1.35f)) return TouchRole.FIRE;
-            if (insideCircle(x, y, w - pad - r, actionY2, r * 1.35f)) return TouchRole.ALTFIRE;
-            float bottomY = h - pad - r - buttonUpShift;
-            float bottomShiftLeft = r;
-            if (insideCircle(x, y, w - pad - r - bottomShiftLeft, bottomY, r * 1.35f)) return TouchRole.CROUCH;
-            if (insideCircle(x, y, w - pad - r * 3.05f - gap - bottomShiftLeft, bottomY, r * 1.35f)) return TouchRole.JUMP;
-
-            // UNREAL_ANDROID_TOUCH_LAYOUT_V133:
-            // Do not gate the empty left/right gameplay halves by native menu state.
-            // On some devices this state can remain true briefly/stale and then the
-            // overlay returns NONE, which kills both virtual sticks. Menu/DPAD/buttons
-            // still win above by hit area; the remaining screen is always gameplay
-            // stick/look exactly like the working UT99 overlay.
-            return x < w * 0.5f ? TouchRole.LEFT_STICK : TouchRole.RIGHT_LOOK;
-        }
-
-        private boolean hasActiveRightLookPointerV135() {
-            for (int i = 0; i < roles.size(); ++i) {
-                if (roles.valueAt(i) == TouchRole.RIGHT_LOOK) return true;
-            }
-            return false;
-        }
-
-        private TouchRole resolveTouchRoleV135(float x, float y) {
-            TouchRole role = hitRole(x, y);
-            // UNREAL_ANDROID_ASSISTIVE_TOUCH_SHOOT_V135:
-            // First free right-half touch stays FPS look/aim. A second free
-            // right-half touch acts as Fire while it is held. Explicit overlay
-            // buttons, DPAD and menu keep their existing roles.
-            if (role == TouchRole.RIGHT_LOOK && x >= getWidth() * 0.5f && hasActiveRightLookPointerV135()) {
-                return TouchRole.RIGHT_FIRE_ASSIST;
-            }
-            return role;
-        }
-
-        private void syncFireV135() {
-            boolean wantFire = fireButton || rightFireAssistCount > 0;
-            if (fire != wantFire) {
-                fire = wantFire;
-                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, wantFire);
-            }
-        }
-
-        private void setFireButtonV135(boolean down) {
-            if (fireButton != down) {
-                fireButton = down;
-                syncFireV135();
-            }
-        }
-
-        private void addRightFireAssistV135() {
-            rightFireAssistCount++;
-            syncFireV135();
-        }
-
-        private void removeRightFireAssistV135() {
-            if (rightFireAssistCount > 0) rightFireAssistCount--;
-            syncFireV135();
-        }
-
-        private boolean insideCircle(float x, float y, float cx, float cy, float r) {
-            float dx = x - cx, dy = y - cy;
-            return dx * dx + dy * dy <= r * r;
-        }
-
-        private float analogValue(float delta, float radius, float dead, float scale) {
-            float v = clampV124(delta / radius, -1f, 1f);
-            if (Math.abs(v) < dead) return 0f;
-            if (v > 0f) v = (v - dead) / (1f - dead);
-            else v = (v + dead) / (1f - dead);
-            return clampV124(v * scale, -1f, 1f);
-        }
-
-        private float touchLookDeltaV129(float deltaPx, float gain) {
-            // UNREAL_ANDROID_TOUCH_RIGHT_LOOK_UT99_V129:
-            // Exact UT99 principle: relative swipe delta, tiny jitter filter only,
-            // no virtual right-stick centre and no continued rotation.
-            if (Math.abs(deltaPx) < 0.25f) return 0f;
-            return clampV124(deltaPx * gain, -1f, 1f);
-        }
-
-        private void sendTouchLookV129(float x, float y) {
-            try {
-                nativeAndroidTouchLookV131(x, y);
-            } catch (Throwable v131) {
-                try {
-                    nativeAndroidTouchLookV101(x, y);
-                } catch (Throwable v101) {
-                    try {
-                        nativeAndroidTouchLookV124(x, y);
-                    } catch (Throwable ignored) {
-                    }
-                }
-            }
-        }
-
-        private void updateRole(TouchRole role, float x, float y, boolean down) {
-            float s = Math.min(getWidth(), getHeight());
-            float moveRadius = Math.max(112f, s * 0.145f);
-            switch (role) {
-                case LEFT_STICK:
-                    lx = down ? analogValue(x - leftBaseX, moveRadius, 0.075f, 0.74f) : 0f;
-                    ly = down ? analogValue(y - leftBaseY, moveRadius, 0.075f, 0.74f) : 0f;
-                    if (lx != 0f || ly != 0f) {
-                        long now = android.os.SystemClock.uptimeMillis();
-                        if (now >= leftStickLogNextMsV132) {
-                            leftStickLogNextMsV132 = now + 1200L;
-                            android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V133 left-stick lx=" + lx + " ly=" + ly);
-                        }
-                    }
-                    sendNativeMotion();
-                    break;
-                case RIGHT_LOOK:
-                    if (down) {
-                        float dx = x - rightLastX;
-                        float dy = y - rightLastY;
-                        rightLastX = x;
-                        rightLastY = y;
-                        rx = touchLookDeltaV129(dx, 0.0210f);
-                        ry = touchLookDeltaV129(dy, 0.0210f);
-                        if (rx != 0f || ry != 0f) {
-                            long now = android.os.SystemClock.uptimeMillis();
-                            if (now >= rightLookLogNextMsV129) {
-                                rightLookLogNextMsV129 = now + 1200L;
-                                android.util.Log.i(TAG, "UNREAL_ANDROID_TOUCH_LAYOUT_V134 right-look dx=" + dx + " dy=" + dy + " rx=" + rx + " ry=" + ry);
-                            }
-                        }
-                    } else {
-                        rx = ry = 0f;
-                    }
-                    sendTouchLookV129(rx, ry);
-                    break;
-                case RIGHT_FIRE_ASSIST:
-                    break;
-                case FIRE:
-                    setFireButtonV135(down);
-                    break;
-                case ALTFIRE:
-                    if (altFire != down) { altFire = down; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, down); }
-                    break;
-                case JUMP:
-                    if (jump != down) { jump = down; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, down); }
-                    break;
-                case CROUCH:
-                    if (crouch != down) { crouch = down; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, down); }
-                    break;
-                case NEXT:
-                    if (next != down) { next = down; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, down); }
-                    break;
-                case MENU:
-                    if (menu != down) { menu = down; setButton(KeyEvent.KEYCODE_MENU, down); }
-                    break;
-                case DPAD_UP:
-                    if (dpadUp != down) { dpadUp = down; setButton(KeyEvent.KEYCODE_DPAD_UP, down); }
-                    break;
-                case DPAD_DOWN:
-                    if (dpadDown != down) { dpadDown = down; setButton(KeyEvent.KEYCODE_DPAD_DOWN, down); }
-                    break;
-                case DPAD_LEFT:
-                    if (dpadLeft != down) { dpadLeft = down; setButton(KeyEvent.KEYCODE_DPAD_LEFT, down); }
-                    break;
-                case DPAD_RIGHT:
-                    if (dpadRight != down) { dpadRight = down; setButton(KeyEvent.KEYCODE_DPAD_RIGHT, down); }
-                    break;
-                case DPAD_CENTER:
-                    if (dpadCenter != down) { dpadCenter = down; setButton(KeyEvent.KEYCODE_BUTTON_A, down); }
-                    break;
-                case NONE:
-                    break;
-            }
-        }
-
-        private void setDirectTouchButtonV136(int directKeyCode, boolean down) {
-            // UNREAL_ANDROID_TOUCH_BUTTON_DIRECT_V136:
-            // Gameplay overlay buttons and assistive shoot use a native direct path
-            // that selects the current friendly controller binding or a safe PC fallback.
-            try {
-                nativeAndroidControllerKey(
-                        -136,
-                        0,
-                        0,
-                        directKeyCode,
-                        0,
-                        down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
-                        0,
-                        InputDevice.SOURCE_GAMEPAD,
-                        "UnrealTouchButtonDirectV136");
-            } catch (Throwable ignored) {
-            }
-        }
-
-        private void setButton(int keyCode, boolean down) {
-            try {
-                nativeAndroidControllerKey(
-                        -124,
-                        0,
-                        0,
-                        keyCode,
-                        0,
-                        down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
-                        0,
-                        InputDevice.SOURCE_GAMEPAD,
-                        "UnrealTouchOverlay");
-            } catch (Throwable ignored) {
-            }
-        }
-
-        private void sendNativeMotion() {
-            try {
-                nativeAndroidControllerMotion(
-                        -124,
-                        0,
-                        0,
-                        InputDevice.SOURCE_JOYSTICK,
-                        "UnrealTouchOverlay",
-                        lx,
-                        ly,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f,
-                        0f);
-            } catch (Throwable ignored) {
-            }
-        }
-
-        private void releaseAll() {
-            if (lx != 0f || ly != 0f) {
-                lx = ly = 0f;
-                sendNativeMotion();
-            }
-            if (rx != 0f || ry != 0f) {
-                rx = ry = 0f;
-                sendTouchLookV129(0f, 0f);
-            }
-            if (fire || fireButton || rightFireAssistCount > 0) {
-                fire = false;
-                fireButton = false;
-                rightFireAssistCount = 0;
-                setDirectTouchButtonV136(TOUCH_DIRECT_FIRE_V136, false);
-            }
-            if (altFire) { altFire = false; setDirectTouchButtonV136(TOUCH_DIRECT_ALT_FIRE_V136, false); }
-            if (jump) { jump = false; setDirectTouchButtonV136(TOUCH_DIRECT_JUMP_V136, false); }
-            if (crouch) { crouch = false; setDirectTouchButtonV136(TOUCH_DIRECT_CROUCH_V136, false); }
-            if (next) { next = false; setDirectTouchButtonV136(TOUCH_DIRECT_NEXT_V136, false); }
-            if (menu) { menu = false; setButton(KeyEvent.KEYCODE_MENU, false); }
-            if (dpadUp) { dpadUp = false; setButton(KeyEvent.KEYCODE_DPAD_UP, false); }
-            if (dpadDown) { dpadDown = false; setButton(KeyEvent.KEYCODE_DPAD_DOWN, false); }
-            if (dpadLeft) { dpadLeft = false; setButton(KeyEvent.KEYCODE_DPAD_LEFT, false); }
-            if (dpadRight) { dpadRight = false; setButton(KeyEvent.KEYCODE_DPAD_RIGHT, false); }
-            if (dpadCenter) { dpadCenter = false; setButton(KeyEvent.KEYCODE_BUTTON_A, false); }
+    void queueRetroTouchAndroidKeyV215(int keyCode, boolean down) {
+        try {
+            nativeAndroidControllerKey(
+                    -215,
+                    0,
+                    0,
+                    keyCode,
+                    0,
+                    down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                    0,
+                    InputDevice.SOURCE_GAMEPAD,
+                    "RetroTouch");
+        } catch (Throwable ignored) {
         }
     }
 
