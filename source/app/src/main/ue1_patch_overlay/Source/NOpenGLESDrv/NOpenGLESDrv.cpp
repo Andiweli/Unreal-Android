@@ -237,34 +237,10 @@ static INT UE1GLESWaterRings2Luma( const FTextureInfo& Info, const BYTE* Data, I
 	return ( (INT)C.R + (INT)C.G + (INT)C.B ) / 3;
 }
 
-static UBOOL UE1GLESIsHubSplashOverlayTexture( const FTextureInfo& Info )
-{
-	// Keep WetTexture HubEffects.WaterRings OUT of this list: that texture is
-	// used as the actual pool/water surface. Masking it removes the visible
-	// water texture and leaves only a flat cyan base.
-	//
-	// Also keep FireTexture HubEffects.WaterFall2 OUT: the vertical waterfall
-	// itself needs the original translucent FireTexture colour data. Masking
-	// dark/green texels made it degenerate into plain cyan/blue streaks. The
-	// regular PF_Translucent blend already treats black source pixels as neutral
-	// enough for this texture.
-	return UE1GLESIsHubSmoke1Texture( Info );
-}
-
-static UBOOL UE1GLESNeedsHubSplashMask( const FTextureInfo& Info )
-{
-	// Smoke1 is a translucent/fire overlay with black borders and still needs
-	// alpha test. WaterFall2 is the vertical waterfall texture and must not be
-	// alpha-masked. WaterRings2 is PF_Modulated and has a dedicated blend fix in
-	// DrawComplexSurface.
-	return UE1GLESIsHubSplashOverlayTexture( Info );
-}
-
 static UBOOL UE1GLESIsLegacyEffectSpriteTexture( const FTextureInfo& Info )
 {
 	return UE1GLESIsMaineffectTexture( Info )
-		|| UE1GLESIsSmokeBlackTexture( Info )
-		|| UE1GLESNeedsHubSplashMask( Info );
+		|| UE1GLESIsSmokeBlackTexture( Info );
 }
 
 static BYTE UE1GLESPaletteEffectAlpha( const FTextureInfo& Info, BYTE Index, UBOOL Masked, UBOOL bMaineffect, UBOOL bSmokeBlack, UBOOL bHubWaterFall2, UBOOL bHubSmoke1, UBOOL bHubWaterRings2, BYTE WR2Corner0, BYTE WR2Corner1, BYTE WR2Corner2, BYTE WR2Corner3 )
@@ -1009,8 +985,6 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 
 	DWORD RenderPolyFlags = Surface.PolyFlags;
 	const UBOOL bHubWaterRings2 = UE1GLESIsHubWaterRings2Texture( *Surface.Texture );
-	if( UE1GLESNeedsHubSplashMask( *Surface.Texture ) )
-		RenderPolyFlags |= PF_Masked | PF_NoSmooth;
 
 	SetSceneNode( Frame );
 	SetBlend( RenderPolyFlags );
@@ -1715,6 +1689,18 @@ void UNOpenGLESRenderDevice::SetBlend( DWORD PolyFlags, UBOOL InverseOrder )
 void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags, INT BaseMip )
 {
 	guard(UNOpenGLESRenderDevice::UpdateTextureFilter);
+
+	if( UE1GLESIsHubSmoke1Texture( Info ) )
+	{
+		// HubEffects.Smoke1 is mapped onto three BSP sheets and intentionally
+		// repeats outside normalized 0..1 UVs. The old sprite workaround clamped
+		// it to its black edge, making the animated mist completely invisible.
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		return;
+	}
 
 	if( UE1GLESIsLegacyEffectSpriteTexture( Info ) )
 	{
