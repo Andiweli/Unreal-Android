@@ -34,8 +34,16 @@ endif()
 
 # UNREAL_ANDROID_API16_SCRIPTVM_SAFE_FLAGS_V212
 # OUYA/API16 release stability without de-optimising the entire Engine target.
+# UNREAL_ANDROID_API16_NATIVE_OPT_V223: optimisation level comes from the
+# Android wrapper (fast/balanced/safe); the UB guard flags always stay on.
 if(ANDROID AND UNREAL_ANDROID_API16_COMPAT AND ANDROID_ABI STREQUAL "armeabi-v7a" AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-  set(_UE1_API16_CORE_SAFE_FLAGS "-O0 -fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer")
+  if(NOT DEFINED UE1_API16_SCRIPTVM_OPT_FLAG)
+    set(UE1_API16_SCRIPTVM_OPT_FLAG "-O1")
+  endif()
+  if(NOT DEFINED UE1_API16_SAFE_CODEGEN_FLAGS)
+    set(UE1_API16_SAFE_CODEGEN_FLAGS "-fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+  endif()
+  set(_UE1_API16_CORE_SAFE_FLAGS "${UE1_API16_SCRIPTVM_OPT_FLAG} ${UE1_API16_SAFE_CODEGEN_FLAGS}")
   set_source_files_properties("Src/UnCorSc.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_API16_CORE_SAFE_FLAGS}")
   set_source_files_properties("Src/UnProp.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_API16_CORE_SAFE_FLAGS}")
 endif()

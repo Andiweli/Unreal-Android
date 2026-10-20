@@ -116,7 +116,7 @@ void AActor::physMovingBrush( FLOAT DeltaTime )
 	if( IsA(AMover::StaticClass) )
 	{
 		AMover* Mover  = (AMover*)this;
-		INT KeyNum     = Clamp( (INT)Mover->KeyNum, (INT)0, (INT)ARRAY_COUNT(Mover->KeyPos) );
+		INT KeyNum     = Clamp( (INT)Mover->KeyNum, (INT)0, (INT)ARRAY_COUNT(Mover->KeyPos)-1 );
 		while( Mover->bInterpolating && DeltaTime>0.0 )
 		{
 			// We are moving.
@@ -216,7 +216,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_VectorConst, execVectorConst );
 void AActor::execStringToVector( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execStringToVector);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FVector*)Result = FVector(0,0,0);
 	GetFVECTOR((char*)Addr,*(FVector*)Result);
@@ -227,7 +227,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_StringToVector, execStringToVector );
 void AActor::execStringToRotation( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execStringToRotation);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FRotator*)Result = FRotator(0,0,0);
 	GetFROTATOR((char*)Addr,*(FRotator*)Result,1.0);
@@ -238,7 +238,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_StringToRotation, execStringToRotation );
 void AActor::execVectorToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execVectorToBool);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = ((FVector*)Addr)->IsZero() ? 0 : 1;
 	unguardexecSlow;
@@ -248,7 +248,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_VectorToBool, execVectorToBool );
 void AActor::execVectorToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execVectorToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appSprintf((char*)Result,"%f,%f,%f",((FVector*)Addr)->X,((FVector*)Addr)->Y,((FVector*)Addr)->Z);
 	unguardexecSlow;
@@ -258,7 +258,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_VectorToString, execVectorToString );
 void AActor::execVectorToRotation( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execVectorToRotation);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FRotator*)Result = ((FVector*)Addr)->Rotation();
 	unguardexecSlow;
@@ -268,7 +268,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_VectorToRotation, execVectorToRotation );
 void AActor::execRotationToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execRotationToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = ((FRotator*)Addr)->IsZero() ? 0 : 1;
 	unguardexecSlow;
@@ -278,7 +278,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_RotationToBool, execRotationToBool );
 void AActor::execRotationToVector( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execRotationToVector);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FVector*)Result = ((FRotator*)Addr)->Vector();
 	unguardexecSlow;
@@ -288,7 +288,7 @@ AUTOREGISTER_INTRINSIC( AActor, EX_RotationToVector, execRotationToVector );
 void AActor::execRotationToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(AActor::execRotationToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appSprintf((char*)Result,"%i,%i,%i",((FRotator*)Addr)->Pitch&65535,((FRotator*)Addr)->Yaw&65535,((FRotator*)Addr)->Roll&65535);
 	unguardexecSlow;
@@ -1945,7 +1945,10 @@ void AActor::ProcessState( FLOAT DeltaSeconds )
 			uclock(GScriptCycles);
 
 		// Create a work area for UnrealScript.
-		BYTE Buffer[MAX_CONST_SIZE], *Addr;
+		// UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223: state code runs whole
+		// statements into this buffer; a discarded string/struct return value
+		// overflowed the old MAX_CONST_SIZE stack buffer.
+		SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr;
 		*(FLOAT*)Buffer = DeltaSeconds;
 
 		// If a latent action is in progress, update it.
@@ -2004,7 +2007,7 @@ UBOOL AActor::ProcessRemoteFunction( UFunction* Function, void* Parms, FFrame* S
 	{
 		// See if UnrealScript replication condition is met.
 		FFrame EvalStack( this, Function->GetOwnerClass(), Function->RepOffset, NULL );
-		BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
+		SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
 		EvalStack.Step( this, Val );
 
 		// Replicate if condition is met.

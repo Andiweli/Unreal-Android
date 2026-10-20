@@ -15,6 +15,13 @@ enum {MAX_STRING_CONST_SIZE	= 256      };
 enum {MAX_CONST_SIZE        = 16       };
 enum {MAX_FUNC_PARMS        = 16       };
 
+// UNREAL_ANDROID_SCRIPT_RESULT_ALIGN_V223
+// Generic script result buffers are plain BYTE arrays, but the intrinsics
+// store FLOAT/INT/pointer/struct values into them. On ARMv7 (OUYA) optimized
+// code uses VFP and LDRD/STRD/LDM for those, which fault on unaligned
+// addresses, so keep the buffers aligned like real variables.
+#define SCRIPT_BUFFER_ALIGN alignas(8)
+
 //
 // guardexec mechanism for script debugging.
 //
@@ -237,9 +244,13 @@ BYTE CORE_API GRegisterIntrinsic( int iIntrinsic, void* Func );
 //
 // Iterator macros.
 //
+// UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223: the loop body runs whole
+// statements into Buffer, and a discarded string/struct return value would
+// overflow a MAX_CONST_SIZE buffer (ProcessInternal already uses the string size).
 #define PRE_ITERATOR \
 	INT wEndOffset = Stack.ReadWord(); \
-	BYTE B=0, *Addr, Buffer[MAX_CONST_SIZE]; \
+	BYTE B=0, *Addr; \
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE]; \
 	BYTE *StartCode = Stack.Code; \
 	do {
 #define POST_ITERATOR \

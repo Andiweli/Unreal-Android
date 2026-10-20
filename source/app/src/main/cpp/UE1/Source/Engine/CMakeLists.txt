@@ -5,8 +5,16 @@ file(GLOB SRC_FILES "Src/*.cpp")
 
 # UNREAL_ANDROID_API16_ENGINE_EVENT_SAFE_FLAGS_V212
 # Preserve the proven OUYA/API16 mover/event-chain stability while leaving renderer/SDL optimized.
+# UNREAL_ANDROID_API16_NATIVE_OPT_V223: optimisation level comes from the
+# Android wrapper (fast/balanced/safe); the UB guard flags always stay on.
 if(ANDROID AND UNREAL_ANDROID_API16_COMPAT AND ANDROID_ABI STREQUAL "armeabi-v7a" AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
-  set(_UE1_API16_ENGINE_SAFE_FLAGS "-O0 -fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer")
+  if(NOT DEFINED UE1_API16_ENGINE_EVENT_OPT_FLAG)
+    set(UE1_API16_ENGINE_EVENT_OPT_FLAG "-O2")
+  endif()
+  if(NOT DEFINED UE1_API16_SAFE_CODEGEN_FLAGS)
+    set(UE1_API16_SAFE_CODEGEN_FLAGS "-fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+  endif()
+  set(_UE1_API16_ENGINE_SAFE_FLAGS "${UE1_API16_ENGINE_EVENT_OPT_FLAG} ${UE1_API16_SAFE_CODEGEN_FLAGS}")
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Src/UnScript.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_API16_ENGINE_SAFE_FLAGS}")
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Src/UnActor.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_API16_ENGINE_SAFE_FLAGS}")
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Src/UnLevAct.cpp" PROPERTIES COMPILE_FLAGS "${_UE1_API16_ENGINE_SAFE_FLAGS}")

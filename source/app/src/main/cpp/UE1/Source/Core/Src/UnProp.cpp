@@ -191,7 +191,9 @@ void UProperty::ExecLet( void* Var, FFrame& Stack )
 	guardSlow(UProperty::ExecLet);
 
 	// Assign value.
-	BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
+	// UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223: struct properties use this
+	// path too, and computed structs can be larger than MAX_CONST_SIZE.
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
 	Stack.Step( Stack.Object, Val );
 	if( Var )
 		appMemcpy( Var, Val, GetElementSize() );
@@ -345,7 +347,7 @@ void UBoolProperty::ExecLet( void* Var, FFrame& Stack )
 
 	// Safely set the bool.
 	DWORD* BoolAddr = GBoolAddr;
-	BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
 	Stack.Step( Stack.Object, Val );
 	if( BoolAddr )
 	{
@@ -561,7 +563,7 @@ void UStringProperty::ExecLet( void* Var, FFrame& Stack )
 	guardSlow(UStringProperty::ExecLet);
 
 	// Assign value.
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
 	Stack.Step( Stack.Object, Val );
 	if( Var )
 		appStrcpy( (char*)Var, (char*)Val );

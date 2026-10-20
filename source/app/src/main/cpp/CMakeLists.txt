@@ -150,6 +150,36 @@ if(UNREAL_ANDROID_API16_COMPAT AND ANDROID_ABI STREQUAL "armeabi-v7a")
     add_compile_definitions(ANDROID_LEGACY_API16)
 endif()
 
+# UNREAL_ANDROID_API16_NATIVE_OPT_V223
+# Optimisation of the UnrealScript VM (Core UnCorSc/UnProp) and the engine
+# event/mover files on the OUYA/API16 armeabi-v7a build. Older builds forced
+# these to -O0; that made script-heavy scenes CPU bound on Tegra 3.
+#   fast     = VM -O1 (upstream uses -Og here), engine event files -O2 (default)
+#   balanced = VM and engine event files -O1
+#   safe     = previous -O0 build, for A/B testing regressions
+# Gradle passes this from gradle.properties (unreal.api16NativeOpt).
+set(UNREAL_ANDROID_API16_NATIVE_OPT "fast" CACHE STRING "OUYA/API16 armeabi-v7a script VM optimisation: fast, balanced or safe")
+set_property(CACHE UNREAL_ANDROID_API16_NATIVE_OPT PROPERTY STRINGS fast balanced safe)
+if(UNREAL_ANDROID_API16_NATIVE_OPT STREQUAL "fast")
+    set(UE1_API16_SCRIPTVM_OPT_FLAG "-O1")
+    set(UE1_API16_ENGINE_EVENT_OPT_FLAG "-O2")
+elseif(UNREAL_ANDROID_API16_NATIVE_OPT STREQUAL "balanced")
+    set(UE1_API16_SCRIPTVM_OPT_FLAG "-O1")
+    set(UE1_API16_ENGINE_EVENT_OPT_FLAG "-O1")
+elseif(UNREAL_ANDROID_API16_NATIVE_OPT STREQUAL "safe")
+    set(UE1_API16_SCRIPTVM_OPT_FLAG "-O0")
+    set(UE1_API16_ENGINE_EVENT_OPT_FLAG "-O0")
+else()
+    message(FATAL_ERROR "UNREAL_ANDROID_API16_NATIVE_OPT must be fast, balanced or safe (got '${UNREAL_ANDROID_API16_NATIVE_OPT}')")
+endif()
+# The UB guards stay on in every mode. Sibling-call optimisation is disabled
+# like upstream does for its other ARMv7 target (PS Vita).
+set(UE1_API16_SAFE_CODEGEN_FLAGS "-fno-strict-aliasing -fno-strict-overflow -fwrapv -fno-delete-null-pointer-checks -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+if(UNREAL_ANDROID_API16_COMPAT AND ANDROID_ABI STREQUAL "armeabi-v7a" AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+    message(STATUS "OUYA/API16 native optimisation: ${UNREAL_ANDROID_API16_NATIVE_OPT} (VM ${UE1_API16_SCRIPTVM_OPT_FLAG}, engine events ${UE1_API16_ENGINE_EVENT_OPT_FLAG})")
+    add_compile_definitions(UNREAL_ANDROID_API16_NATIVE_OPT_NAME="${UNREAL_ANDROID_API16_NATIVE_OPT}")
+endif()
+
 add_compile_definitions(
     PLATFORM_ANDROID
     UNREAL_ANDROID

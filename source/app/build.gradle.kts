@@ -11,6 +11,15 @@ val openAlSoftVersion = "1.24.3" // C++17: compatible with NDK r23/API16 and inc
 val overlayRevision = "rev49-unified-normal-ouya-automotive-v1-signing-debugkey"
 val androidVersionName = "2.2.1"
 
+// UNREAL_ANDROID_API16_NATIVE_OPT_V223: optimisation of the script VM / engine
+// event files on the OUYA/API16 armeabi-v7a build (fast, balanced or safe).
+// Set unreal.api16NativeOpt in gradle.properties; safe = old -O0 build.
+val api16NativeOpt = ((findProperty("unreal.api16NativeOpt") as String?) ?: "fast").trim().lowercase().also {
+    if (it !in listOf("fast", "balanced", "safe")) {
+        throw GradleException("unreal.api16NativeOpt must be fast, balanced or safe (got '$it')")
+    }
+}
+
 val nativeRoot = layout.projectDirectory.dir("src/main/cpp")
 val downloadsDir = layout.buildDirectory.dir("downloads")
 val ue1Dir = nativeRoot.dir("UE1")
@@ -749,6 +758,14 @@ val prepareSources = tasks.register("prepareSources") {
         requirePatched(ue1Dir.asFile.resolve("Source/Core/CMakeLists.txt"), "UNREAL_ANDROID_API16_SCRIPTVM_SAFE_FLAGS_V212")
         requirePatched(ue1Dir.asFile.resolve("Source/Engine/CMakeLists.txt"), "UNREAL_ANDROID_API16_ENGINE_EVENT_SAFE_FLAGS_V212")
         requirePatched(layout.projectDirectory.file("src/main/cpp/CMakeLists.txt").asFile, "UNREAL_ANDROID_API16_NATIVE_COMPAT_V212")
+        requirePatched(layout.projectDirectory.file("src/main/cpp/CMakeLists.txt").asFile, "UNREAL_ANDROID_API16_NATIVE_OPT_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/CMakeLists.txt"), "UNREAL_ANDROID_API16_NATIVE_OPT_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/CMakeLists.txt"), "UNREAL_ANDROID_API16_NATIVE_OPT_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Inc/UnScript.h"), "UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Inc/UnScript.h"), "UNREAL_ANDROID_SCRIPT_RESULT_ALIGN_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnCorSc.cpp"), "UNREAL_ANDROID_INTTOBYTE_RESULT_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Core/Src/UnProp.cpp"), "UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223")
+        requirePatched(ue1Dir.asFile.resolve("Source/Engine/Src/UnScript.cpp"), "UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_LEVELS_1_0_TO_3_0_V16")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_GAMMA_DPAD_LEFT_RIGHT_V17")
         requirePatched(ue1Dir.asFile.resolve("Source/NSDLDrv/Src/NSDLViewport.cpp"), "UNREAL_ANDROID_CONTROLLER_DIRECT_TOGGLES_V22")
@@ -902,7 +919,7 @@ android {
             versionName = androidVersionName
             externalNativeBuild {
                 cmake {
-                    arguments += listOf("-DUNREAL_ANDROID_API16_COMPAT=ON", "-DUNREAL_ANDROID_AUTOMOTIVE=OFF")
+                    arguments += listOf("-DUNREAL_ANDROID_API16_COMPAT=ON", "-DUNREAL_ANDROID_AUTOMOTIVE=OFF", "-DUNREAL_ANDROID_API16_NATIVE_OPT=$api16NativeOpt")
                 }
             }
         }

@@ -299,7 +299,7 @@ void UObject::execClassContext( FFrame& Stack, BYTE*& Result )
 	guard(UObject::execClassContext);
 
 	// Get class expression.
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 
 	// Execute expression in class context.
@@ -334,7 +334,7 @@ void UObject::execArrayElement( FFrame& Stack, BYTE*& Result )
 	guardSlow(UObject::execArrayElement);
 
 	// Get array index expression.
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 
 	// Get base element.
@@ -437,7 +437,9 @@ void UObject::execSwitch( FFrame& Stack, BYTE*& Result )
 	BYTE bSize = *Stack.Code++;
 
 	// Get switch expression.
-	BYTE SwitchBuffer[MAX_CONST_SIZE], *SwitchVal=SwitchBuffer;
+	// UNREAL_ANDROID_SCRIPT_STATEMENT_BUFFER_V223: string switches are compared
+	// with appStrcmp below, so the value buffer must hold a whole string.
+	SCRIPT_BUFFER_ALIGN BYTE SwitchBuffer[MAX_STRING_CONST_SIZE], *SwitchVal=SwitchBuffer;
 	Stack.Step( Stack.Object, SwitchVal );
 
 	// Check each case clause till we find a match.
@@ -453,7 +455,7 @@ void UObject::execSwitch( FFrame& Stack, BYTE*& Result )
 			break;
 
 		// Get case expression.
-		BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
+		SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
 		Stack.Step( Stack.Object, Val );
 
 		// Compare.
@@ -475,7 +477,7 @@ void UObject::execCase( FFrame& Stack, BYTE*& Result )
 	INT wNext = Stack.ReadWord();
 	if( wNext != MAXWORD )
 	{
-		BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
+		SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Val=Buffer;
 		Stack.Step( Stack.Object, Val );
 	}
 	unguardexecSlow;
@@ -503,7 +505,7 @@ void UObject::execJumpIfNot( FFrame& Stack, BYTE*& Result )
 	INT wOffset = Stack.ReadWord();
 
 	// Get boolean test value.
-	BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
 	Stack.Step( Stack.Object, Val );
 
 	// Jump if false.
@@ -522,7 +524,7 @@ void UObject::execAssert( FFrame& Stack, BYTE*& Result )
 	INT wLine = Stack.ReadWord();
 
 	// Get boolean assert value.
-	BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Val=Buffer;
 	Stack.Step( Stack.Object, Val );
 
 	// Check it.
@@ -582,7 +584,7 @@ void UObject::execContext( FFrame& Stack, BYTE*& Result )
 	guardSlow(UObject::execContext);
 
 	// Get actor variable.
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( this, Addr );
 
 	// Execute or skip the following expression in the actor's context.
@@ -660,11 +662,11 @@ void UObject::execStructCmpEq( FFrame& Stack, BYTE*& Result )
 	UStruct* Struct = (UStruct*)GObj.GetIndexedObject( Stack.ReadInt() );
 
 	// Get first expression.
-	BYTE Buffer1[255], *Addr1=Buffer1;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer1[255], *Addr1=Buffer1;
 	Stack.Step( this, Addr1 );
 
 	// Get second expression.
-	BYTE Buffer2[255], *Addr2=Buffer2;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer2[255], *Addr2=Buffer2;
 	Stack.Step( this, Addr2 );
 
 	// Compare.
@@ -682,11 +684,11 @@ void UObject::execStructCmpNe( FFrame& Stack, BYTE*& Result )
 	UStruct* Struct = (UStruct*)GObj.GetIndexedObject( Stack.ReadInt() );
 
 	// Get first expression.
-	BYTE Buffer1[MAX_STRING_CONST_SIZE], *Addr1=Buffer1;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer1[MAX_STRING_CONST_SIZE], *Addr1=Buffer1;
 	Stack.Step( this, Addr1 );
 
 	// Get second expression.
-	BYTE Buffer2[MAX_STRING_CONST_SIZE], *Addr2=Buffer2;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer2[MAX_STRING_CONST_SIZE], *Addr2=Buffer2;
 	Stack.Step( this, Addr2 );
 
 	// Compare.
@@ -704,7 +706,7 @@ void UObject::execStructMember( FFrame& Stack, BYTE*& Result )
 	UProperty* Property = (UProperty*)GObj.GetIndexedObject( Stack.ReadInt() );
 
 	// Get struct expression.
-	BYTE Buffer[255], *Addr = Result ? Buffer : NULL;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[255], *Addr = Result ? Buffer : NULL;
 	Stack.Step( this, Addr );
 
 	// Set result.
@@ -847,7 +849,7 @@ void UObject::execDynamicCast( FFrame& Stack, BYTE*& Result )
 	UClass* Class = (UClass*)GObj.GetIndexedObject( Stack.ReadInt() );
 
 	// Compile actor expression.
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 
 	UObject* Castee = *(UObject**)Addr;
@@ -865,7 +867,7 @@ void UObject::execMetaCast( FFrame& Stack, BYTE*& Result )
 	UClass* MetaClass = (UClass*)GObj.GetIndexedObject( Stack.ReadInt() );
 
 	// Compile actor expression.
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 
 	UObject* Castee = *(UObject**)Addr;
@@ -878,7 +880,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_MetaCast, execMetaCast );
 void UObject::execByteToInt( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execByteToInt);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(INT*)Result = *(BYTE*)Addr;
 	unguardexecSlow;
@@ -888,7 +890,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ByteToInt, execByteToInt );
 void UObject::execByteToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execByteToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = *(BYTE*)Addr ? 1 : 0;
 	unguardexecSlow;
@@ -898,7 +900,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ByteToBool, execByteToBool );
 void UObject::execByteToFloat( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execByteToFloat);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FLOAT*)Result = *(BYTE*)Addr;
 	unguardexecSlow;
@@ -908,7 +910,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ByteToFloat, execByteToFloat );
 void UObject::execByteToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execByteToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appSprintf( (char*)Result, "%i", *(BYTE*)Addr );
 	unguardexecSlow;
@@ -918,10 +920,16 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ByteToString, execByteToString );
 void UObject::execIntToByte( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execIntToByte);
-	BYTE Buffer[MAX_CONST_SIZE];
-	Result = Buffer;
-	Stack.Step( Stack.Object, Result );
-	*(BYTE*)Result = *(INT*)Result;
+	// UNREAL_ANDROID_INTTOBYTE_RESULT_V223: the original code pointed the
+	// caller's Result at this function's own stack Buffer, so callers read the
+	// byte from a dead frame. On ARMv7 the next call (e.g. memcpy in ExecLet or
+	// CallFunction) overwrote it, giving movers garbage KeyNum values
+	// (InterpolateTo(KeyNum+1,..), KeyNum=Clamp(..)). Write into the caller's
+	// buffer like every other conversion does.
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	Stack.Step( Stack.Object, Addr );
+	if( Result )
+		*(BYTE*)Result = *(INT*)Addr;
 	unguardexecSlow;
 }
 AUTOREGISTER_INTRINSIC( UObject, EX_IntToByte, execIntToByte );
@@ -929,7 +937,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_IntToByte, execIntToByte );
 void UObject::execIntToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execIntToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(INT*)Result = *(INT*)Addr ? 1 : 0;
 	unguardexecSlow;
@@ -939,7 +947,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_IntToBool, execIntToBool );
 void UObject::execIntToFloat( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execIntToFloat);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FLOAT*)Result = *(INT*)Addr;
 	unguardexecSlow;
@@ -950,7 +958,7 @@ void UObject::execIntToString( FFrame& Stack, BYTE*& Result )
 {
 	// Safe because integers can't overflow maximum size of 16 characters.
 	guardSlow(UObject::execIntToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appSprintf( (char*)Result, "%i", *(INT*)Addr );
 	unguardexecSlow;
@@ -960,7 +968,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_IntToString, execIntToString );
 void UObject::execBoolToByte( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execBoolToByte);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(BYTE*)Result = *(DWORD*)Addr & 1;
 	unguardexecSlow;
@@ -970,7 +978,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_BoolToByte, execBoolToByte );
 void UObject::execBoolToInt( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execBoolToInt);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(INT*)Result = *(DWORD*)Addr & 1;
 	unguardexecSlow;
@@ -980,7 +988,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_BoolToInt, execBoolToInt );
 void UObject::execBoolToFloat( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execBoolToFloat);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FLOAT*)Result = *(DWORD*)Addr & 1;
 	unguardexecSlow;
@@ -990,7 +998,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_BoolToFloat, execBoolToFloat );
 void UObject::execBoolToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execBoolToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appStrcpy( (char*)Result, (*(DWORD*)Addr&1) ? "True" : "False" );
 	unguardexecSlow;
@@ -1000,7 +1008,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_BoolToString, execBoolToString );
 void UObject::execFloatToByte( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execFloatToByte);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(BYTE*)Result = *(FLOAT*)Addr;
 	unguardexecSlow;
@@ -1010,7 +1018,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_FloatToByte, execFloatToByte );
 void UObject::execFloatToInt( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execFloatToInt);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(INT*)Result = *(FLOAT*)Addr;
 	unguardexecSlow;
@@ -1020,7 +1028,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_FloatToInt, execFloatToInt );
 void UObject::execFloatToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execFloatToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = *(FLOAT*)Addr!=0.0 ? 1 : 0;
 	unguardexecSlow;
@@ -1030,7 +1038,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_FloatToBool, execFloatToBool );
 void UObject::execFloatToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execFloatToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appSprintf((char*)Result,"%.2f",*(FLOAT*)Addr);
 	unguardexecSlow;
@@ -1040,7 +1048,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_FloatToString, execFloatToString );
 void UObject::execObjectToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execObjectToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = *(UObject**)Addr!=NULL;
 	unguardexecSlow;
@@ -1050,7 +1058,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ObjectToBool, execObjectToBool );
 void UObject::execObjectToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execObjectToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appStrcpy((char*)Result, *(UObject**)Addr ? (*(UObject**)Addr)->GetName() : "None");
 	unguardexecSlow;
@@ -1060,7 +1068,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_ObjectToString, execObjectToString );
 void UObject::execNameToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execNameToBool);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(DWORD*)Result = *(FName*)Addr!=NAME_None ? 1 : 0;
 	unguardexecSlow;
@@ -1070,7 +1078,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_NameToBool, execNameToBool );
 void UObject::execNameToString( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execNameToString);
-	BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	appStrcpy( (char*)Result, **(FName*)Addr );
 	unguardexecSlow;
@@ -1080,7 +1088,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_NameToString, execNameToString );
 void UObject::execStringToByte( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execStringToByte);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(BYTE*)Result = appAtoi((char*)Addr);
 	unguardexecSlow;
@@ -1090,7 +1098,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_StringToByte, execStringToByte );
 void UObject::execStringToInt( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execStringToInt);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(INT*)Result = appAtoi((char*)Addr);
 	unguardexecSlow;
@@ -1100,7 +1108,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_StringToInt, execStringToInt );
 void UObject::execStringToBool( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execStringToBool);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	if     ( appStricmp((char*)Addr,"True" ) == 0 ) *(INT*)Result = 1;
 	else if( appStricmp((char*)Addr,"False") == 0 ) *(INT*)Result = 0;
@@ -1112,7 +1120,7 @@ AUTOREGISTER_INTRINSIC( UObject, EX_StringToBool, execStringToBool );
 void UObject::execStringToFloat( FFrame& Stack, BYTE*& Result )
 {
 	guardSlow(UObject::execStringToFloat);
-	BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
+	SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr=Buffer;
 	Stack.Step( Stack.Object, Addr );
 	*(FLOAT*)Result = appAtof((char*)Addr);
 	unguardexecSlow;
@@ -2838,7 +2846,7 @@ void UObject::CallFunction( FFrame& Stack, BYTE*& Result, UFunction* Function )
 	else if( Function->FunctionFlags & FUNC_Intrinsic )
 	{
 		// Call intrinsic networkable function.
-		BYTE Buffer[1024], *Addr;
+		SCRIPT_BUFFER_ALIGN BYTE Buffer[1024], *Addr;
 		if( !ProcessRemoteFunction( Function, Buffer, &Stack ) )
 		{
 			// Call regular intrinsic.
@@ -2913,14 +2921,14 @@ void UObject::ProcessInternal( FFrame& Stack )
 		// Local call.
 		if( !(((UFunction*)Stack.Node)->FunctionFlags & FUNC_Singular) )
 		{
-			BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr;
+			SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr;
 			while( *Stack.Code != EX_Return )
 				Stack.Step( Stack.Object, Addr=Buffer );
 		}
 		else if( !(GetFlags() & RF_InSingularFunc) )
 		{
 			SetFlags( RF_InSingularFunc );
-			BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr;
+			SCRIPT_BUFFER_ALIGN BYTE Buffer[MAX_STRING_CONST_SIZE], *Addr;
 			while( *Stack.Code != EX_Return )
 				Stack.Step( Stack.Object, Addr=Buffer );
 			ClearFlags( RF_InSingularFunc );

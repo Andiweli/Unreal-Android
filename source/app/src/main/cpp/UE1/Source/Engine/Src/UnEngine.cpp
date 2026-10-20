@@ -74,6 +74,10 @@ void UEngine::Init()
 #else
 	GCache.Init( 1024 * 1024 * Clamp(CacheSizeMegs,1,1024), 4096 );
 #endif
+#ifdef UNREAL_ANDROID_API16_NATIVE_OPT_NAME
+	// UNREAL_ANDROID_API16_NATIVE_OPT_V223: show which script VM build is running.
+	debugf( NAME_Init, "OUYA/API16 native optimisation: %s", UNREAL_ANDROID_API16_NATIVE_OPT_NAME );
+#endif
 
 	// Objects.
 	Cylinder = new UPrimitive;
