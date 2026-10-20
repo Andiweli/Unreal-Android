@@ -46,6 +46,8 @@ Makefile.vc.tmp
 *.umx
 *.gtk
 mod.*
+# Unreal-Android: keep the libxmp source header (matched by mod.* above)
+!src/loaders/mod.h
 AS.*
 *.xz
 
