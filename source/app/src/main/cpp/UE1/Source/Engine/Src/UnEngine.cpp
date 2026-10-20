@@ -66,7 +66,14 @@ void UEngine::Init()
 
 	// Subsystems.
 	FURL::Init();
+#if defined(PLATFORM_ANDROID)
+	// UNREAL_ANDROID_ENGINE_CACHE_FLOOR_V222: the 1998 default (2-4 MB) is far too
+	// small for big levels; lightmaps, shadow maps and mesh frames then get evicted
+	// and rebuilt on the CPU over and over. 16 MB is cheap on any supported device.
+	GCache.Init( 1024 * 1024 * Clamp(CacheSizeMegs,16,1024), 8192 );
+#else
 	GCache.Init( 1024 * 1024 * Clamp(CacheSizeMegs,1,1024), 4096 );
+#endif
 
 	// Objects.
 	Cylinder = new UPrimitive;

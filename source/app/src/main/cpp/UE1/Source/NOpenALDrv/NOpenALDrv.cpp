@@ -43,6 +43,7 @@ void UNOpenALAudioSubsystem::InternalClassInitializer( UClass* Class )
 	new(Class, "DopplerFactor",      RF_Public)UFloatProperty ( CPP_PROPERTY( DopplerFactor      ), "Audio", CPF_Config );
 	new(Class, "UseReverb",          RF_Public)UBoolProperty  ( CPP_PROPERTY( UseReverb          ), "Audio", CPF_Config );
 	new(Class, "UseHRTF",            RF_Public)UBoolProperty  ( CPP_PROPERTY( UseHRTF            ), "Audio", CPF_Config );
+	new(Class, "LowSoundQuality",    RF_Public)UBoolProperty  ( CPP_PROPERTY( LowSoundQuality    ), "Audio", CPF_Config );
 	new(Class, "MusicInterpolation", RF_Public)UByteProperty  ( CPP_PROPERTY( MusicInterpolation ), "Audio", CPF_Config );
 	unguardSlow;
 }
@@ -55,8 +56,18 @@ UNOpenALAudioSubsystem::UNOpenALAudioSubsystem()
 	MusicVolume = 63;
 	AmbientFactor = 0.6f;
 	DopplerFactor = 0.01f;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	// UNREAL_ANDROID_AUDIO_DEFAULTS_V222: match the shipped Unreal.ini. Without an
+	// [NOpenALDrv.NOpenALAudioSubsystem] section (e.g. an imported PC Unreal.ini)
+	// these used to fall back to on: HRTF is pointless on TV/handheld speakers and
+	// the EAX reverb runs on every mixed sample. Both can still be set to True.
+	UseHRTF = false;
+	UseReverb = false;
+#else
 	UseHRTF = true;
 	UseReverb = true;
+#endif
+	LowSoundQuality = false;
 	MusicInterpolation = XMP_INTERP_LINEAR;
 }
 
@@ -90,9 +101,17 @@ UBOOL UNOpenALAudioSubsystem::Init()
 	if( MusicInterpolation > XMP_INTERP_SPLINE )
 		MusicInterpolation = XMP_INTERP_SPLINE;
 
+	// UNREAL_ANDROID_LOW_SOUND_QUALITY_V222: the menu's "Low Sound Quality" (applied
+	// on the next start) halves the sounds while loading, see USound::Serialize, and
+	// mixes music and effects at 22 kHz, roughly halving the audio CPU cost.
+	if( LowSoundQuality && OutputRate > 22050 )
+		OutputRate = 22050;
+
+	// UNREAL_ANDROID_HRTF_ATTRIBUTE_V222: ALC_SOFT_HRTF is the extension macro (1),
+	// the context attribute is ALC_HRTF_SOFT. With the old value UseHRTF was ignored.
 	const ALint AttrList[] = {
 		ALC_FREQUENCY, OutputRate,
-		ALC_SOFT_HRTF, UseHRTF,
+		ALC_HRTF_SOFT, UseHRTF ? ALC_TRUE : ALC_FALSE,
 		0
 	};
 
@@ -106,6 +125,9 @@ UBOOL UNOpenALAudioSubsystem::Init()
 	}
 
 	alcMakeContextCurrent( Ctx );
+
+	DeferUpdates = alIsExtensionPresent( "AL_SOFT_deferred_updates" );
+	debugf( NAME_Init, "OpenAL: %i Hz, HRTF %s, reverb %s, low quality %s", OutputRate, UseHRTF ? "on" : "off", UseReverb ? "on" : "off", LowSoundQuality ? "on" : "off" );
 
 	alDistanceModel( AL_LINEAR_DISTANCE_CLAMPED );
 	alDopplerFactor( Max( 0.f, DopplerFactor ) );
@@ -180,12 +202,6 @@ void UNOpenALAudioSubsystem::Destroy()
 		MusicCtx = NULL;
 	}
 
-	if (UseReverb)
-	{
-		alDeleteAuxiliaryEffectSlots(1, &ReverbSlot);
-		alDeleteEffects(1, &ReverbEffect);
-	}
-
 	if( Ctx )
 	{
 		// If we have a context, we probably have everything else. Kill it.
@@ -194,6 +210,13 @@ void UNOpenALAudioSubsystem::Destroy()
 		alDeleteBuffers( ARRAY_COUNT( MusicBuffers ), MusicBuffers );
 		alDeleteSources( MAX_SOURCES, Sources );
 		alDeleteSources( 1, &MusicSource );
+		// UNREAL_ANDROID_OPENAL_SHUTDOWN_ORDER_V222: the sources' reverb sends keep
+		// the effect slot "in use" until the sources themselves are gone.
+		if( UseReverb )
+		{
+			alDeleteAuxiliaryEffectSlots( 1, &ReverbSlot );
+			alDeleteEffects( 1, &ReverbEffect );
+		}
 		alcMakeContextCurrent( NULL );
 		alcDestroyContext( Ctx );
 		Ctx = NULL;
@@ -744,6 +767,13 @@ void UNOpenALAudioSubsystem::Update( FPointRegion Region, FCoords& Listener )
 		-Listener.YAxis.Y,
 		+Listener.YAxis.Z,
 	};
+	// UNREAL_ANDROID_OPENAL_DEFERRED_UPDATES_V222: every voice gets ~9 property
+	// calls per frame, and OpenAL Soft hands each one to the mixer separately.
+	// Batch them into one update per source; newly started sources still pick up
+	// their current properties immediately.
+	if( DeferUpdates )
+		alDeferUpdatesSOFT();
+
 	alListenerfv( AL_POSITION, &ALPosition.X );
 	alListenerfv( AL_VELOCITY, &ALVelocity.X );
 	alListenerfv( AL_ORIENTATION, ALOrientation );
@@ -913,6 +943,9 @@ void UNOpenALAudioSubsystem::Update( FPointRegion Region, FCoords& Listener )
 			Viewport->Actor->Transition = MTRAN_None;
 		}
 	}
+
+	if( DeferUpdates )
+		alProcessUpdatesSOFT();
 
 	unguard;
 }

@@ -185,8 +185,16 @@ CORE_API void VARARGS appThrowf( const char* Fmt, ... );
 //
 // Normal timing.
 //
+// UNREAL_ANDROID_NO_STAT_CLOCKS_V222: these timers only feed the "stat" overlays.
+// On Android every appCycles() is a clock_gettime() call (a real syscall on the
+// ARM32 OUYA kernel), and the engine calls them thousands of times per frame.
+#if defined(__vita__) || defined(PLATFORM_ANDROID) || defined(__ANDROID__)
+#define uclock(Timer)   {}
+#define uunclock(Timer) {}
+#else
 #define uclock(Timer)   {Timer -= appCycles();}
 #define uunclock(Timer) {Timer += appCycles()-34;}
+#endif
 
 //
 // Performance critical timing.
@@ -383,9 +391,12 @@ CORE_API UBOOL appIsNan( DOUBLE Value );
 CORE_API INT appRand();
 CORE_API FLOAT appFrand();
 // UNREAL_ANDROID_NDK_MATH_DECLARATIONS_V2
-CORE_API INT appRound( FLOAT Value );
-CORE_API INT appFloor( FLOAT Value );
-CORE_API INT appCeil( FLOAT Value );
+// UNREAL_ANDROID_INLINE_ROUNDING_V222: these run per texel/vertex in the
+// lighting and render loops; keep them inline (no call, no libm floorf) while
+// preserving the floor-based results of the former out-of-line versions.
+inline INT appFloor( FLOAT Value ) { const INT I = (INT)Value; return I - ( Value < (FLOAT)I ? 1 : 0 ); }
+inline INT appCeil ( FLOAT Value ) { const INT I = (INT)Value; return I + ( Value > (FLOAT)I ? 1 : 0 ); }
+inline INT appRound( FLOAT Value ) { return appFloor( Value + 0.5f ); }
 
 /*-----------------------------------------------------------------------------
 	Memory functions.

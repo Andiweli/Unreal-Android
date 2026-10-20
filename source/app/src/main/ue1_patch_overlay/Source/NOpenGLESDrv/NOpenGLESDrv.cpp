@@ -199,29 +199,90 @@ static UBOOL UE1GLESAndroidFixedRenderSizeV71( INT& OutX, INT& OutY )
 	return false;
 }
 
+// UNREAL_ANDROID_GLES_EFFECT_TEXTURE_CACHE_V222
+// The effect checks below run for every mesh triangle and every DrawTile (font
+// glyphs, sprites, coronas). Building the object's full name each time costs a
+// vsprintf plus recursive outer-name lookups, several ms per frame on OUYA.
+// Classify each texture object once and remember the result; the cache is
+// cleared whenever the render device flushes its textures (e.g. map change).
+enum
+{
+	UE1GLES_TEX_MAINEFFECT     = 0x01,
+	UE1GLES_TEX_SMOKEBLACK     = 0x02,
+	UE1GLES_TEX_HUBWATERFALL2  = 0x04,
+	UE1GLES_TEX_HUBSMOKE1      = 0x08,
+	UE1GLES_TEX_HUBWATERRINGS2 = 0x10,
+};
+
+struct FUE1GLESTextureClassEntry
+{
+	UObject* Obj;
+	INT ObjIndex;
+	BYTE Flags;
+};
+
+static FUE1GLESTextureClassEntry GUE1GLESTextureClassCache[1024];
+
+static void UE1GLESResetTextureClassCache()
+{
+	appMemset( GUE1GLESTextureClassCache, 0, sizeof(GUE1GLESTextureClassCache) );
+}
+
+static BYTE UE1GLESTextureClassFlags( const FTextureInfo& Info )
+{
+	if( (BYTE)( Info.CacheID & 0xff ) != CID_RenderTexture )
+		return 0;
+
+	const INT ObjIndex = (INT)( Info.CacheID >> 32 );
+	UObject* Obj = GObj.GetIndexedObject( ObjIndex );
+	if( !Obj )
+		return 0;
+
+	FUE1GLESTextureClassEntry& Entry = GUE1GLESTextureClassCache[ObjIndex & ( ARRAY_COUNT(GUE1GLESTextureClassCache) - 1 )];
+	if( Entry.Obj == Obj && Entry.ObjIndex == ObjIndex )
+		return Entry.Flags;
+
+	BYTE Flags = 0;
+	if( UE1GLESTextureNameStartsWith( Info, "Texture UnrealI.Maineffect." ) )
+		Flags |= UE1GLES_TEX_MAINEFFECT;
+	else if( UE1GLESTextureNameStartsWith( Info, "Texture UnrealI.SmokeBlack." ) )
+		Flags |= UE1GLES_TEX_SMOKEBLACK;
+	else if( UE1GLESTextureNameStartsWith( Info, "FireTexture HubEffects.WaterFall2" ) )
+		Flags |= UE1GLES_TEX_HUBWATERFALL2;
+	else if( UE1GLESTextureNameStartsWith( Info, "FireTexture HubEffects.Smoke1" ) )
+		Flags |= UE1GLES_TEX_HUBSMOKE1;
+	else if( UE1GLESTextureNameStartsWith( Info, "WaveTexture HubEffects.WaterRings2" ) )
+		Flags |= UE1GLES_TEX_HUBWATERRINGS2;
+
+	Entry.Obj = Obj;
+	Entry.ObjIndex = ObjIndex;
+	Entry.Flags = Flags;
+	return Flags;
+}
+
 static UBOOL UE1GLESIsMaineffectTexture( const FTextureInfo& Info )
 {
-	return UE1GLESTextureNameStartsWith( Info, "Texture UnrealI.Maineffect." );
+	return ( UE1GLESTextureClassFlags( Info ) & UE1GLES_TEX_MAINEFFECT ) != 0;
 }
 
 static UBOOL UE1GLESIsSmokeBlackTexture( const FTextureInfo& Info )
 {
-	return UE1GLESTextureNameStartsWith( Info, "Texture UnrealI.SmokeBlack." );
+	return ( UE1GLESTextureClassFlags( Info ) & UE1GLES_TEX_SMOKEBLACK ) != 0;
 }
 
 static UBOOL UE1GLESIsHubWaterFall2Texture( const FTextureInfo& Info )
 {
-	return UE1GLESTextureNameStartsWith( Info, "FireTexture HubEffects.WaterFall2" );
+	return ( UE1GLESTextureClassFlags( Info ) & UE1GLES_TEX_HUBWATERFALL2 ) != 0;
 }
 
 static UBOOL UE1GLESIsHubSmoke1Texture( const FTextureInfo& Info )
 {
-	return UE1GLESTextureNameStartsWith( Info, "FireTexture HubEffects.Smoke1" );
+	return ( UE1GLESTextureClassFlags( Info ) & UE1GLES_TEX_HUBSMOKE1 ) != 0;
 }
 
 static UBOOL UE1GLESIsHubWaterRings2Texture( const FTextureInfo& Info )
 {
-	return UE1GLESTextureNameStartsWith( Info, "WaveTexture HubEffects.WaterRings2" );
+	return ( UE1GLESTextureClassFlags( Info ) & UE1GLES_TEX_HUBWATERRINGS2 ) != 0;
 }
 
 
@@ -239,8 +300,7 @@ static INT UE1GLESWaterRings2Luma( const FTextureInfo& Info, const BYTE* Data, I
 
 static UBOOL UE1GLESIsLegacyEffectSpriteTexture( const FTextureInfo& Info )
 {
-	return UE1GLESIsMaineffectTexture( Info )
-		|| UE1GLESIsSmokeBlackTexture( Info );
+	return ( UE1GLESTextureClassFlags( Info ) & ( UE1GLES_TEX_MAINEFFECT | UE1GLES_TEX_SMOKEBLACK ) ) != 0;
 }
 
 static BYTE UE1GLESPaletteEffectAlpha( const FTextureInfo& Info, BYTE Index, UBOOL Masked, UBOOL bMaineffect, UBOOL bSmokeBlack, UBOOL bHubWaterFall2, UBOOL bHubSmoke1, UBOOL bHubWaterRings2, BYTE WR2Corner0, BYTE WR2Corner1, BYTE WR2Corner2, BYTE WR2Corner3 )
@@ -331,6 +391,8 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	WorldGamma = 1.0f;
 	WorldShadowLift = 0.0f;
 	RuntimeLowDetailTextures = false;
+	RuntimeDetailTextures = true;
+	RuntimeTrilinear = true;
 	CurrentBrightness = -1.f;
 	CurrentBrightnessScale = -1.f;
 	CurrentWorldGamma = -1.f;
@@ -391,6 +453,16 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 		WorldShadowLift = 0.35f;
 
 	RuntimeLowDetailTextures = GetConfiguredLowDetailTextures();
+
+	// UNREAL_ANDROID_OUYA_TEXTURE_COST_V222: Tegra 3 is fill-rate bound. Trilinear
+	// filtering and the detail texture layer both add texture fetches to most world
+	// pixels, so the OUYA defaults to bilinear mipmaps without the detail layer.
+	// OuyaTrilinear=True / OuyaDetailTextures=True in [NOpenGLESDrv.NOpenGLESRenderDevice]
+	// bring back full quality. Other devices are unchanged.
+	const UBOOL bOuyaTextureCost = UE1GLESAndroidIsOuyaV214();
+	RuntimeTrilinear = !bOuyaTextureCost || UE1GLESConfigBool( "NOpenGLESDrv.NOpenGLESRenderDevice", "OuyaTrilinear", false );
+	RuntimeDetailTextures = DetailTextures && ( !bOuyaTextureCost || UE1GLESConfigBool( "NOpenGLESDrv.NOpenGLESRenderDevice", "OuyaDetailTextures", false ) );
+	debugf( NAME_Log, "GLES2: trilinear=%i detailtextures=%i", RuntimeTrilinear ? 1 : 0, RuntimeDetailTextures ? 1 : 0 );
 
 	UpdateSwapInterval();
 
@@ -454,8 +526,23 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 		SF_Texture0 | SF_Texture1 | SF_Texture2 | SF_Lightmap | SF_Fogmap,
 		SF_Texture0 | SF_Texture1 | SF_Texture2 | SF_Lightmap | SF_Fogmap | SF_AlphaTest,
 	};
+	// Fresh programs start with UniformSerial 0, so every uniform is uploaded
+	// once per program. // UNREAL_ANDROID_GLES_UNIFORM_SERIALS_V222
+	for( INT i = 0; i < UF_Count; ++i )
+	{
+		UniformValueSerial[i] = 1;
+		UniformsChanged[i] = true;
+	}
+
+	// Only compile the world gamma/lift variants when the config actually uses
+	// them; at the default (1.0/0.0) that math is a no-op. // UNREAL_ANDROID_GLES_WORLD_TONE_FLAG_V222
+	const DWORD WorldToneFlag = WorldToneActive( GetConfiguredWorldGamma(), GetConfiguredWorldShadowLift() ) ? SF_WorldTone : 0;
 	for( DWORD i = 0; i < ARRAY_COUNT( PrecacheShaders ); ++i )
+	{
 		CreateShader( PrecacheShaders[i] );
+		if( WorldToneFlag && ( PrecacheShaders[i] & SF_Lightmap ) )
+			CreateShader( PrecacheShaders[i] | WorldToneFlag );
+	}
 
 	CurrentPolyFlags = PF_Occlude;
 	CurrentShaderFlags = 0;
@@ -535,6 +622,7 @@ void UNOpenGLESRenderDevice::Flush()
 		TexAlloc.Empty();
 		BindMap.Empty();
 	}
+	UE1GLESResetTextureClassCache(); // UNREAL_ANDROID_GLES_EFFECT_TEXTURE_CACHE_V222
 
 	unguard;
 }
@@ -910,28 +998,23 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 
 	FLOAT TargetBrightness = GetConfiguredBrightness();
 
-	if( CurrentBrightness != TargetBrightness )
+	if( CurrentBrightness != TargetBrightness || CurrentBrightnessScale != BrightnessScale )
 	{
 		CurrentBrightness = TargetBrightness;
-		UniformsChanged[UF_Brightness] = true;
-	}
-
-	if( CurrentBrightnessScale != BrightnessScale )
-	{
 		CurrentBrightnessScale = BrightnessScale;
-		UniformsChanged[UF_BrightnessScale] = true;
+		MarkUniformChanged( UF_Brightness );
 	}
 
 	if( CurrentWorldGamma != WorldGamma )
 	{
 		CurrentWorldGamma = WorldGamma;
-		UniformsChanged[UF_WorldGamma] = true;
+		MarkUniformChanged( UF_WorldGamma );
 	}
 
 	if( CurrentWorldShadowLift != WorldShadowLift )
 	{
 		CurrentWorldShadowLift = WorldShadowLift;
-		UniformsChanged[UF_WorldShadowLift] = true;
+		MarkUniformChanged( UF_WorldShadowLift );
 	}
 
 	SetBlend( PF_Occlude );
@@ -1005,13 +1088,15 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 	{
 		SetTexture( 1, *Surface.LightMap, 0, -0.5f );
 		CurrentShaderFlags |= SF_Lightmap;
+		if( WorldToneActive( CurrentWorldGamma, CurrentWorldShadowLift ) )
+			CurrentShaderFlags |= SF_WorldTone; // UNREAL_ANDROID_GLES_WORLD_TONE_FLAG_V222
 	}
 	if( Surface.FogMap )
 	{
 		SetTexture( 2, *Surface.FogMap, 0, -0.5f );
 		CurrentShaderFlags |= SF_Fogmap;
 	}
-	if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
+	if( Surface.DetailTexture && RuntimeDetailTextures && !RuntimeLowDetailTextures )
 	{
 		SetTexture( 3, *Surface.DetailTexture, 0, 0.f );
 		CurrentShaderFlags |= SF_Detail;
@@ -1033,7 +1118,7 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 			FloatsPerVert += 2;
 		if( Surface.FogMap )
 			FloatsPerVert += 2;
-		if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
+		if( Surface.DetailTexture && RuntimeDetailTextures && !RuntimeLowDetailTextures )
 			FloatsPerVert += 2;
 		PreparePoly( Poly->NumPts, FloatsPerVert ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 		BeginPoly();
@@ -1047,14 +1132,14 @@ void UNOpenGLESRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo
 				AttribFloat2( (U-UDot-TexInfo[1].UPan)*TexInfo[1].UMult, (V-VDot-TexInfo[1].VPan)*TexInfo[1].VMult );
 			if( Surface.FogMap )
 				AttribFloat2( (U-UDot-TexInfo[2].UPan)*TexInfo[2].UMult, (V-VDot-TexInfo[2].VPan)*TexInfo[2].VMult );
-			if( Surface.DetailTexture && DetailTextures && !RuntimeLowDetailTextures )
+			if( Surface.DetailTexture && RuntimeDetailTextures && !RuntimeLowDetailTextures )
 				AttribFloat2( (U-UDot-TexInfo[3].UPan)*TexInfo[3].UMult, (V-VDot-TexInfo[3].VPan)*TexInfo[3].VMult );
 			PolyVertex();
 		}
 		EndPoly();
 	}
 
-	CurrentShaderFlags &= ~( SF_Lightmap|SF_Fogmap|SF_Detail );
+	CurrentShaderFlags &= ~( SF_Lightmap|SF_Fogmap|SF_Detail|SF_WorldTone );
 
 	ResetTexture( 1 );
 	ResetTexture( 2 );
@@ -1169,7 +1254,12 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
 	// when 2D HUD tiles follow world geometry with different attribute layouts.
 	// Isolate DrawTile quads so inventory/HUD icons cannot create a diagonal line
 	// from the screen center to the icon.
-	FlushTriangles();
+	// UNREAL_ANDROID_OUYA_DRAWTILE_BATCH_V222: on the OUYA (Tegra 3) this costs one
+	// draw call per font glyph/sprite/HUD tile, which its driver handles badly, so
+	// there consecutive tiles with the same texture/blend are batched again.
+	const UBOOL bIsolateTile = !UE1GLESAndroidIsOuyaV214();
+	if( bIsolateTile )
+		FlushTriangles();
 #endif
 	PreparePoly( 4, 3 + 2 + 4 ); // UNREAL_ANDROID_MALI_POLY_BUFFER_GUARD_V121
 	BeginPoly();
@@ -1191,7 +1281,8 @@ void UNOpenGLESRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture,
 		PolyVertex();
 	EndPoly();
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
-	FlushTriangles(); // UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124
+	if( bIsolateTile )
+		FlushTriangles(); // UNREAL_ANDROID_MALI_DRAWTILE_ISOLATE_V124
 #endif
 
 	CurrentShaderFlags &= ~SF_VtxColor;
@@ -1314,22 +1405,18 @@ void UNOpenGLESRenderDevice::UpdateUniforms()
 	{
 		FlushTriangles();
 		glUniformMatrix4fv( ShaderInfo->Uniforms[UF_Mtx], 1, GL_FALSE, &MtxMVP[0][0] );
+		ShaderInfo->UniformSerial[UF_Mtx] = UniformValueSerial[UF_Mtx];
 		UniformsChanged[UF_Mtx] = false;
 	}
 
 	if( UniformsChanged[UF_Brightness] )
 	{
+		// Folded on the CPU instead of per fragment. // UNREAL_ANDROID_GLES_UNIFORM_SERIALS_V222
 		FlushTriangles();
-		glUniform1f( ShaderInfo->Uniforms[UF_Brightness], CurrentBrightness );
+		if( ShaderInfo->Uniforms[UF_Brightness] >= 0 )
+			glUniform1f( ShaderInfo->Uniforms[UF_Brightness], ( 0.5f + 1.5f * CurrentBrightness ) * CurrentBrightnessScale );
+		ShaderInfo->UniformSerial[UF_Brightness] = UniformValueSerial[UF_Brightness];
 		UniformsChanged[UF_Brightness] = false;
-	}
-
-	if( UniformsChanged[UF_BrightnessScale] )
-	{
-		FlushTriangles();
-		if( ShaderInfo->Uniforms[UF_BrightnessScale] >= 0 )
-			glUniform1f( ShaderInfo->Uniforms[UF_BrightnessScale], CurrentBrightnessScale );
-		UniformsChanged[UF_BrightnessScale] = false;
 	}
 
 	if( UniformsChanged[UF_WorldGamma] )
@@ -1337,6 +1424,7 @@ void UNOpenGLESRenderDevice::UpdateUniforms()
 		FlushTriangles();
 		if( ShaderInfo->Uniforms[UF_WorldGamma] >= 0 )
 			glUniform1f( ShaderInfo->Uniforms[UF_WorldGamma], CurrentWorldGamma );
+		ShaderInfo->UniformSerial[UF_WorldGamma] = UniformValueSerial[UF_WorldGamma];
 		UniformsChanged[UF_WorldGamma] = false;
 	}
 
@@ -1345,14 +1433,17 @@ void UNOpenGLESRenderDevice::UpdateUniforms()
 		FlushTriangles();
 		if( ShaderInfo->Uniforms[UF_WorldShadowLift] >= 0 )
 			glUniform1f( ShaderInfo->Uniforms[UF_WorldShadowLift], CurrentWorldShadowLift );
+		ShaderInfo->UniformSerial[UF_WorldShadowLift] = UniformValueSerial[UF_WorldShadowLift];
 		UniformsChanged[UF_WorldShadowLift] = false;
 	}
 
 	for( INT i = UF_Texture0; i <= UF_Texture3; ++i )
 	{
-		if( UniformsChanged[i] && ShaderInfo->Uniforms[i] >= 0 )
+		if( UniformsChanged[i] )
 		{
-			glUniform1i( ShaderInfo->Uniforms[i], i - UF_Texture0 );
+			if( ShaderInfo->Uniforms[i] >= 0 )
+				glUniform1i( ShaderInfo->Uniforms[i], i - UF_Texture0 );
+			ShaderInfo->UniformSerial[i] = UniformValueSerial[i];
 			UniformsChanged[i] = false;
 		}
 	}
@@ -1392,11 +1483,11 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
 	static const char* FlagNames[SF_Count] = {
 		"SF_Texture0", "SF_Texture1", "SF_Texture2", "SF_Texture3",
 		"SF_VtxColor", "SF_AlphaTest", "SF_Lightmap", "SF_Fogmap",
-		"SF_Detail", "SF_VtxFog"
+		"SF_Detail", "SF_VtxFog", "SF_WorldTone"
 	};
 
 	static const char* UniformNames[UF_Count] = {
-		"uMtx", "uBrightness", "uBrightnessScale", "uWorldGamma", "uWorldShadowLift",
+		"uMtx", "uBrightScale", "uWorldGamma", "uWorldShadowLift",
 		"uTexture0", "uTexture1", "uTexture2", "uTexture3"
 	};
 
@@ -1495,9 +1586,10 @@ void UNOpenGLESRenderDevice::SetShader( DWORD ShaderFlags )
 			ShaderInfo = CreateShader( ShaderFlags );
 		verify( ShaderInfo );
 
-		// TODO: probably don't do this every program change
+		// GL keeps uniform values per program: only re-upload what changed since
+		// this program last saw it. // UNREAL_ANDROID_GLES_UNIFORM_SERIALS_V222
 		for( INT i = 0; i < UF_Count; ++i )
-			UniformsChanged[i] = true;
+			UniformsChanged[i] = ( ShaderInfo->UniformSerial[i] != UniformValueSerial[i] );
 
 		BYTE* Ptr = UseVAO ? nullptr : (BYTE*)VtxData;
 		for( INT i = 0; i < AT_Count; ++i )
@@ -1619,7 +1711,7 @@ void UNOpenGLESRenderDevice::SetSceneNode( FSceneNode* Frame )
 		CurrentSceneNode.FX = Frame->FX;
 		CurrentSceneNode.FY = Frame->FY;
 		CurrentSceneNode.FovAngle = Viewport->Actor->FovAngle;
-		UniformsChanged[UF_Mtx] = true;
+		MarkUniformChanged( UF_Mtx );
 	}
 
 	unguard;
@@ -1725,7 +1817,7 @@ void UNOpenGLESRenderDevice::UpdateTextureFilter( const FTextureInfo& Info, DWOR
 	}
 	else
 	{
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ( EffectiveNumMips > 1 ) ? ( RuntimeTrilinear ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST ) : GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 

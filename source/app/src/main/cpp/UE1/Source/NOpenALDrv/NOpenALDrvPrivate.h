@@ -45,6 +45,7 @@ class DLL_EXPORT UNOpenALAudioSubsystem : public UAudioSubsystem
 	FLOAT DopplerFactor;
 	UBOOL UseReverb;
 	UBOOL UseHRTF;
+	UBOOL LowSoundQuality; // UNREAL_ANDROID_LOW_SOUND_QUALITY_V222: "Low Sound Quality" menu option
 
 	// Constructors.
 	static void InternalClassInitializer( UClass* Class );
@@ -66,7 +67,7 @@ class DLL_EXPORT UNOpenALAudioSubsystem : public UAudioSubsystem
 	virtual void UnregisterMusic( UMusic* Music ) override;
 	virtual UBOOL PlaySound( AActor* Actor, INT Id, USound* Sound, FVector Location, FLOAT Volume, FLOAT Radius, FLOAT Pitch ) override;
 	virtual void NoteDestroy( AActor* Actor );
-	virtual UBOOL GetLowQualitySetting() override { return false; };
+	virtual UBOOL GetLowQualitySetting() override { return LowSoundQuality; };
 #if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
 	void AndroidSetSuspended( UBOOL bSuspended );
 #endif
@@ -84,6 +85,7 @@ private:
 	ALuint ReverbEffect;
 	ALuint ReverbSlot;
 	UBOOL ReverbOn;
+	UBOOL DeferUpdates; // AL_SOFT_deferred_updates available
 	AZoneInfo* ReverbZone;
 
 	xmp_context MusicCtx;

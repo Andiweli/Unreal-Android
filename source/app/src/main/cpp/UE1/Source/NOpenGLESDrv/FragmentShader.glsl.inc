@@ -29,10 +29,11 @@ varying lowp vec4 vVtxColor;
 varying lowp vec4 vVtxFog;
 #endif
 
-uniform lowp float uBrightness;
-uniform mediump float uBrightnessScale;
+uniform mediump float uBrightScale; // (0.5 + 1.5 * Brightness) * BrightnessScale, folded on the CPU
+#ifdef SF_WorldTone
 uniform mediump float uWorldGamma;
 uniform mediump float uWorldShadowLift;
+#endif
 
 #ifdef SF_Texture0
 uniform sampler2D uTexture0;
@@ -109,10 +110,12 @@ void main()
 	// Brightness is back to the original UE1-style linear slider.
 	// Extra Android tuning is separate: uWorldGamma/uWorldShadowLift only affect
 	// lightmapped world geometry, never sprite/effect/HUD paths.
-	mediump float BrightScale = (0.5 + 1.5 * uBrightness) * uBrightnessScale;
-	Out.rgb *= BrightScale;
+	Out.rgb *= uBrightScale;
 
-#ifdef SF_Lightmap
+	// SF_WorldTone is only set together with SF_Lightmap and only when gamma/lift
+	// differ from 1.0/0.0, where this block is an exact no-op anyway.
+	// UNREAL_ANDROID_GLES_WORLD_TONE_FLAG_V222
+#ifdef SF_WorldTone
 	mediump vec3 ClampedRgb = clamp(Out.rgb, 0.0, 1.0);
 	mediump float ShadowLuma = max(max(ClampedRgb.r, ClampedRgb.g), ClampedRgb.b);
 	mediump float ShadowMask = 1.0 - smoothstep(0.20, 0.85, ShadowLuma);

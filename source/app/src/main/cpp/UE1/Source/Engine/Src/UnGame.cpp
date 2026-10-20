@@ -1012,8 +1012,15 @@ INT UGameEngine::GetMaxTickRate()
 	guard(UEngine::GetMaxTickRate);
 	if( GLevel && GLevel->NetDriver && !GLevel->NetDriver->ServerConnection )
 		return GLevel->NetDriver->MaxTicksPerSecond;
-	else
-		return 0;
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	// UNREAL_ANDROID_MENU_TICK_CAP_V222: while the game is paused or the Unreal menu
+	// is open, nothing needs 60 fps; 30 fps there saves battery and heat. Gameplay
+	// stays uncapped (vsync only).
+	if( GLevel && Client && Client->Viewports.Num() && Client->Viewports(0)->Actor &&
+		( GLevel->GetLevelInfo()->Pauser[0] != 0 || Client->Viewports(0)->Actor->bShowMenu ) )
+		return 30;
+#endif
+	return 0;
 	unguard;
 }
 

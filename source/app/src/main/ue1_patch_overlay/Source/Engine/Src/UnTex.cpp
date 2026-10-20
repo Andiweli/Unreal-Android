@@ -52,6 +52,15 @@ FPlane ENGINE_API FGetHSV( BYTE H, BYTE S, BYTE V )
 	Texture locking and unlocking.
 -----------------------------------------------------------------------------*/
 
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+// UNREAL_ANDROID_REALTIME_TEXTURE_SKIP_V222: set by UTexture::Tick when a texture
+// with MaxFrameRate skips this frame. Its bitmap is then unchanged, so it must not
+// be flagged TF_RealtimeChanged, which would make the renderer convert and
+// re-upload the whole texture to the GPU every frame for nothing. Stores the
+// texture itself, as a ticking texture may update other textures (nested Update).
+static UTexture* GUE1TextureTickSkippedV222 = NULL;
+#endif
+
 //
 // Update texture.
 //
@@ -61,9 +70,16 @@ void UTexture::Update( DOUBLE CurrentTime )
 
 	if( CurrentTime != LastUpdateTime )
 	{
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+		GUE1TextureTickSkippedV222 = NULL;
+		Tick( CurrentTime - LastUpdateTime);
+		if( ( TextureFlags & TF_Realtime ) && GUE1TextureTickSkippedV222 != this )
+			TextureFlags |= TF_RealtimeChanged;
+#else
 		if( TextureFlags & TF_Realtime )
 			TextureFlags |= TF_RealtimeChanged;
 		Tick( CurrentTime - LastUpdateTime);
+#endif
 		LastUpdateTime = CurrentTime;
 	}
 
@@ -145,6 +161,9 @@ void UTexture::Tick( FLOAT DeltaSeconds )
 		if( Accumulator < MinTime )
 		{
 			// Skip update.
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+			GUE1TextureTickSkippedV222 = this;
+#endif
 		}
 		else if( Accumulator < MaxTime )
 		{

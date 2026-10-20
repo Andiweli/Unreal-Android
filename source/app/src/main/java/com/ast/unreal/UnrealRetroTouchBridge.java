@@ -68,6 +68,10 @@ final class UnrealRetroTouchBridge {
         @Override public void run() {
             if (hostPaused) return;
             refreshMode();
+            // UNREAL_ANDROID_RETROTOUCH_NO_TOUCH_IDLE_V222: without touch hardware (OUYA,
+            // Android TV) touch mode can never become true, so once the engine has
+            // accepted that report there is nothing left to poll until the next resume.
+            if (!touchscreenAvailable && reportedTouchModeV218 != null) return;
             handler.postDelayed(this, STATE_POLL_MS);
         }
     };

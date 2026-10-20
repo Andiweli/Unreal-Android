@@ -762,18 +762,6 @@ CORE_API FLOAT appFrand()
 {
 	return rand() / (FLOAT)RAND_MAX;
 }
-CORE_API INT appFloor( FLOAT Value )
-{
-	return (INT)floorf(Value);
-}
-CORE_API INT appCeil( FLOAT Value )
-{
-	return (INT)ceilf(Value);
-}
-CORE_API INT appRound( FLOAT Value )
-{
-	return (INT)floorf(Value + 0.5f);
-}
 
 /*-----------------------------------------------------------------------------
 	File functions.

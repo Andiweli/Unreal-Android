@@ -13,8 +13,7 @@
 enum EUniformIndex
 {
 	UF_Mtx,
-	UF_Brightness,
-	UF_BrightnessScale,
+	UF_Brightness, // (0.5 + 1.5 * Brightness) * BrightnessScale, see UpdateUniforms()
 	UF_WorldGamma,
 	UF_WorldShadowLift,
 	UF_Texture0,
@@ -36,8 +35,9 @@ enum EShaderFlags : DWORD
 	SF_Fogmap    = 1 << 7,
 	SF_Detail    = 1 << 8,
 	SF_VtxFog    = 1 << 9,
-	SF_Max       = SF_VtxFog,
-	SF_Count     = 10,
+	SF_WorldTone = 1 << 10, // UNREAL_ANDROID_GLES_WORLD_TONE_FLAG_V222: lightmap gamma/lift only when not neutral
+	SF_Max       = SF_WorldTone,
+	SF_Count     = 11,
 };
 
 enum EShaderAttribs
@@ -73,6 +73,8 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	FLOAT WorldShadowLift;
 	INT SwapInterval;
 	UBOOL RuntimeLowDetailTextures;
+	UBOOL RuntimeDetailTextures; // UNREAL_ANDROID_OUYA_TEXTURE_COST_V222
+	UBOOL RuntimeTrilinear;      // UNREAL_ANDROID_OUYA_TEXTURE_COST_V222
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -102,10 +104,14 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		GLint Uniforms[UF_Count];
 		UBOOL Attribs[AT_Count];
 		DWORD NumFloats;
+		DWORD UniformSerial[UF_Count]; // value serial last uploaded into this program
 	};
 	TMap<DWORD, FCachedShader> ShaderMap;
 
 	BYTE UniformsChanged[UF_Count];
+	// UNREAL_ANDROID_GLES_UNIFORM_SERIALS_V222: bumped whenever a uniform value
+	// changes, so switching programs only re-uploads what that program has not seen.
+	DWORD UniformValueSerial[UF_Count];
 
 	// Currently bound shader.
 	FCachedShader* ShaderInfo;
@@ -197,6 +203,15 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 
 	// UNOpenGLESRenderDevice interface.
 	void UpdateUniforms();
+	void MarkUniformChanged( INT Index )
+	{
+		UniformValueSerial[Index]++;
+		UniformsChanged[Index] = true;
+	}
+	UBOOL WorldToneActive( FLOAT Gamma, FLOAT ShadowLift ) const
+	{
+		return Gamma < 0.999f || Gamma > 1.001f || ShadowLift > 0.0005f;
+	}
 	GLuint CompileShader( GLenum Type, const char* Text );
 	FCachedShader* CreateShader( DWORD ShaderFlags );
 	void SetShader( DWORD ShaderFlags );
