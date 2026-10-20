@@ -3,14 +3,18 @@ package com.ast.unreal;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -18,6 +22,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -26,6 +31,17 @@ public class MainActivity extends Activity {
     private static final int REQ_LEGACY_STORAGE = 2001;
     private static final int REQ_SELECT_UNREAL_FOLDER = 3001;
     private static final int REQ_SELECT_UNREAL_ZIP = 3002;
+
+    // UNREAL_ANDROID_IMPORT_SINGLE_V222
+    // The import thread outlives the Activity instance that started it (the
+    // Activity can be recreated, e.g. when a controller reconnects). Track the
+    // import process-wide so a new instance shows progress instead of starting
+    // the game on half-copied data or a second import, and hand the result to
+    // whichever instance is current when the import ends.
+    private static final Object IMPORT_LOCK = new Object();
+    private static boolean sImportRunning;
+    private static UnrealDataPaths.ImportResult sPendingImportResult;
+    private static WeakReference<MainActivity> sCurrentInstance = new WeakReference<>(null);
 
     private File selectedRoot;
     private String lastImportMessage;
@@ -40,6 +56,9 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         hideSystemUi();
+        sCurrentInstance = new WeakReference<>(this);
+
+        if (resumeImportState()) return;
 
         if (needsLegacyStoragePermission()) {
             requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, REQ_LEGACY_STORAGE);
@@ -52,6 +71,71 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         hideSystemUi();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (sCurrentInstance.get() == this) sCurrentInstance = new WeakReference<>(null);
+        super.onDestroy();
+    }
+
+    private boolean resumeImportState() {
+        UnrealDataPaths.ImportResult pending;
+        synchronized (IMPORT_LOCK) {
+            if (sImportRunning) {
+                showBusyScreen(
+                        t("Unreal-Daten werden importiert", "Importing Unreal data"),
+                        t("Der Import läuft noch. Bitte warten.", "The import is still running. Please wait."));
+                return true;
+            }
+            pending = sPendingImportResult;
+            sPendingImportResult = null;
+        }
+        if (pending == null) return false;
+        handleImportResult(pending);
+        return true;
+    }
+
+    private static void deliverPendingImportResult() {
+        MainActivity activity = sCurrentInstance.get();
+        if (activity == null || activity.isFinishing()) return; // the next onCreate picks it up
+        UnrealDataPaths.ImportResult result;
+        synchronized (IMPORT_LOCK) {
+            result = sPendingImportResult;
+            sPendingImportResult = null;
+        }
+        if (result != null) activity.handleImportResult(result);
+    }
+
+    private void startImport(final boolean zip, final Uri uri) {
+        synchronized (IMPORT_LOCK) {
+            if (sImportRunning) return;
+            sImportRunning = true;
+            sPendingImportResult = null;
+        }
+        final Context appContext = getApplicationContext();
+        new Thread(() -> {
+            UnrealDataPaths.ImportResult result = null;
+            try {
+                result = zip
+                        ? UnrealDataPaths.importUnrealZip(appContext, uri)
+                        : UnrealDataPaths.importUnrealFolderFromSaf(appContext, uri);
+            } catch (Throwable t) {
+                result = UnrealDataPaths.ImportResult.fail("Import failed.", t);
+            } finally {
+                synchronized (IMPORT_LOCK) {
+                    sImportRunning = false;
+                    sPendingImportResult = result;
+                }
+                new Handler(Looper.getMainLooper()).post(MainActivity::deliverPendingImportResult);
+            }
+        }, zip ? "UE1ZipImport" : "UE1FolderImport").start();
+    }
+
+    private void setKeepScreenOn(boolean on) {
+        // A large import can take minutes; do not let the device sleep (or kill us) mid-copy.
+        if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private boolean needsLegacyStoragePermission() {
@@ -137,6 +221,7 @@ public class MainActivity extends Activity {
     }
 
     private void showMissingDataScreen() {
+        setKeepScreenOn(false);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setGravity(Gravity.CENTER);
@@ -223,6 +308,7 @@ public class MainActivity extends Activity {
 
         setContentView(body);
         hideSystemUi();
+        setKeepScreenOn(true);
     }
 
     private void openUnrealFolderPicker() {
@@ -309,10 +395,7 @@ public class MainActivity extends Activity {
                 t("Unreal-Daten werden importiert", "Importing Unreal data"),
                 t("Der ausgewählte Ordner wird geprüft und in den sicheren App-Ordner kopiert.\nDas kann je nach SD-Karte einige Minuten dauern.",
                   "The selected folder is being checked and copied into the safe app folder.\nThis may take a few minutes depending on the SD card."));
-        new Thread(() -> {
-            UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealFolderFromSaf(this, uri);
-            runOnUiThread(() -> handleImportResult(result));
-        }, "UE1FolderImport").start();
+        startImport(false, uri);
     }
 
     private void importZipInBackground(Uri uri) {
@@ -320,13 +403,11 @@ public class MainActivity extends Activity {
                 t("Unreal-ZIP wird importiert", "Importing Unreal ZIP"),
                 t("Die ZIP-Datei wird geprüft und in den sicheren App-Ordner entpackt.\nDas kann je nach Gerät einige Minuten dauern.",
                   "The ZIP file is being checked and extracted into the safe app folder.\nThis may take a few minutes depending on the device."));
-        new Thread(() -> {
-            UnrealDataPaths.ImportResult result = UnrealDataPaths.importUnrealZip(this, uri);
-            runOnUiThread(() -> handleImportResult(result));
-        }, "UE1ZipImport").start();
+        startImport(true, uri);
     }
 
     private void handleImportResult(UnrealDataPaths.ImportResult result) {
+        setKeepScreenOn(false);
         if (result == null) {
             lastImportMessage = t("Import fehlgeschlagen: unbekannter Fehler.", "Import failed: unknown error.");
             showMissingDataScreen();

@@ -164,10 +164,17 @@ static UBOOL UE1AndroidCleanDispatchKeyCaptureV86( UNSDLViewport* Viewport, INT 
 
 static SDL_mutex* UE1AndroidNativeControllerMutex()
 {
-	if( !GAndroidNativeControllerMutex )
-		GAndroidNativeControllerMutex = SDL_CreateMutex();
-	return GAndroidNativeControllerMutex;
+	// The Java UI thread and the engine thread can both get here first; a
+	// function-local static is initialized exactly once (C++11 magic statics).
+	static SDL_mutex* const Mutex = SDL_CreateMutex();
+	GAndroidNativeControllerMutex = Mutex;
+	return Mutex;
 }
+
+// UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222
+// Set by the Java UI thread (pause/resume/focus); consumed by TickInput on the
+// engine thread, which owns the pressed-state tables below.
+static SDL_atomic_t GAndroidNativeControllerResetRequestedV222;
 
 static void UE1AndroidNativeControllerPushEvent( const FAndroidNativeControllerEvent& Event )
 {
@@ -212,8 +219,9 @@ static INT UE1AndroidNativeControllerDrainEvents( FAndroidNativeControllerEvent*
 	return Count;
 }
 
-static void UE1AndroidNativeControllerResetState()
+static void UE1AndroidNativeControllerClearState()
 {
+	// Engine thread only: these tables are read and written by TickInput.
 	appMemset( GAndroidNativeButtonPressed, 0, sizeof(GAndroidNativeButtonPressed) );
 	appMemset( GAndroidNativeAxisDirPressed, 0, sizeof(GAndroidNativeAxisDirPressed) );
 	appMemset( GAndroidNativeHatPressed, 0, sizeof(GAndroidNativeHatPressed) );
@@ -227,6 +235,11 @@ static void UE1AndroidNativeControllerResetState()
 	appMemset( GAndroidToggleFaceDownV21, 0, sizeof(GAndroidToggleFaceDownV21) );
 	appMemset( GAndroidToggleFaceLatchedV21, 0, sizeof(GAndroidToggleFaceLatchedV21) );
 	appMemset( GAndroidToggleFaceConsumedV21, 0, sizeof(GAndroidToggleFaceConsumedV21) );
+}
+
+static void UE1AndroidNativeControllerDropQueuedDeviceEvents()
+{
+	// Safe from any thread: only touches the mutex-protected queue.
 	SDL_mutex* Mutex = UE1AndroidNativeControllerMutex();
 	if( Mutex )
 		SDL_LockMutex( Mutex );
@@ -252,6 +265,71 @@ static void UE1AndroidNativeControllerResetState()
 	GAndroidNativeControllerQueueCount = RetroTouchKeepCountV216;
 	if( Mutex )
 		SDL_UnlockMutex( Mutex );
+}
+
+static void UE1AndroidNativeControllerResetState()
+{
+	UE1AndroidNativeControllerClearState();
+	UE1AndroidNativeControllerDropQueuedDeviceEvents();
+}
+
+static BYTE UE1AndroidNativeDirectionalAxisKey( INT Axis, INT Direction );
+
+static void UE1AndroidNativeControllerReleaseHeldKeys( UNSDLViewport* Viewport, const SWORD* JoyAxisValues, const BYTE* JoyAxisKeys, INT PressThreshold )
+{
+	// UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222
+	// Clearing the native pressed-state tables without telling UE1 left the keys
+	// down in UInput: holding R1 (Fire) while opening the menu kept firing after
+	// the menu closed. Release everything still tracked as held before a reset.
+	// UInput::Process ignores releases for keys that are not down.
+	if( !Viewport )
+		return;
+
+	for( INT Key=1; Key<IK_MAX; ++Key )
+	{
+		if( GAndroidNativeButtonPressed[Key] )
+		{
+			GAndroidNativeButtonPressed[Key] = 0;
+			Viewport->CauseInputEvent( Key, IST_Release );
+		}
+	}
+
+	for( INT Axis=0; Axis<SDL_CONTROLLER_AXIS_MAX; ++Axis )
+	{
+		for( INT DirIndex=0; DirIndex<2; ++DirIndex )
+		{
+			if( !GAndroidNativeAxisDirPressed[Axis][DirIndex] )
+				continue;
+			GAndroidNativeAxisDirPressed[Axis][DirIndex] = 0;
+			const BYTE DirKey = UE1AndroidNativeDirectionalAxisKey( Axis, DirIndex == 0 ? -1 : 1 );
+			if( DirKey != IK_None )
+				Viewport->CauseInputEvent( DirKey, IST_Release );
+		}
+	}
+
+	static const BYTE HatKeys[2][2] = { { IK_JoyPovLeft, IK_JoyPovRight }, { IK_JoyPovUp, IK_JoyPovDown } };
+	for( INT HatAxis=0; HatAxis<2; ++HatAxis )
+	{
+		for( INT DirIndex=0; DirIndex<2; ++DirIndex )
+		{
+			if( !GAndroidNativeHatPressed[HatAxis][DirIndex] )
+				continue;
+			GAndroidNativeHatPressed[HatAxis][DirIndex] = 0;
+			Viewport->CauseInputEvent( HatKeys[HatAxis][DirIndex], IST_Release );
+		}
+	}
+
+	// Triggers (and other button-like axes) are pressed via the JoyAxis threshold path.
+	if( JoyAxisValues && JoyAxisKeys )
+	{
+		for( INT Axis=0; Axis<SDL_CONTROLLER_AXIS_MAX; ++Axis )
+		{
+			const BYTE Key = JoyAxisKeys[Axis];
+			const UBOOL bButtonAxis = Axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || Axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT || Key < IK_JoyX;
+			if( bButtonAxis && Key != IK_None && JoyAxisValues[Axis] >= PressThreshold )
+				Viewport->CauseInputEvent( Key, IST_Release );
+		}
+	}
 }
 
 static BYTE UE1AndroidNativeDirectionalAxisKey( INT Axis, INT Direction )
@@ -909,7 +987,11 @@ extern "C" JNIEXPORT void JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeAn
 	// v88: Activity resume/focus can reuse the same process while Android has
 	// already cancelled the physical key stream. Reset the native debounce state
 	// so the next real BUTTON_DOWN is not swallowed as a duplicate.
-	UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_NATIVE_RESET_V92
+	// UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222: this runs on the Java UI
+	// thread. Only drop the queued events here (mutex protected); the engine
+	// thread releases held keys and clears the pressed-state tables in TickInput.
+	UE1AndroidNativeControllerDropQueuedDeviceEvents(); // ANDROID_CONTROLLER_NATIVE_RESET_V92
+	SDL_AtomicSet( &GAndroidNativeControllerResetRequestedV222, 1 );
 }
 
 extern "C" JNIEXPORT jint JNICALL Java_com_ast_unreal_UnrealSDLActivity_nativeRetroTouchUiModeV215( JNIEnv*, jclass )
@@ -3001,6 +3083,12 @@ UBOOL UNSDLViewport::TickInput()
 		GAndroidRetroTouchTouchModeAppliedV218 = AndroidRetroTouchRequestedV218;
 		debugf( NAME_Log, "UNREAL_ANDROID_RETROTOUCH_AUTOMODE_V218 Touch Controls=%s", AndroidRetroTouchRequestedV218 ? "True" : "False" );
 	}
+	if( SDL_AtomicSet( &GAndroidNativeControllerResetRequestedV222, 0 ) )
+	{
+		// UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222: deferred reset from the UI thread.
+		UE1AndroidNativeControllerReleaseHeldKeys( this, JoyAxis, JoyAxisMap, JoyAxisPressThreshold );
+		UE1AndroidNativeControllerClearState(); // sets GAndroidNativeDirectResetPending
+	}
 	if( GAndroidNativeDirectResetPending )
 	{
 		UE1AndroidNativeDirectReleaseGameplayV122( this ); // UNREAL_ANDROID_CONTROLLER_DIRECT_V122
@@ -3078,6 +3166,7 @@ UBOOL UNSDLViewport::TickInput()
 			// When entering normal menus, discard held native gameplay state.
 			// Menu input is handled as short taps below, so stale press/release pairs
 			// cannot make the next menu button require a second physical press.
+			UE1AndroidNativeControllerReleaseHeldKeys( this, JoyAxis, JoyAxisMap, JoyAxisPressThreshold ); // UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222
 			UE1AndroidNativeControllerResetState(); // ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
 			appMemset( JoyAxis, 0, sizeof(JoyAxis) );
 		}
@@ -3496,6 +3585,10 @@ UBOOL UNSDLViewport::TickInput()
 						// The stateful press/release path is still used for gameplay, but
 						// Menuing gets an immediate press+release.
 						// ANDROID_CONTROLLER_NATIVE_MENU_TAP_V93
+						// UNREAL_ANDROID_CONTROLLER_RESET_RELEASE_V222: a button still held
+						// from gameplay must be released in UInput too, or it stays latched.
+						if( !bPressed && GAndroidNativeButtonPressed[Key] )
+							CauseInputEvent( Key, IST_Release );
 						GAndroidNativeButtonPressed[Key] = 0;
 						if( bPressed )
 						{

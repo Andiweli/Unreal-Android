@@ -231,6 +231,69 @@ void UObject::execDefaultVariable( FFrame& Stack, BYTE*& Result )
 }
 AUTOREGISTER_INTRINSIC( UObject, EX_DefaultVariable, execDefaultVariable );
 
+#ifdef PLATFORM_64BIT
+// UNREAL_ANDROID_64BIT_ACCESSED_NONE_SIZE_V222
+// The zero-fill size stored after EX_Context/EX_ClassContext comes from the
+// 32-bit compiler, so an object reference is listed as 4 bytes. On 64-bit
+// only the low half of the 8-byte pointer would be cleared after "Accessed
+// None", leaving a wild non-NULL pointer. Peek at the skipped expression to
+// find out whether it yields an object reference.
+static UProperty* UE1SkippedExprReturnParm( UFunction* Function )
+{
+	if( !Function )
+		return NULL;
+	for( TFieldIterator<UProperty> It(Function); It && (It->PropertyFlags & CPF_Parm); ++It )
+		if( It->PropertyFlags & CPF_ReturnParm )
+			return *It;
+	return NULL;
+}
+
+static INT UE1SkippedExprZeroSize( const BYTE* Code, BYTE bSize )
+{
+	if( bSize != sizeof(INT) || !Code )
+		return bSize;
+
+	UProperty* ResultProperty = NULL;
+	switch( *Code )
+	{
+		case EX_LocalVariable:
+		case EX_InstanceVariable:
+		case EX_DefaultVariable:
+		{
+			INT Index;
+			appMemcpy( &Index, Code + 1, sizeof(INT) );
+			UObject* Obj = GObj.GetIndexedObject( Index );
+			if( Obj && Obj->IsA(UProperty::StaticClass) )
+				ResultProperty = (UProperty*)Obj;
+			break;
+		}
+		case EX_FinalFunction:
+		{
+			INT Index;
+			appMemcpy( &Index, Code + 1, sizeof(INT) );
+			UObject* Obj = GObj.GetIndexedObject( Index );
+			if( Obj && Obj->IsA(UFunction::StaticClass) )
+				ResultProperty = UE1SkippedExprReturnParm( (UFunction*)Obj );
+			break;
+		}
+		case EX_VirtualFunction:
+		case EX_GlobalFunction:
+		{
+			// The object is None, so its class is unknown. Overrides keep the
+			// signature, so any function of that name has the same return type.
+			FName Name;
+			appMemcpy( &Name, Code + 1, sizeof(FName) );
+			ResultProperty = UE1SkippedExprReturnParm( FindObject<UFunction>( ANY_PACKAGE, *Name ) );
+			break;
+		}
+	}
+
+	if( ResultProperty && ResultProperty->IsA(UObjectProperty::StaticClass) && ResultProperty->ArrayDim == 1 )
+		return sizeof(UObject*);
+	return bSize;
+}
+#endif
+
 void UObject::execClassContext( FFrame& Stack, BYTE*& Result )
 {
 	guard(UObject::execClassContext);
@@ -251,9 +314,14 @@ void UObject::execClassContext( FFrame& Stack, BYTE*& Result )
 		Stack.ScriptWarn( 0, "Accessed null class context" );
 		INT wSkip = Stack.ReadWord();
 		BYTE bSize = *Stack.Code++;
+#ifdef PLATFORM_64BIT
+		const INT ZeroSize = UE1SkippedExprZeroSize( Stack.Code, bSize ); // UNREAL_ANDROID_64BIT_ACCESSED_NONE_SIZE_V222
+#else
+		const INT ZeroSize = bSize;
+#endif
 		Stack.Code += wSkip;
 		if( Result )
-			appMemset( Result, 0, bSize );
+			appMemset( Result, 0, ZeroSize );
 		GBoolAddr = NULL;
 	}
 
@@ -529,9 +597,14 @@ void UObject::execContext( FFrame& Stack, BYTE*& Result )
 		Stack.ScriptWarn( 0, "Accessed None" );
 		INT wSkip = Stack.ReadWord();
 		BYTE bSize = *Stack.Code++;
+#ifdef PLATFORM_64BIT
+		const INT ZeroSize = UE1SkippedExprZeroSize( Stack.Code, bSize ); // UNREAL_ANDROID_64BIT_ACCESSED_NONE_SIZE_V222
+#else
+		const INT ZeroSize = bSize;
+#endif
 		Stack.Code += wSkip;
 		if( Result )
-			appMemset( Result, 0, bSize );
+			appMemset( Result, 0, ZeroSize );
 		GBoolAddr = NULL;
 	}
 	unguardexecSlow;

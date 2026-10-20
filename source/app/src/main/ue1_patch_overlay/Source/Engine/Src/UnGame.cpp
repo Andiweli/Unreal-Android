@@ -10,6 +10,10 @@
 #include "UnRender.h"
 #include "UnNet.h"
 
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+extern "C" void UE1AndroidSuspendTogglesForSaveV222( UBOOL bSuspend ); // UnActor.cpp
+#endif
+
 /*-----------------------------------------------------------------------------
 	Object class implementation.
 -----------------------------------------------------------------------------*/
@@ -1192,7 +1196,16 @@ void UGameEngine::SaveGame( INT Position )
 		delete GLevel->BrushTracker;
 	}
 	GLevel->CleanupDestroyed( 1 );
+#if defined(PLATFORM_ANDROID) || defined(UNREAL_ANDROID) || defined(__ANDROID__)
+	// UNREAL_ANDROID_INFINITE_TOGGLES_LIFETIME_V222: keep the infinite-health
+	// toggle out of the savegame.
+	UE1AndroidSuspendTogglesForSaveV222( 1 );
+	const UBOOL bAndroidSavedV222 = GObj.SavePackage( GLevel->GetParent(), GLevel, 0, Filename );
+	UE1AndroidSuspendTogglesForSaveV222( 0 );
+	if( bAndroidSavedV222 )
+#else
 	if( GObj.SavePackage( GLevel->GetParent(), GLevel, 0, Filename ) )
+#endif
 	{
 		// Copy the hub stack.
 		INT i;

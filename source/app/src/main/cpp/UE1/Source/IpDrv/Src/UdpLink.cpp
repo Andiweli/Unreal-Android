@@ -201,9 +201,12 @@ UBOOL AUdpLink::Tick( FLOAT DeltaTime, enum ELevelTick TickType )
 				            char SourceIp[64];
 				            appSprintf( SourceIp, "%i.%i.%i.%i", SourceA, SourceB, SourceC, SourceD );
 				
-				            char FixedBuffer[512];
+				            // UNREAL_ANDROID_LAN_BEACON_BOUNDED_V222: the source IP can be up to
+				            // 6 chars longer than "127.0.0.1", so a 511 byte beacon would
+				            // overflow an unbounded sprintf. Truncate instead.
+				            char FixedBuffer[ARRAY_COUNT(Buffer)];
 				            *Token = 0;
-				            appSprintf( FixedBuffer, "%s %s%s", Buffer, SourceIp, Tail );
+				            snprintf( FixedBuffer, sizeof(FixedBuffer), "%s %s%s", Buffer, SourceIp, Tail );
 				            strncpy( Buffer, FixedBuffer, ARRAY_COUNT(Buffer)-1 );
 				            Buffer[ARRAY_COUNT(Buffer)-1] = 0;
 				

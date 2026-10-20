@@ -156,6 +156,9 @@ else()
     add_compile_options(-O2)
   endif()
   add_compile_options(-ffunction-sections -fno-strict-aliasing)
+  # UE1 relies on "if( !this )" / "if( this )" checks (UObject::IsValid,
+  # UObject::GetFullName) which clang removes at -O1 and above.
+  add_compile_options(-fno-delete-null-pointer-checks)
   add_compile_options(-Wno-write-strings)
 endif()
 

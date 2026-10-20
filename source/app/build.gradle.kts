@@ -424,7 +424,19 @@ void PlatformPreInit()
                 "\t// Init windowing.\n#ifdef PLATFORM_ANDROID // UNREAL_ANDROID_SKIP_APPBASEDIR_CHDIR\n\t// PlatformPreInit already chdir()s to ANDROIDROOT/System.\n\t// Do not call appBaseDir() here: SDL_GetBasePath() may be null on Android.\n#else\n\tappChdir( appBaseDir() );\n#endif"
             )
         }
-        s = s.replace(marker, androidBlock)
+        // UNREAL_ANDROID_SDLLAUNCH_IDEMPOTENT_V222
+        // androidBlock ends with the same marker it replaces, so it must only be
+        // inserted once. Older scripts inserted it again on every build; collapse
+        // those identical copies (and the extra blank lines) in prepared trees.
+        if (s.contains("UNREAL_ANDROID_NATIVE_ROOT_PATH")) {
+            val androidBlockBody = androidBlock.removeSuffix(marker + "\n")
+            while (s.contains(androidBlockBody + androidBlockBody)) {
+                s = s.replace(androidBlockBody + androidBlockBody, androidBlockBody)
+            }
+            s = Regex(Regex.escape(marker) + "\\n{5,}//").replace(s, Regex.escapeReplacement(marker + "\n\n\n\n//"))
+        } else {
+            s = s.replace(marker, androidBlock)
+        }
         s
     }
 

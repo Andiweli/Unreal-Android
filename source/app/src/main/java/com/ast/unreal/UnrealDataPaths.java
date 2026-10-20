@@ -36,6 +36,14 @@ final class UnrealDataPaths {
             "System", "Maps", "Textures", "Sounds", "Music", "Meshes", "Help", "Web", "Save", "Cache"
     };
 
+    // UNREAL_ANDROID_IMPORT_ATOMIC_V222
+    // Written into the app data root before an import starts copying and removed
+    // only after the import finished completely. A root that still carries it was
+    // interrupted (killed, storage full, I/O error) and may contain truncated
+    // packages, so it is never treated as valid game data.
+    static final String IMPORT_INCOMPLETE_MARKER = ".ue1-import-incomplete";
+    private static final long LOW_STORAGE_HINT_BYTES = 64L * 1024L * 1024L;
+
     private UnrealDataPaths() {}
 
     static boolean isGermanLocale(Context context) {
@@ -269,9 +277,11 @@ final class UnrealDataPaths {
         boolean hasUnrealShare = findCaseInsensitive(systemDir, "UnrealShare.u") != null;
         boolean hasGamePackage = hasUnrealI || hasUnrealShare;
         boolean hasMap = findCaseInsensitive(mapsDir, "Entry.unr") != null || hasAnyMap(mapsDir);
-        boolean ok = rootDir && system && maps && hasCore && hasEngine && hasGamePackage && hasMap;
+        boolean importComplete = !new File(root, IMPORT_INCOMPLETE_MARKER).exists();
+        boolean ok = rootDir && system && maps && hasCore && hasEngine && hasGamePackage && hasMap && importComplete;
         if (verbose || root.exists()) {
             Log.i(TAG_STARTUP, "data candidate detail: ok=" + ok
+                    + " importComplete=" + importComplete
                     + " rootDir=" + rootDir
                     + " system=" + system
                     + " maps=" + maps
@@ -455,18 +465,21 @@ final class UnrealDataPaths {
         try {
             String text = readUtf8(file);
             String patched = text;
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "UseJoystick", "True");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeController", "True");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeDirectInput", "True"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickScale", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeLeftStickDeadzone", "0.08"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickDeadzone", "0.10"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeTriggerDeadzone", "0.12"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "AndroidNativeAxisCurve", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneXYZ", "0.10");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "DeadZoneRUV", "0.10");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleXYZ", "100.0");
-            patched = setIniValue(patched, "NSDLDrv.NSDLClient", "ScaleRUV", "100.0");
+            patched = setIniValueIfDifferent(patched, "NSDLDrv.NSDLClient", "UseJoystick", "True");
+            patched = setIniValueIfDifferent(patched, "NSDLDrv.NSDLClient", "AndroidNativeController", "True");
+            patched = setIniValueIfDifferent(patched, "NSDLDrv.NSDLClient", "AndroidNativeDirectInput", "True"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            // UNREAL_ANDROID_CONFIG_PRESERVE_TUNING_V222: sensitivity, deadzone and curve
+            // values are user tuning. Only fill them in when missing so hand-edited
+            // values survive app restarts.
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickScale", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "AndroidNativeLeftStickDeadzone", "0.08"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "AndroidNativeRightStickDeadzone", "0.10"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "AndroidNativeTriggerDeadzone", "0.12"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "AndroidNativeAxisCurve", "1.00"); // UNREAL_ANDROID_CONFIG_PRESERVE_V139
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "DeadZoneXYZ", "0.10");
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "DeadZoneRUV", "0.10");
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "ScaleXYZ", "100.0");
+            patched = setIniValueIfMissing(patched, "NSDLDrv.NSDLClient", "ScaleRUV", "100.0");
             if (!patched.equals(text)) {
                 writeUtf8(file, patched);
                 Log.i(TAG_CONFIG, "Patched Android controller defaults: " + file.getAbsolutePath());
@@ -566,6 +579,19 @@ final class UnrealDataPaths {
                 || text.contains("Joy13=Fire");
     }
 
+    private static String setIniValueIfMissing(String text, String section, String key, String value) {
+        String current = getIniValue(text, section, key);
+        if (current != null && current.length() > 0) return text;
+        return setIniValue(text, section, key, value);
+    }
+
+    private static String setIniValueIfDifferent(String text, String section, String key, String value) {
+        // Avoid rewriting (and line-ending normalizing) an INI that already has the value.
+        String current = getIniValue(text, section, key);
+        if (current != null && current.equalsIgnoreCase(value)) return text;
+        return setIniValue(text, section, key, value);
+    }
+
     private static String setIniValue(String text, String section, String key, String value) {
         if (text == null) text = "";
         String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
@@ -654,21 +680,97 @@ final class UnrealDataPaths {
             }
 
             File target = primaryAppRoot(context);
+            if (isSafDocInsideAppRoot(context, unrealDocId)) {
+                // Copying a folder onto itself would truncate every file before reading it.
+                return ImportResult.fail(tr(context,
+                        "Der ausgewählte Ordner ist bereits der App-Datenordner. Bitte einen anderen Unreal-Ordner (z. B. auf SD-Karte oder in 'Download') wählen.",
+                        "The selected folder is already the app data folder. Please select a different Unreal folder (for example on the SD card or in 'Download')."));
+            }
             ensureDirectoryLayout(target);
+            beginImport(target);
             Log.i(TAG_IMPORT, "Importing SAF Unreal folder to " + target.getAbsolutePath());
-            copySafTree(context, treeUri, unrealDocId, target);
+            try {
+                copySafTree(context, treeUri, unrealDocId, target);
+            } catch (Throwable t) {
+                return ImportResult.fail(tr(context, "Import aus dem ausgewählten Ordner fehlgeschlagen.", "Import from the selected folder failed.") + storageHint(context, target), t);
+            }
+            return finishImport(context, target,
+                    tr(context, "Der Ordner wurde kopiert, aber danach fehlen weiterhin Pflichtdateien in ", "The folder was copied, but required files are still missing in "),
+                    tr(context, "Unreal-Daten wurden erfolgreich importiert nach:\n", "Unreal data was imported successfully to:\n"));
+        } catch (Throwable t) {
+            return ImportResult.fail(tr(context, "Import aus dem ausgewählten Ordner fehlgeschlagen.", "Import from the selected folder failed."), t);
+        }
+    }
+
+    private static void beginImport(File target) throws IOException {
+        // UNREAL_ANDROID_IMPORT_ATOMIC_V222
+        writeUtf8(new File(target, IMPORT_INCOMPLETE_MARKER), "Unreal data import in progress or interrupted.\n");
+    }
+
+    private static ImportResult finishImport(Context context, File target, String missingPrefix, String okPrefix) {
+        try {
             installDefaultConfigsIfNeeded(context, target);
             normalizeConfigForDetectedData(target);
             ensureAndroidControllerDirectPatch(new File(target, "System"));
             resetOuyaResolutionDefaultAfterImportV212(target);
-
-            if (!hasRequiredData(target, true)) {
-                return ImportResult.fail(tr(context, "Der Ordner wurde kopiert, aber danach fehlen weiterhin Pflichtdateien in ", "The folder was copied, but required files are still missing in ") + target.getAbsolutePath());
-            }
-            return ImportResult.ok(target, tr(context, "Unreal-Daten wurden erfolgreich importiert nach:\n", "Unreal data was imported successfully to:\n") + target.getAbsolutePath());
         } catch (Throwable t) {
-            return ImportResult.fail(tr(context, "Import aus dem ausgewählten Ordner fehlgeschlagen.", "Import from the selected folder failed."), t);
+            return ImportResult.fail(tr(context, "Die Konfiguration konnte nach dem Import nicht angelegt werden.", "The configuration could not be created after the import.") + storageHint(context, target), t);
         }
+
+        File marker = new File(target, IMPORT_INCOMPLETE_MARKER);
+        if (marker.exists() && !marker.delete()) {
+            return ImportResult.fail(tr(context, "Der Import ist fertig, aber die Import-Markierung konnte nicht entfernt werden: ", "The import finished, but the import marker could not be removed: ") + marker.getAbsolutePath());
+        }
+        if (!hasRequiredData(target, true)) {
+            return ImportResult.fail(missingPrefix + target.getAbsolutePath());
+        }
+        return ImportResult.ok(target, okPrefix + target.getAbsolutePath());
+    }
+
+    private static String storageHint(Context context, File target) {
+        try {
+            File dir = target;
+            while (dir != null && !dir.exists()) dir = dir.getParentFile();
+            if (dir != null && dir.getUsableSpace() < LOW_STORAGE_HINT_BYTES) {
+                return tr(context, "\nDer Gerätespeicher ist fast voll. Bitte Platz schaffen und den Import erneut starten.",
+                        "\nThe device storage is almost full. Please free some space and start the import again.");
+            }
+        } catch (Throwable ignored) {}
+        return "";
+    }
+
+    private static boolean isSafDocInsideAppRoot(Context context, String docId) {
+        // ExternalStorageProvider document IDs look like "primary:Android/data/<pkg>/files/Unreal".
+        // primaryAppRoot() lives on the primary volume, so other volumes (SD cards) are fine.
+        if (docId == null) return false;
+        int colon = docId.indexOf(':');
+        if (colon >= 0 && !"primary".equalsIgnoreCase(docId.substring(0, colon))) return false;
+        String path = (colon >= 0 ? docId.substring(colon + 1) : docId).replace('\\', '/');
+        while (path.startsWith("/")) path = path.substring(1);
+        while (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+        String appRoot = ("Android/data/" + context.getPackageName() + "/files/Unreal").toLowerCase(Locale.ROOT);
+        String lower = path.toLowerCase(Locale.ROOT);
+        return lower.equals(appRoot) || lower.startsWith(appRoot + "/");
+    }
+
+    private static long directorySize(File dir) {
+        File[] files = dir != null ? dir.listFiles() : null;
+        if (files == null) return 0L;
+        long total = 0L;
+        for (File f : files) total += f.isDirectory() ? directorySize(f) : f.length();
+        return total;
+    }
+
+    private static long queryContentSize(Context context, Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(uri, new String[] { android.provider.OpenableColumns.SIZE }, null, null, null);
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
+        } catch (Throwable ignored) {
+        } finally {
+            if (cursor != null) try { cursor.close(); } catch (Throwable ignored) {}
+        }
+        return -1L;
     }
 
     static ImportResult importUnrealZip(Context context, Uri zipUri) {
@@ -681,17 +783,26 @@ final class UnrealDataPaths {
 
             File target = primaryAppRoot(context);
             ensureDirectoryLayout(target);
-            Log.i(TAG_IMPORT, "Importing ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
-            extractZipRoot(context, zipUri, rootPrefix, target);
-            installDefaultConfigsIfNeeded(context, target);
-            normalizeConfigForDetectedData(target);
-            ensureAndroidControllerDirectPatch(new File(target, "System"));
-            resetOuyaResolutionDefaultAfterImportV212(target);
-
-            if (!hasRequiredData(target, true)) {
-                return ImportResult.fail(tr(context, "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ", "The ZIP file was extracted, but required files are still missing in ") + target.getAbsolutePath());
+            long zipSize = queryContentSize(context, zipUri);
+            long usable = target.getUsableSpace();
+            if (usable > 0) usable += directorySize(target); // re-imports overwrite existing files
+            if (zipSize > 0 && usable > 0 && usable < zipSize) {
+                // The extracted data is at least as large as the compressed ZIP.
+                return ImportResult.fail(tr(context, "Nicht genug freier Speicher für den Import. Benötigt werden mindestens ", "Not enough free storage for the import. At least ")
+                        + (zipSize / (1024L * 1024L)) + " MB"
+                        + tr(context, ", frei sind ", " are required, free: ")
+                        + (usable / (1024L * 1024L)) + " MB.");
             }
-            return ImportResult.ok(target, tr(context, "Unreal-Daten wurden erfolgreich aus der ZIP-Datei importiert nach:\n", "Unreal data was imported successfully from the ZIP file to:\n") + target.getAbsolutePath());
+            beginImport(target);
+            Log.i(TAG_IMPORT, "Importing ZIP Unreal root prefix='" + rootPrefix + "' to " + target.getAbsolutePath());
+            try {
+                extractZipRoot(context, zipUri, rootPrefix, target);
+            } catch (Throwable t) {
+                return ImportResult.fail(tr(context, "Import aus der ZIP-Datei fehlgeschlagen.", "Import from the ZIP file failed.") + storageHint(context, target), t);
+            }
+            return finishImport(context, target,
+                    tr(context, "Die ZIP-Datei wurde entpackt, aber danach fehlen weiterhin Pflichtdateien in ", "The ZIP file was extracted, but required files are still missing in "),
+                    tr(context, "Unreal-Daten wurden erfolgreich aus der ZIP-Datei importiert nach:\n", "Unreal data was imported successfully from the ZIP file to:\n"));
         } catch (Throwable t) {
             return ImportResult.fail(tr(context, "Import aus der ZIP-Datei fehlgeschlagen.", "Import from the ZIP file failed."), t);
         }
@@ -756,16 +867,27 @@ final class UnrealDataPaths {
     }
 
     private static List<SafNode> listSafChildren(Context context, Uri treeUri, String parentDocId) {
+        try {
+            return listSafChildrenStrict(context, treeUri, parentDocId);
+        } catch (Throwable t) {
+            Log.w(TAG_IMPORT, "Could not list SAF children for doc=" + parentDocId + ": " + t);
+            return new ArrayList<>();
+        }
+    }
+
+    private static List<SafNode> listSafChildrenStrict(Context context, Uri treeUri, String parentDocId) throws IOException {
+        // UNREAL_ANDROID_IMPORT_ATOMIC_V222: the copy must not silently skip a folder
+        // it could not list (e.g. Textures or Sounds) and still report success.
         ArrayList<SafNode> out = new ArrayList<>();
         if (Build.VERSION.SDK_INT < 21) return out;
         ContentResolver resolver = context.getContentResolver();
         Cursor cursor = null;
         try {
             Uri childrenUri = safBuildChildDocumentsUriUsingTree(treeUri, parentDocId);
-            if (childrenUri == null) return out;
+            if (childrenUri == null) throw new IOException("Could not build SAF children URI for doc=" + parentDocId);
             String[] projection = new String[] { SAF_COL_DOCUMENT_ID, SAF_COL_DISPLAY_NAME, SAF_COL_MIME_TYPE };
             cursor = resolver.query(childrenUri, projection, null, null, null);
-            if (cursor == null) return out;
+            if (cursor == null) throw new IOException("Could not list SAF folder doc=" + parentDocId);
             while (cursor.moveToNext()) {
                 String docId = cursor.getString(0);
                 String name = cursor.getString(1);
@@ -773,8 +895,10 @@ final class UnrealDataPaths {
                 if (docId == null || name == null) continue;
                 out.add(new SafNode(docId, name, mime));
             }
+        } catch (IOException ex) {
+            throw ex;
         } catch (Throwable t) {
-            Log.w(TAG_IMPORT, "Could not list SAF children for doc=" + parentDocId + ": " + t);
+            throw new IOException("Could not list SAF folder doc=" + parentDocId + ": " + t);
         } finally {
             if (cursor != null) try { cursor.close(); } catch (Throwable ignored) {}
         }
@@ -783,7 +907,7 @@ final class UnrealDataPaths {
 
     private static void copySafTree(Context context, Uri treeUri, String parentDocId, File outDir) throws IOException {
         if (!outDir.exists() && !outDir.mkdirs()) throw new IOException("Could not create " + outDir.getAbsolutePath());
-        for (SafNode child : listSafChildren(context, treeUri, parentDocId)) {
+        for (SafNode child : listSafChildrenStrict(context, treeUri, parentDocId)) {
             String safeName = sanitizeFileName(child.name);
             if (safeName.length() == 0) continue;
             File out = new File(outDir, safeName);

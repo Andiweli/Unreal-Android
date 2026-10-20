@@ -31,8 +31,11 @@
             android:screenOrientation="landscape"
             android:theme="@style/GameTheme" />
 
+        <!-- configChanges: a controller (dis)connect changes keyboard/navigation and
+             must not recreate the launcher while it imports game data. -->
         <activity
             android:name="com.ast.unreal.MainActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme" />
