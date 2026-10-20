@@ -565,6 +565,17 @@ void UNOpenGLESRenderDevice::Exit()
 
 	Flush();
 
+	// UNREAL_ANDROID_GLES_EXIT_NO_CONTEXT_V222: on shutdown the viewport deletes its
+	// GL context before the render device exits. Its GL objects died with it, so
+	// only forget the handles instead of calling GL without a current context.
+	if( !SDL_GL_GetCurrentContext() )
+	{
+		AndroidSceneFBO = 0;
+		AndroidSceneColorTex = 0;
+		AndroidSceneDepthRB = 0;
+		AndroidSceneBlitProg = 0;
+	}
+
 	ReleaseAndroidSceneFBO(); // UE1_ANDROID_REAL_RENDER_RESOLUTION_FBO_V71
 	if( AndroidSceneBlitProg )
 	{
@@ -613,12 +624,23 @@ void UNOpenGLESRenderDevice::Flush()
 	if( TexAlloc.Num() )
 	{
 		debugf( NAME_Log, "Flushing %d/%d textures", TexAlloc.Num(), BindMap.Size() );
-		ResetTexture( 0 );
-		ResetTexture( 1 );
-		ResetTexture( 2 );
-		ResetTexture( 3 );
-		glFinish();
-		glDeleteTextures( TexAlloc.Num(), &TexAlloc(0) );
+		if( SDL_GL_GetCurrentContext() )
+		{
+			ResetTexture( 0 );
+			ResetTexture( 1 );
+			ResetTexture( 2 );
+			ResetTexture( 3 );
+			glFinish();
+			glDeleteTextures( TexAlloc.Num(), &TexAlloc(0) );
+		}
+		else
+		{
+			// Context already destroyed (shutdown): the textures went with it.
+			// UNREAL_ANDROID_GLES_EXIT_NO_CONTEXT_V222
+			for( INT i = 0; i < 4; ++i )
+				TexInfo[i].CurrentCacheID = 0;
+			CurrentShaderFlags &= ~( SF_Texture0 | SF_Texture1 | SF_Texture2 | SF_Texture3 );
+		}
 		TexAlloc.Empty();
 		BindMap.Empty();
 	}

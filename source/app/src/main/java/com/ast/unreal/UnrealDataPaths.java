@@ -382,6 +382,7 @@ final class UnrealDataPaths {
             ensureConfigFile(systemDir, "Unreal.ini", new String[] { "Default.ini", "Unreal.ini.default" }, "");
             ensureAndroidControllerDirectPatch(systemDir);
             applyOuyaResolutionDefaultOnceV212(systemDir); // UNREAL_ANDROID_OUYA_960_DEFAULT_V212
+            disableStaleHrtfOnceV222(systemDir); // UNREAL_ANDROID_HRTF_MIGRATION_V222
             Log.i(TAG_CONFIG, "Config root: " + root.getAbsolutePath());
             Log.i(TAG_CONFIG, "User.ini: " + new File(systemDir, "User.ini").getAbsolutePath());
         } catch (Throwable t) {
@@ -446,6 +447,33 @@ final class UnrealDataPaths {
             Log.i(TAG_CONFIG, "OUYA detected: initialized modern FBO resolution to 960x540 once");
         } catch (Throwable t) {
             Log.w(TAG_CONFIG, "Could not initialize OUYA 960x540 default: " + t);
+        }
+    }
+
+    private static void disableStaleHrtfOnceV222(File systemDir) {
+        // UNREAL_ANDROID_HRTF_MIGRATION_V222: up to 2.2.1 the audio driver passed
+        // UseHRTF with the wrong OpenAL attribute, so HRTF never ran, while the
+        // old default UseHRTF=True still got saved into many Unreal.ini files.
+        // Now that the setting works, such a stale True would suddenly enable
+        // headphone HRTF on TV/handheld speakers. Reset it to False once;
+        // a value set afterwards is respected.
+        if (systemDir == null) return;
+        File marker = new File(systemDir, ".unreal-hrtf-v222");
+        if (marker.isFile()) return;
+        try {
+            for (String name : new String[] { "Unreal.ini", "Default.ini" }) {
+                File file = new File(systemDir, name);
+                if (!file.isFile()) continue;
+                String text = readUtf8(file);
+                String current = getIniValue(text, "NOpenALDrv.NOpenALAudioSubsystem", "UseHRTF");
+                if (current != null && "True".equalsIgnoreCase(current)) {
+                    writeUtf8(file, setIniValue(text, "NOpenALDrv.NOpenALAudioSubsystem", "UseHRTF", "False"));
+                    Log.i(TAG_CONFIG, "Reset stale UseHRTF=True to False once: " + file.getAbsolutePath());
+                }
+            }
+            writeUtf8(marker, "UNREAL_ANDROID_HRTF_MIGRATION_V222\n");
+        } catch (Throwable t) {
+            Log.w(TAG_CONFIG, "Could not migrate UseHRTF: " + t);
         }
     }
 
