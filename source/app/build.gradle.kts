@@ -926,7 +926,8 @@ android {
         create("automotive") {
             dimension = "platform"
             applicationId = "com.ast.unrealandroid"
-            minSdk = 23
+            // Google Play automatic protection requires minSdk 24 or newer.
+            minSdk = 24
             targetSdk = 36
             versionCode = 14
             versionName = androidVersionName
