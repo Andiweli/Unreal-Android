@@ -7,7 +7,6 @@ import android.view.KeyEvent;
 
 import com.ast.retrotouch.RetroTouchAdapter;
 import com.ast.retrotouch.RetroTouchControl;
-import com.ast.retrotouch.RetroTouchControllers;
 import com.ast.retrotouch.RetroTouchLayout;
 import com.ast.retrotouch.RetroTouchMode;
 import com.ast.retrotouch.RetroTouchNavigation;
@@ -231,7 +230,9 @@ final class UnrealRetroTouchBridge {
         // A real touchscreen with no GAMEPAD/JOYSTICK means touch mode TRUE. Any physical
         // controller (or a device without touch hardware) means FALSE. Report only changes;
         // UE1 applies the config/menu value on its own TickInput thread.
-        final boolean controllerConnected = RetroTouchControllers.isControllerConnected();
+        // UNREAL_ANDROID_CONTROLLER_DETECT_V231: fingerprint sensors and other built-in
+        // devices with a gamepad source flag no longer count as a controller.
+        final boolean controllerConnected = UnrealControllerDetector.isControllerConnected();
         final boolean touchMode = touchscreenAvailable && !controllerConnected;
         if (reportedTouchModeV218 == null || reportedTouchModeV218.booleanValue() != touchMode) {
             if (activity.setRetroTouchInputModeV218(touchMode)) {
@@ -283,7 +284,7 @@ final class UnrealRetroTouchBridge {
      */
     boolean handleIntroTouchV217(android.view.MotionEvent event) {
         if (event == null || hostPaused || view.isEditing() || !touchscreenAvailable) return false;
-        if (RetroTouchControllers.isControllerConnected()) return false;
+        if (UnrealControllerDetector.isControllerConnected()) return false;
         if (activity.getRetroTouchUiModeV215() != UnrealSDLActivity.RETROTOUCH_UI_INTRO_TAP_V217) {
             introTouchGestureCapturedV217 = false;
             return false;

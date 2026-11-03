@@ -9,7 +9,7 @@ val ue1Version = "51b0ecdad7e2d026485d7ec7cd0b5a77bd1ff026"
 val sdl2Version = "2.32.10"
 val openAlSoftVersion = "1.24.3" // C++17: compatible with NDK r23/API16 and includes Android 16KB-page support
 val overlayRevision = "rev49-unified-normal-ouya-automotive-v1-signing-debugkey"
-val androidVersionName = "2.3.0"
+val androidVersionName = "2.3.1"
 
 // UNREAL_ANDROID_API16_NATIVE_OPT_V223: optimisation of the script VM / engine
 // event files on the OUYA/API16 armeabi-v7a build (fast, balanced or safe).
@@ -885,7 +885,7 @@ android {
         applicationId = "com.ast.unreal"
         minSdk = 16
         targetSdk = 36
-        versionCode = 14
+        versionCode = 15
         versionName = androidVersionName
 
         ndk {
@@ -915,7 +915,7 @@ android {
             applicationId = "com.ast.unreal"
             minSdk = 16
             targetSdk = 36
-            versionCode = 14
+            versionCode = 15
             versionName = androidVersionName
             externalNativeBuild {
                 cmake {
@@ -929,7 +929,7 @@ android {
             // Google Play automatic protection requires minSdk 24 or newer.
             minSdk = 24
             targetSdk = 36
-            versionCode = 14
+            versionCode = 15
             versionName = androidVersionName
             externalNativeBuild {
                 cmake {
@@ -969,7 +969,7 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/retrotouch.aar")) // UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_RETROTOUCH_BETA3_V221
+    implementation(files("libs/retrotouch.aar")) // RetroTouch 1.0.0-beta.9 UNREAL_ANDROID_RETROTOUCH_V215 UNREAL_ANDROID_RETROTOUCH_BETA3_V221
 }
 
 // Keep Android Studio's green Play/Run path unambiguous.
